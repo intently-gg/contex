@@ -1,0 +1,14 @@
+{
+  "salvo": {
+    "abi": "salvo.json",
+    "addresses": [
+      {
+        "address": "0x589b51cac450E2AFCE79EFFfd79288C1f8d0c1BB",
+        "label": "salvo 0x589b...c1BB",
+        "chainIds": [
+          8453
+        ]
+      }
+    ]
+  }
+}

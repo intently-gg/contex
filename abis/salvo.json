@@ -1,0 +1,816 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "addrOwnerToAssign",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "addrOperatorsToAssign",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "chainVarsAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "fallback",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "receive",
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "OPERATOR_1",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "OPERATOR_2",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "OPERATOR_3",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ad_removeAllowedTarget",
+    "inputs": [
+      {
+        "name": "_id",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_removeAllowedWithdraw",
+    "inputs": [
+      {
+        "name": "_id",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_setMaxConfigMappings",
+    "inputs": [
+      {
+        "name": "newMax",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_updateAllowedTarget",
+    "inputs": [
+      {
+        "name": "_addrAllowedContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_label",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_id",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_updateAllowedWithdraw",
+    "inputs": [
+      {
+        "name": "_addrWithdrawTo",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_addrWithdrawToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_label",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_id",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_withdrawGas",
+    "inputs": [
+      {
+        "name": "_to",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ad_withdrawToken",
+    "inputs": [
+      {
+        "name": "_tokenAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_to",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "addrAcxSpoke",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addrRhineSpoke",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addrWrappedNative",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addressToBytes32",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "chainId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "exec_withBalChecks",
+    "inputs": [
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "balanceChecks",
+        "type": "tuple[]",
+        "internalType": "struct SalvoVault.TokenBalanceCheck[]",
+        "components": [
+          {
+            "name": "tokenAddress",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amountOffset",
+            "type": "int256",
+            "internalType": "int256"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isSuccess",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "listAllowedTargets",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "",
+        "type": "string[]",
+        "internalType": "string[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "listAllowedWithdraws",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "",
+        "type": "string[]",
+        "internalType": "string[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mapTargetAddresses",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mapTargetLabels",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mapWithdrawLabels",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mapWithdrawTokens",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mapWithdrawTos",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxConfigMappings",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "multiExec",
+    "inputs": [
+      {
+        "name": "calls",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "multiExecTry",
+    "inputs": [
+      {
+        "name": "calls",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "multiExecTry_wReason",
+    "inputs": [
+      {
+        "name": "calls",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "stepResults",
+        "type": "string[]",
+        "internalType": "string[]"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "multiExec_wReason",
+    "inputs": [
+      {
+        "name": "calls",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_acxRelay",
+    "inputs": [
+      {
+        "name": "relayData",
+        "type": "tuple",
+        "internalType": "struct IAcrossSpokePool.V3RelayData",
+        "components": [
+          {
+            "name": "depositor",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "recipient",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "exclusiveRelayer",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "inputToken",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "outputToken",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "inputAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "outputAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "originChainId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "depositId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fillDeadline",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "exclusivityDeadline",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "message",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "repaymentChainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "op_confirmAcxFills",
+    "inputs": [
+      {
+        "name": "keys",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "op_executeAny",
+    "inputs": [
+      {
+        "name": "target",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "message",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_executeAnyWithValue",
+    "inputs": [
+      {
+        "name": "target",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "message",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_executeRhinestone",
+    "inputs": [
+      {
+        "name": "message",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_pullToken",
+    "inputs": [
+      {
+        "name": "tokenAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_pushGasAll",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_sendTokenOrGas",
+    "inputs": [
+      {
+        "name": "_withdrawId",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "_amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "op_setAllowance",
+    "inputs": [
+      {
+        "name": "_tokenAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_spender",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "op_unwrapNativeToken",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "op_wrapNativeToken",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "operators",
+    "inputs": [
+      {
+        "name": "operator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  }
+]
