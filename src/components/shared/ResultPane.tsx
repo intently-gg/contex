@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
-import { copyToClipboard } from "@/lib/utils"
+import { copyToClipboard, safeStringify, sanitizeForSerialization } from "@/lib/utils"
 import { toast } from "sonner"
 import { ExpandResultModal } from "./ExpandResultModal"
 
@@ -38,9 +38,31 @@ export function ResultPane({
   const [isOverflowing, setIsOverflowing] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
 
+  // Sanitize result and error for React DevTools (convert BigInt to string)
+  const sanitizedResult = useMemo(() => {
+    if (result === undefined) return undefined
+    return sanitizeForSerialization(result)
+  }, [result])
+
+  const sanitizedError = useMemo(() => {
+    if (!error) return null
+    // Create a new error object with sanitized properties
+    const sanitized = sanitizeForSerialization(error)
+    if (sanitized && typeof sanitized === "object" && "message" in sanitized) {
+      const err = new Error(String(sanitized.message))
+      if ("name" in sanitized) err.name = String(sanitized.name)
+      if ("stack" in sanitized) err.stack = String(sanitized.stack)
+      // Copy other sanitized properties
+      Object.assign(err, sanitized)
+      return err
+    }
+    return error
+  }, [error])
+
   const getResultText = (): string => {
-    if (error) {
-      return error.message || "Transaction failed"
+    if (sanitizedError) {
+      // Replace newlines with spaces for single-line display
+      return (sanitizedError.message || "Transaction failed").replace(/\n/g, " ").replace(/\s+/g, " ").trim()
     }
     if (hash) {
       let text = `Hash: ${hash}`
@@ -49,11 +71,12 @@ export function ResultPane({
       return text
     }
     if (result !== undefined) {
-      if (typeof result === "string") return result
+      if (typeof result === "string") return result.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
       if (typeof result === "number" || typeof result === "bigint") return String(result)
       if (typeof result === "boolean") return String(result)
       try {
-        return JSON.stringify(result)
+        const str = safeStringify(result)
+        return str.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
       } catch {
         return String(result)
       }
@@ -62,14 +85,19 @@ export function ResultPane({
   }
 
   const resultText = getResultText()
-  const isError = !!error
-  const hasResult = error || hash || result !== undefined
+  const isError = !!sanitizedError
+  const hasResult = sanitizedError || hash || result !== undefined
 
   // Check if text is overflowing
   useEffect(() => {
     if (textRef.current && hasResult) {
-      const element = textRef.current
-      setIsOverflowing(element.scrollWidth > element.clientWidth)
+      // Use requestAnimationFrame to ensure layout is complete
+      requestAnimationFrame(() => {
+        if (textRef.current) {
+          const element = textRef.current
+          setIsOverflowing(element.scrollWidth > element.clientWidth)
+        }
+      })
     } else {
       setIsOverflowing(false)
     }
@@ -89,7 +117,16 @@ export function ResultPane({
 
   return (
     <>
-      <div className="flex items-center gap-2 border-t pt-2 mt-4">
+      <div 
+        className="flex items-center gap-2 border-t pt-2 mt-4" 
+        style={{ 
+          width: "100%", 
+          minWidth: 0, 
+          maxWidth: "100%",
+          overflow: "hidden",
+          boxSizing: "border-box"
+        }}
+      >
         {/* Execute/Refresh Button */}
         {type === "write" ? (
           <Button
@@ -142,8 +179,8 @@ export function ResultPane({
           </Tooltip>
         )}
 
-        {/* Expand Button - only show if text is overflowing */}
-        {isOverflowing && (
+        {/* Expand Button - show when there's a result */}
+        {hasResult && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -163,15 +200,19 @@ export function ResultPane({
         {hasResult && (
           <div
             ref={textRef}
-            className="flex-1 min-w-0 text-sm overflow-hidden"
+            className="text-sm"
             style={{
+              flex: "1 1 0%",
+              minWidth: 0,
+              width: 0,
+              overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               color: isError ? "hsl(var(--destructive))" : undefined,
             }}
           >
-            {isError && <AlertCircle className="inline h-4 w-4 mr-1" />}
-            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1" />}
+            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
             {resultText}
           </div>
         )}
@@ -181,11 +222,11 @@ export function ResultPane({
       <ExpandResultModal
         open={expandOpen}
         onOpenChange={setExpandOpen}
-        error={error}
+        error={sanitizedError}
         hash={hash}
         isConfirming={isConfirming}
         isConfirmed={isConfirmed}
-        result={result}
+        result={sanitizedResult}
       />
     </>
   )

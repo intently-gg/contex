@@ -14,6 +14,7 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
+import { sanitizeForSerialization } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 
@@ -96,11 +97,48 @@ export function WriteFunction({
         }
       }
       
+      // Special handling for tuple arrays - parse each tuple element according to component types
+      if (isTupleType(field.type) && field.type.includes("[]")) {
+        const components = (field.abiParam as any).components || []
+        try {
+          const parsed = JSON.parse(String(val))
+          if (Array.isArray(parsed)) {
+            return parsed.map((tupleItem) => {
+              // Each tupleItem should be an array representing the tuple
+              if (Array.isArray(tupleItem)) {
+                return tupleItem.map((item, index) => {
+                  const component = components[index]
+                  if (component) {
+                    return parseInputValue(String(item), component.type)
+                  }
+                  return item
+                })
+              }
+              // If it's an object, convert to array format
+              if (typeof tupleItem === "object" && tupleItem !== null) {
+                return components.map((comp) => {
+                  const name = comp.name || ""
+                  const value = (tupleItem as any)[name] ?? ""
+                  return parseInputValue(String(value), comp.type)
+                })
+              }
+              return tupleItem
+            })
+          }
+        } catch {
+          // If parsing fails, try regular parsing
+          return parseInputValue(String(val), field.type)
+        }
+      }
+      
+      // parseInputValue now handles arrays recursively, converting string numbers to proper types
       return parseInputValue(String(val), field.type)
     })
 
     const filteredArgs = args.filter((a) => a !== undefined) as unknown[]
     const valueBigInt = value ? BigInt(value) : undefined
+
+    console.log(filteredArgs)
 
     try {
       await write(filteredArgs, valueBigInt)
@@ -138,10 +176,24 @@ export function WriteFunction({
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
   }, [])
 
+  // Sanitize error for React DevTools (convert BigInt to string)
+  const sanitizedError = useMemo(() => {
+    if (!error) return null
+    const sanitized = sanitizeForSerialization(error)
+    if (sanitized && typeof sanitized === "object" && "message" in sanitized) {
+      const err = new Error(String(sanitized.message))
+      if ("name" in sanitized) err.name = String(sanitized.name)
+      if ("stack" in sanitized) err.stack = String(sanitized.stack)
+      Object.assign(err, sanitized)
+      return err
+    }
+    return error
+  }, [error])
+
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="space-y-4">
+      <CardContent className="p-4" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
           <div className="flex items-center gap-2">
             <span className="text-base font-medium">{func.name}</span>
             <Tooltip>
@@ -232,7 +284,7 @@ export function WriteFunction({
           <ResultPane
             type="write"
             isLoading={isPending}
-            error={error}
+            error={sanitizedError}
             hash={hash}
             isConfirming={isConfirming}
             isConfirmed={isConfirmed}

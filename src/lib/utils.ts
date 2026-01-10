@@ -12,6 +12,50 @@ export function bigintReplacer(_key: string, value: unknown): unknown {
   return value
 }
 
+/**
+ * Recursively convert BigInt values to strings in objects/arrays
+ * This makes values serializable for React DevTools
+ */
+export function sanitizeForSerialization(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value
+  }
+  
+  if (typeof value === "bigint") {
+    return value.toString()
+  }
+  
+  if (Array.isArray(value)) {
+    return value.map(sanitizeForSerialization)
+  }
+  
+  if (typeof value === "object") {
+    // Handle Error objects specially - preserve message and name but sanitize other properties
+    if (value instanceof Error) {
+      const sanitized: Record<string, unknown> = {
+        name: value.name,
+        message: value.message,
+        stack: value.stack,
+      }
+      // Sanitize any additional properties that might contain BigInt
+      for (const [key, val] of Object.entries(value)) {
+        if (!["name", "message", "stack"].includes(key)) {
+          sanitized[key] = sanitizeForSerialization(val)
+        }
+      }
+      return sanitized
+    }
+    
+    const sanitized: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(value)) {
+      sanitized[key] = sanitizeForSerialization(val)
+    }
+    return sanitized
+  }
+  
+  return value
+}
+
 // Safe JSON.stringify that handles BigInt
 export function safeStringify(value: unknown, space?: string | number): string {
   return JSON.stringify(value, bigintReplacer, space)

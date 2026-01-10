@@ -13,6 +13,7 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
+import { sanitizeForSerialization } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 import { needsValueParser } from "@/lib/formGenerator"
@@ -150,10 +151,29 @@ export function ReadFunction({
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
   }, [])
 
+  // Sanitize error and result for React DevTools (convert BigInt to string)
+  const sanitizedError = useMemo(() => {
+    if (!error) return null
+    const sanitized = sanitizeForSerialization(error)
+    if (sanitized && typeof sanitized === "object" && "message" in sanitized) {
+      const err = new Error(String(sanitized.message))
+      if ("name" in sanitized) err.name = String(sanitized.name)
+      if ("stack" in sanitized) err.stack = String(sanitized.stack)
+      Object.assign(err, sanitized)
+      return err
+    }
+    return error
+  }, [error])
+
+  const sanitizedResult = useMemo(() => {
+    if (displayData === undefined) return undefined
+    return sanitizeForSerialization(displayData)
+  }, [displayData])
+
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="space-y-4">
+      <CardContent className="p-4" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -200,8 +220,8 @@ export function ReadFunction({
           <ResultPane
             type="read"
             isLoading={isLoading}
-            error={error}
-            result={displayData}
+            error={sanitizedError}
+            result={sanitizedResult}
             onRefresh={handleRefresh}
             showCheckmark={showCheckmark}
           />

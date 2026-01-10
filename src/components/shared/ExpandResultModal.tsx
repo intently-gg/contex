@@ -9,6 +9,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { ResultRenderer } from "./ResultRenderer"
+import { sanitizeForSerialization } from "@/lib/utils"
 
 interface ExpandResultModalProps {
   open: boolean
@@ -31,13 +32,19 @@ export function ExpandResultModal({
 }: ExpandResultModalProps) {
   const hasResult = error || hash || result !== undefined
 
+  // Sanitize result to ensure BigInt values are converted (already done in ResultPane, but do it here too for safety)
+  const sanitizedResult = useMemo(() => {
+    if (result === undefined) return undefined
+    return sanitizeForSerialization(result)
+  }, [result])
+
   // Determine if result is complex (array/object) - same logic as ReadFunction
   const isComplexValue = useMemo(() => {
-    if (error || result === undefined) return false
-    return typeof result === "object" && result !== null && !(result instanceof Date)
-  }, [result, error])
+    if (error || sanitizedResult === undefined) return false
+    return typeof sanitizedResult === "object" && sanitizedResult !== null && !(sanitizedResult instanceof Date)
+  }, [sanitizedResult, error])
 
-  const isSimpleValue = !error && result !== undefined && !isComplexValue
+  const isSimpleValue = !error && sanitizedResult !== undefined && !isComplexValue
 
   if (!hasResult) return null
 
@@ -76,16 +83,16 @@ export function ExpandResultModal({
                 {isConfirmed && " (Confirmed!)"}
               </AlertDescription>
             </Alert>
-          ) : result !== undefined ? (
+          ) : sanitizedResult !== undefined ? (
             isSimpleValue ? (
               <div className="space-y-2">
                 <div className="text-sm font-medium">Value</div>
                 <div className="rounded-md bg-muted p-3 text-sm border">
-                  {String(result)}
+                  {String(sanitizedResult)}
                 </div>
               </div>
             ) : (
-              <ResultRenderer value={result} />
+              <ResultRenderer value={sanitizedResult} />
             )
           ) : null}
         </div>

@@ -104,10 +104,15 @@ export function parseInputValue(
     try {
       const parsed = JSON.parse(value)
       if (Array.isArray(parsed)) {
-        return parsed
+        // Get the base type (e.g., "uint256[]" -> "uint256")
+        const baseType = type.replace("[]", "")
+        // Recursively parse each element according to the base type
+        return parsed.map((item) => parseInputValue(String(item), baseType))
       }
     } catch {
-      return value.split(",").map((v) => v.trim())
+      // If JSON parsing fails, try comma-separated values
+      const baseType = type.replace("[]", "")
+      return value.split(",").map((v) => parseInputValue(v.trim(), baseType))
     }
   }
 
