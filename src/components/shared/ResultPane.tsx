@@ -135,7 +135,7 @@ export function ResultPane({
   return (
     <>
       <div 
-        className={`border-t pt-2 mt-4 flex-shrink-0 ${shouldUseRenderer ? 'flex flex-col gap-2' : 'flex items-center gap-2'}`}
+        className="border-t pt-2 mt-4 flex-shrink-0 flex flex-col gap-2"
         style={{ 
           width: "100%", 
           minWidth: 0, 
@@ -177,27 +177,6 @@ export function ResultPane({
             </Button>
           ) : null}
 
-          {/* Result Text - only show for simple values */}
-          {hasResult && !shouldUseRenderer && (
-            <div
-              ref={textRef}
-              className="text-sm"
-              style={{
-                flex: "1 1 0%",
-                minWidth: 0,
-                width: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                color: isError ? "hsl(var(--destructive))" : undefined,
-              }}
-            >
-              {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-              {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-              {resultText}
-            </div>
-          )}
-
           {/* Copy Button - only show if there's a result and not using ResultRenderer (which has its own copy button) */}
           {hasResult && !shouldUseRenderer && (
             <Tooltip>
@@ -236,6 +215,26 @@ export function ResultPane({
             </Tooltip>
           )}
         </div>
+
+        {/* Result Text - show below buttons for simple values */}
+        {hasResult && !shouldUseRenderer && (
+          <div
+            ref={textRef}
+            className="text-sm"
+            style={{
+              width: "100%",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              color: isError ? "hsl(var(--destructive))" : undefined,
+            }}
+          >
+            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+            {resultText}
+          </div>
+        )}
 
         {/* ResultRenderer - show below buttons for complex read results */}
         {shouldUseRenderer && (
