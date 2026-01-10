@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pin, PinOff, Zap, RotateCcw, Sparkles } from "lucide-react"
+import { Pin, PinOff, RotateCcw, Sparkles } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
@@ -116,7 +116,7 @@ export function WriteFunction({
               }
               // If it's an object, convert to array format
               if (typeof tupleItem === "object" && tupleItem !== null) {
-                return components.map((comp) => {
+                return components.map((comp: any) => {
                   const name = comp.name || ""
                   const value = (tupleItem as any)[name] ?? ""
                   return parseInputValue(String(value), comp.type)
@@ -234,7 +234,7 @@ export function WriteFunction({
 
           {/* Input Fields */}
           {formFields.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {formFields.map((field) => (
                 <InputControl
                   key={field.name}
@@ -252,9 +252,9 @@ export function WriteFunction({
           )}
 
           {isPayable && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
-              <div className="flex gap-1">
+              <div className="flex gap-0.5">
                 <Input
                   id={`${func.name}-value`}
                   type="text"

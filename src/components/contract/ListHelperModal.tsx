@@ -171,12 +171,12 @@ export function ListHelperModal({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-[50%_50%] gap-4 flex-1 overflow-hidden">
-          <div className="space-y-4 overflow-y-auto pr-2">
+          <div className="space-y-2 overflow-y-auto pr-2">
             {listValues.map((value, index) => {
               const itemParam = createItemParam()
               const itemName = `item_${index}`
               return (
-                <div key={index} className="border rounded-md p-3 space-y-2">
+                <div key={index} className="border rounded-md p-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Item {index + 1}</span>
                     <Button

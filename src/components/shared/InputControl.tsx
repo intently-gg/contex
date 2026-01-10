@@ -43,7 +43,7 @@ export function InputControl({
       const radioValue = value === true ? "true" : value === false ? "false" : ""
       
       return (
-        <div className="flex items-center space-x-4 flex-1">
+        <div className="flex items-center space-x-2 flex-1">
           <RadioGroup
             value={radioValue}
             onValueChange={(val) => {
@@ -54,15 +54,15 @@ export function InputControl({
                 onChange(val === "true")
               }
             }}
-            className="flex flex-row gap-4"
+            className="flex flex-row gap-2"
           >
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <RadioGroupItem value="true" id={`${fieldName}-true`} />
               <Label htmlFor={`${fieldName}-true`} className="text-sm cursor-pointer">
                 True
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <RadioGroupItem value="false" id={`${fieldName}-false`} />
               <Label htmlFor={`${fieldName}-false`} className="text-sm cursor-pointer">
                 False
@@ -276,11 +276,11 @@ export function InputControl({
   }
 
   return (
-    <div className={`space-y-2 ${className || ""}`}>
+    <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
         {fieldName} ({fieldType})
       </Label>
-      <div className="flex gap-1">
+      <div className="flex gap-0.5">
         {isTuple ? (
           <Textarea
             id={fieldName}

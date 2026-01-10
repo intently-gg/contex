@@ -172,7 +172,7 @@ export function TupleHelperModal({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-[50%_50%] gap-4 flex-1 overflow-hidden">
-          <div className="space-y-4 overflow-y-auto pr-2">
+          <div className="space-y-2 overflow-y-auto pr-2">
             {components.map((comp: AbiParameter, index: number) => {
               const compName = comp.name || `param_${index}`
               return (

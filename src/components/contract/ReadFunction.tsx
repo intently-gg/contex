@@ -199,7 +199,7 @@ export function ReadFunction({
 
           {/* Input Fields */}
           {formFields.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {formFields.map((field) => (
                 <InputControl
                   key={field.name}
