@@ -118,7 +118,7 @@ export function ResultPane({
   return (
     <>
       <div 
-        className="flex items-center gap-2 border-t pt-2 mt-4" 
+        className="flex items-center gap-2 border-t pt-2 mt-4 flex-shrink-0" 
         style={{ 
           width: "100%", 
           minWidth: 0, 

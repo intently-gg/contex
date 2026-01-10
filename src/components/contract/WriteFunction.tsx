@@ -191,96 +191,100 @@ export function WriteFunction({
   }, [error])
 
   return (
-    <Card>
-      <CardContent className="p-4" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
-        <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-medium">{func.name}</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => toggleFavorite(contractLabel, func.name)}
-                >
-                  {isFav ? (
-                    <Pin className="h-3.5 w-3.5 fill-current" />
-                  ) : (
-                    <PinOff className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isFav ? "Unpin from favorites" : "Pin to favorites"}
-              </TooltipContent>
-            </Tooltip>
-            {hasData && (
+    <Card className="h-full flex flex-col">
+      <CardContent className="p-4 flex flex-col flex-1 min-h-0" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div className="flex-1 overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
+          <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-medium">{func.name}</span>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={handleReset}
+                    onClick={() => toggleFavorite(contractLabel, func.name)}
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
+                    {isFav ? (
+                      <Pin className="h-3.5 w-3.5 fill-current" />
+                    ) : (
+                      <PinOff className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Reset all inputs</TooltipContent>
+                <TooltipContent>
+                  {isFav ? "Unpin from favorites" : "Pin to favorites"}
+                </TooltipContent>
               </Tooltip>
-            )}
-          </div>
-
-          {/* Input Fields */}
-          {formFields.length > 0 && (
-            <div className="space-y-1">
-              {formFields.map((field) => (
-                <InputControl
-                  key={field.name}
-                  fieldName={field.name}
-                  fieldType={field.type}
-                  abiParam={field.abiParam}
-                  value={inputs[field.name] ?? ""}
-                  onChange={(value) => handleInputChange(field.name, value)}
-                  onValueHelper={(name) => setValueParserOpen(name)}
-                  onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-                  onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                />
-              ))}
-            </div>
-          )}
-
-          {isPayable && (
-            <div className="space-y-1">
-              <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
-              <div className="flex gap-0.5">
-                <Input
-                  id={`${func.name}-value`}
-                  type="text"
-                  placeholder="0"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  className="flex-1"
-                />
+              {hasData && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
-                      className="h-10 w-10 flex items-center justify-center"
-                      onClick={() => setValueParserOpen("__eth_value__")}
+                      className="h-7 w-7"
+                      onClick={handleReset}
                     >
-                      <Sparkles className="h-4 w-4" />
+                      <RotateCcw className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Value Helper</TooltipContent>
+                  <TooltipContent>Reset all inputs</TooltipContent>
                 </Tooltip>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Result Pane */}
+            {/* Input Fields */}
+            {formFields.length > 0 && (
+              <div className="space-y-1">
+                {formFields.map((field) => (
+                  <InputControl
+                    key={field.name}
+                    fieldName={field.name}
+                    fieldType={field.type}
+                    abiParam={field.abiParam}
+                    value={inputs[field.name] ?? ""}
+                    onChange={(value) => handleInputChange(field.name, value)}
+                    onValueHelper={(name) => setValueParserOpen(name)}
+                    onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
+                    onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+                  />
+                ))}
+              </div>
+            )}
+
+            {isPayable && (
+              <div className="space-y-1">
+                <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
+                <div className="flex gap-0.5">
+                  <Input
+                    id={`${func.name}-value`}
+                    type="text"
+                    placeholder="0"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 flex items-center justify-center"
+                        onClick={() => setValueParserOpen("__eth_value__")}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Value Helper</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Result Pane - Pinned to bottom */}
+        <div className="flex-shrink-0" style={{ width: "100%", minWidth: 0 }}>
           <ResultPane
             type="write"
             isLoading={isPending}

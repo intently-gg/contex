@@ -171,52 +171,56 @@ export function ReadFunction({
   }, [displayData])
 
   return (
-    <Card>
-      <CardContent className="p-4" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
-        <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => toggleFavorite(contractLabel, func.name)}
-                >
-                  {isFav ? (
-                    <Pin className="h-3.5 w-3.5 fill-current" />
-                  ) : (
-                    <PinOff className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isFav ? "Unpin from favorites" : "Pin to favorites"}
-              </TooltipContent>
-            </Tooltip>
-            <span className="text-base font-medium">{func.name}</span>
-          </div>
-
-          {/* Input Fields */}
-          {formFields.length > 0 && (
-            <div className="space-y-1">
-              {formFields.map((field) => (
-                <InputControl
-                  key={field.name}
-                  fieldName={field.name}
-                  fieldType={field.type}
-                  abiParam={field.abiParam}
-                  value={inputs[field.name] ?? ""}
-                  onChange={(value) => handleInputChange(field.name, value)}
-                  onValueHelper={(name) => setValueParserOpen(name)}
-                  onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-                  onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                />
-              ))}
+    <Card className="h-full flex flex-col">
+      <CardContent className="p-4 flex flex-col flex-1 min-h-0" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div className="flex-1 overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
+          <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => toggleFavorite(contractLabel, func.name)}
+                  >
+                    {isFav ? (
+                      <Pin className="h-3.5 w-3.5 fill-current" />
+                    ) : (
+                      <PinOff className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isFav ? "Unpin from favorites" : "Pin to favorites"}
+                </TooltipContent>
+              </Tooltip>
+              <span className="text-base font-medium">{func.name}</span>
             </div>
-          )}
 
-          {/* Result Pane */}
+            {/* Input Fields */}
+            {formFields.length > 0 && (
+              <div className="space-y-1">
+                {formFields.map((field) => (
+                  <InputControl
+                    key={field.name}
+                    fieldName={field.name}
+                    fieldType={field.type}
+                    abiParam={field.abiParam}
+                    value={inputs[field.name] ?? ""}
+                    onChange={(value) => handleInputChange(field.name, value)}
+                    onValueHelper={(name) => setValueParserOpen(name)}
+                    onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
+                    onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Result Pane - Pinned to bottom */}
+        <div className="flex-shrink-0" style={{ width: "100%", minWidth: 0 }}>
           <ResultPane
             type="read"
             isLoading={isLoading}
