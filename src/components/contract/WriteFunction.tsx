@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pin, PinOff, AlertCircle, CheckCircle2, Zap, RotateCcw, Sparkles } from "lucide-react"
+import { Pin, PinOff, Zap, RotateCcw, Sparkles } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
+import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
@@ -141,143 +141,104 @@ export function WriteFunction({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="grid grid-cols-[40%_60%] gap-4">
-          {/* Left Column: Function Label and Controls */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-medium">{func.name}</span>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-medium">{func.name}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => toggleFavorite(contractLabel, func.name)}
+                >
+                  {isFav ? (
+                    <Pin className="h-3.5 w-3.5 fill-current" />
+                  ) : (
+                    <PinOff className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isFav ? "Unpin from favorites" : "Pin to favorites"}
+              </TooltipContent>
+            </Tooltip>
+            {hasData && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => toggleFavorite(contractLabel, func.name)}
+                    onClick={handleReset}
                   >
-                    {isFav ? (
-                      <Pin className="h-3.5 w-3.5 fill-current" />
-                    ) : (
-                      <PinOff className="h-3.5 w-3.5" />
-                    )}
+                    <RotateCcw className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {isFav ? "Unpin from favorites" : "Pin to favorites"}
-                </TooltipContent>
+                <TooltipContent>Reset all inputs</TooltipContent>
               </Tooltip>
-              {hasData && (
+            )}
+          </div>
+
+          {/* Input Fields */}
+          {formFields.length > 0 && (
+            <div className="space-y-2">
+              {formFields.map((field) => (
+                <InputControl
+                  key={field.name}
+                  fieldName={field.name}
+                  fieldType={field.type}
+                  abiParam={field.abiParam}
+                  value={inputs[field.name] ?? ""}
+                  onChange={(value) => handleInputChange(field.name, value)}
+                  onValueHelper={(name) => setValueParserOpen(name)}
+                  onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
+                  onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+                />
+              ))}
+            </div>
+          )}
+
+          {isPayable && (
+            <div className="space-y-2">
+              <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
+              <div className="flex gap-1">
+                <Input
+                  id={`${func.name}-value`}
+                  type="text"
+                  placeholder="0"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  className="flex-1"
+                />
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
-                      className="h-7 w-7"
-                      onClick={handleReset}
+                      className="h-10 w-10 flex items-center justify-center"
+                      onClick={() => setValueParserOpen("__eth_value__")}
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
+                      <Sparkles className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Reset all inputs</TooltipContent>
+                  <TooltipContent>Value Helper</TooltipContent>
                 </Tooltip>
-              )}
+              </div>
             </div>
+          )}
 
-            {/* Input Fields */}
-            {formFields.length > 0 && (
-              <div className="space-y-2">
-                {formFields.map((field) => (
-                  <InputControl
-                    key={field.name}
-                    fieldName={field.name}
-                    fieldType={field.type}
-                    abiParam={field.abiParam}
-                    value={inputs[field.name] ?? ""}
-                    onChange={(value) => handleInputChange(field.name, value)}
-                    onValueHelper={(name) => setValueParserOpen(name)}
-                    onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-                    onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                  />
-                ))}
-              </div>
-            )}
-
-            {isPayable && (
-              <div className="space-y-2">
-                <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
-                <div className="flex gap-1">
-                  <Input
-                    id={`${func.name}-value`}
-                    type="text"
-                    placeholder="0"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 flex items-center justify-center"
-                        onClick={() => setValueParserOpen("__eth_value__")}
-                      >
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Value Helper</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            )}
-
-            <Button
-              onClick={handleWrite}
-              disabled={isPending || isConfirming || !supportedChainIds.includes(chainId)}
-              style={{
-                maxWidth: '100px',
-                opacity: (isPending || isConfirming || !supportedChainIds.includes(chainId)) ? 0.5 : 1,
-                cursor: (isPending || isConfirming || !supportedChainIds.includes(chainId)) ? 'not-allowed' : 'pointer',
-              }}
-              variant="default"
-            >
-              <Zap className={`mr-2 h-4 w-4 ${isPending || isConfirming ? "animate-pulse" : ""}`} />
-              Execute
-            </Button>
-          </div>
-
-          {/* Right Column: Results */}
-          <div className="space-y-2" style={{ paddingRight: '10px' }}>
-            {error && (
-              <Alert variant="destructive" className="max-w-full">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription 
-                  className="text-pink-600 dark:text-pink-400 break-words overflow-wrap-anywhere whitespace-pre-wrap overflow-y-auto max-h-96"
-                  style={{ 
-                    wordBreak: 'break-word',
-                    overflowWrap: 'anywhere',
-                    maxWidth: '100%',
-                    overflowX: 'hidden',
-                    paddingLeft: '3px'
-                  }}
-                >
-                  {error.message || "Transaction failed"}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {hash && (
-              <Alert>
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>Transaction Submitted</AlertTitle>
-                <AlertDescription>
-                  Hash: {hash}
-                  {isConfirming && " (Confirming...)"}
-                  {isConfirmed && " (Confirmed!)"}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+          {/* Result Pane */}
+          <ResultPane
+            type="write"
+            isLoading={isPending}
+            error={error}
+            hash={hash}
+            isConfirming={isConfirming}
+            isConfirmed={isConfirmed}
+            onExecute={handleWrite}
+            disabled={!supportedChainIds.includes(chainId)}
+          />
         </div>
       </CardContent>
       {formFields.map((field) => {
