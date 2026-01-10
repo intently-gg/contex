@@ -62,16 +62,26 @@ export function ValueParserModal({
   })
   const [units, setUnits] = useState("")
 
-  // Try to load from current value if it hasn't changed
+  // Reset state when modal opens/closes
   useEffect(() => {
-    if (open && currentValue && memoryKey && decimalsMemory[memoryKey]) {
-      try {
-        const savedDecimals = Number.parseInt(decimalsMemory[memoryKey], 10)
-        const parsedUnits = formatUnits(BigInt(currentValue), savedDecimals)
-        setUnits(parsedUnits)
-      } catch {
-        // If parsing fails, don't auto-populate
+    if (open) {
+      // If currentValue exists and we have saved decimals, try to load it
+      if (currentValue && memoryKey && decimalsMemory[memoryKey]) {
+        try {
+          const savedDecimals = Number.parseInt(decimalsMemory[memoryKey], 10)
+          const parsedUnits = formatUnits(BigInt(currentValue), savedDecimals)
+          setUnits(parsedUnits)
+        } catch {
+          // If parsing fails, reset to empty
+          setUnits("")
+        }
+      } else {
+        // If no currentValue, reset to empty (don't remember previous input)
+        setUnits("")
       }
+    } else {
+      // When modal closes, reset units state
+      setUnits("")
     }
   }, [open, currentValue, memoryKey])
 
@@ -251,7 +261,7 @@ export function ValueParserModal({
                 </Tooltip>
               </div>
             ) : (
-              <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
+              <div className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono min-h-[42px] flex items-center text-muted-foreground">
                 Enter values to see preview
               </div>
             )}

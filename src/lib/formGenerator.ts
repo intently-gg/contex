@@ -46,9 +46,11 @@ export function needsValueParser(fieldName: string, fieldType: string): boolean 
   const lowerName = fieldName.toLowerCase()
   const lowerType = fieldType.toLowerCase()
   
+  // Check if it's any uint or int type (not just 256)
+  const isUintOrInt = fieldType.startsWith("uint") || fieldType.startsWith("int")
+  
   return (
-    fieldType === "uint256" ||
-    fieldType === "int256" ||
+    isUintOrInt ||
     lowerName.includes("wei") ||
     lowerName.includes("amount") ||
     lowerName.includes("units") ||

@@ -65,7 +65,7 @@ export function Header() {
             )}
           </Button>
           <div style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}>
-            <ConnectButton accountStatus="avatar" chainStatus="icon" />
+            <ConnectButton showBalance={false} chainStatus="icon" />
           </div>
         </div>
       </div>

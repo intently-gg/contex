@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit"
+import { RainbowKitProvider, lightTheme, darkTheme } from "@rainbow-me/rainbowkit"
 import { Toaster } from "sonner"
 import "@rainbow-me/rainbowkit/styles.css"
 import { config } from "@/lib/wagmi"
@@ -32,13 +32,20 @@ function AppContent() {
   )
 }
 
+function ThemedRainbowKitProvider({ children }: { children: React.ReactNode }) {
+  const { theme } = useThemeStore()
+  const rainbowKitTheme = theme === "dark" ? darkTheme() : lightTheme()
+
+  return <RainbowKitProvider theme={rainbowKitTheme}>{children}</RainbowKitProvider>
+}
+
 function App() {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <ThemedRainbowKitProvider>
           <AppContent />
-        </RainbowKitProvider>
+        </ThemedRainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )

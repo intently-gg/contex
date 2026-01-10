@@ -94,7 +94,12 @@ export function updateAddressLabel(
 ): ContractsRegistry {
   const newContracts = { ...contracts }
   if (newContracts[contractLabel]?.addresses[addressIndex]) {
-    newContracts[contractLabel].addresses[addressIndex].label = newLabel
+    newContracts[contractLabel] = {
+      ...newContracts[contractLabel],
+      addresses: newContracts[contractLabel].addresses.map((addr, idx) =>
+        idx === addressIndex ? { ...addr, label: newLabel } : addr
+      ),
+    }
   }
   return newContracts
 }
@@ -133,7 +138,12 @@ export function updateAddressChainIds(
 ): ContractsRegistry {
   const newContracts = { ...contracts }
   if (newContracts[contractLabel]?.addresses[addressIndex]) {
-    newContracts[contractLabel].addresses[addressIndex].chainIds = chainIds
+    newContracts[contractLabel] = {
+      ...newContracts[contractLabel],
+      addresses: newContracts[contractLabel].addresses.map((addr, idx) =>
+        idx === addressIndex ? { ...addr, chainIds } : addr
+      ),
+    }
   }
   return newContracts
 }

@@ -129,7 +129,7 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
       </div>
       <div className="border rounded-md overflow-hidden" style={{ height: editorHeight }}>
         <Editor
-          height="100%"
+          height={editorHeight}
           language={format === "raw" ? "plaintext" : format}
           theme={editorTheme}
           value={resultContent}

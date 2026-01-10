@@ -91,7 +91,12 @@ export function WriteFunction({
   }
 
   const handleValueParserApply = useCallback((fieldName: string, parsedValue: string) => {
-    setInputs((prev) => ({ ...prev, [fieldName]: parsedValue }))
+    // Special case for ETH value field
+    if (fieldName === "__eth_value__") {
+      setValue(parsedValue)
+    } else {
+      setInputs((prev) => ({ ...prev, [fieldName]: parsedValue }))
+    }
     setValueParserOpen(null)
   }, [])
 
@@ -190,7 +195,7 @@ export function WriteFunction({
                         variant="outline"
                         size="icon"
                         className="h-10 w-10 flex items-center justify-center"
-                        onClick={() => setValueParserOpen("value")}
+                        onClick={() => setValueParserOpen("__eth_value__")}
                       >
                         <Sparkles className="h-4 w-4" />
                       </Button>
@@ -261,6 +266,21 @@ export function WriteFunction({
         }
         return null
       })}
+      {/* Separate ValueParserModal for ETH value field */}
+      {isPayable && (
+        <ValueParserModal
+          key="__eth_value__"
+          open={valueParserOpen === "__eth_value__"}
+          onOpenChange={(open) => setValueParserOpen(open ? "__eth_value__" : null)}
+          onApply={(parsedValue) => handleValueParserApply("__eth_value__", parsedValue)}
+          fieldName="Value (wei)"
+          fieldType="uint256"
+          currentValue={value}
+          contractLabel={contractLabel}
+          address={address}
+          functionName={func.name}
+        />
+      )}
       {tupleHelperOpen && (
         <TupleHelperModal
           open={!!tupleHelperOpen}

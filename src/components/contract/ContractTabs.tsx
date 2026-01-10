@@ -25,7 +25,7 @@ export function ContractTabs({ onAddContract }: ContractTabsProps) {
       className="w-full"
     >
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-sm font-medium text-muted-foreground" style={{ paddingLeft: '10px' }}>Contract List</span>
+        <span className="text-sm font-medium text-muted-foreground" style={{ paddingLeft: '10px' }}>ABI List</span>
         <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground overflow-x-auto overflow-y-hidden border flex-1" style={{ border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
           {contractLabels.map((label) => (
             <TabsTrigger 

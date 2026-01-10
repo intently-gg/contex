@@ -49,7 +49,9 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const addressIndex = selectedAddresses[contractLabel] ?? 0
   const selectedAddress = contract.addresses[addressIndex]
   const selectedFunction = getSelectedFunction(contractLabel)
-  const abi = abis[contract.abi]
+  
+  // Stabilize ABI reference to prevent infinite loops with large ABIs
+  const abi = useMemo(() => abis[contract.abi], [abis, contract.abi])
 
   // Auto-refresh read functions with no params when address/chain/wallet changes
   useEffect(() => {
@@ -88,7 +90,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       prevChainIdRef.current = chainId
       prevWalletAddressRef.current = walletAddress || null
     }
-  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi, clearReadResultsForContract])
+  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi])
 
   const handleUpdateContractLabel = async (newLabel: string) => {
     try {

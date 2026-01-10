@@ -73,7 +73,7 @@ function AutoRefreshFunction({
     shouldAutoRefresh
   )
 
-  // Trigger refetch when refreshKey changes OR when component first mounts
+  // Trigger refetch when refreshKey changes
   // The key prop ensures component remounts when address changes, so this will run
   useEffect(() => {
     if (refreshKey !== undefined && refreshKey > 0) {
@@ -89,23 +89,8 @@ function AutoRefreshFunction({
       }, 10)
       return () => clearTimeout(timer)
     }
-  }, [refreshKey, refetch, contractLabel, functionName, address])
-
-  // Also trigger on mount (when address changes, component remounts due to key)
-  useEffect(() => {
-    if (shouldAutoRefresh) {
-      const timer = setTimeout(() => {
-        console.debug('[AutoRefreshFunction] Attempting to auto-refresh value (on mount)', {
-          contractLabel,
-          functionName,
-          address,
-          refreshKey,
-        })
-        refetch()
-      }, 10)
-      return () => clearTimeout(timer)
-    }
-  }, [shouldAutoRefresh, refetch, contractLabel, functionName, address, refreshKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   return null // This component doesn't render anything visible
 }

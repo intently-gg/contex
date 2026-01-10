@@ -13,10 +13,10 @@
         "address": "0x589b51cac450E2AFCE79EFFfd79288C1f8d0c1BB",
         "label": "SandboxDev",
         "chainIds": [
-          42161,
           10,
+          8453,
           137,
-          8453
+          42161
         ]
       },
       {
@@ -27,6 +27,18 @@
           10,
           137,
           8453
+        ]
+      }
+    ]
+  },
+  "Acx SpokePool": {
+    "abi": "acxSpokePool.json",
+    "addresses": [
+      {
+        "address": "0x6f26Bf09B1C792e3228e5467807a900A503c0281",
+        "label": "OP Acx SpokePool 0x6f26...0281",
+        "chainIds": [
+          10
         ]
       }
     ]

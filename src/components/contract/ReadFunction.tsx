@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useChainId } from "wagmi"
 import { useReadContractFunction } from "@/hooks/useContractFunctions"
 import { generateFormFields, parseInputValue } from "@/lib/formGenerator"
@@ -48,6 +48,7 @@ export function ReadFunction({
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
+  const [showCheckmark, setShowCheckmark] = useState(false)
 
   const formFields = generateFormFields([...func.inputs])
   const savedFormState = getFormState(abiFileName, func.name) || {}
@@ -96,7 +97,8 @@ export function ReadFunction({
       }, 10)
       return () => clearTimeout(timer)
     }
-  }, [refreshKey, hasNoParams, refetch, contractLabel, func.name, address])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, hasNoParams])
 
   // Load cached result - but only if we have no fresh data
   // For functions with params, never show cached data unless manually refreshed
@@ -112,9 +114,27 @@ export function ReadFunction({
     setFormState(abiFileName, func.name, inputs)
   }, [inputs, abiFileName, func.name, setFormState])
 
+  const wasLoadingRef = useRef(false)
+
   const handleRefresh = async () => {
     await refetch()
+    setShowCheckmark(true)
+    setTimeout(() => setShowCheckmark(false), 2000)
   }
+
+  // Show checkmark when loading completes (for auto-refresh)
+  useEffect(() => {
+    if (!isLoading && wasLoadingRef.current) {
+      // Just finished loading, show checkmark
+      setShowCheckmark(true)
+      const timer = setTimeout(() => setShowCheckmark(false), 2000)
+      wasLoadingRef.current = false
+      return () => clearTimeout(timer)
+    }
+    if (isLoading) {
+      wasLoadingRef.current = true
+    }
+  }, [isLoading])
 
   const isFav = isFavorite(contractLabel, func.name)
 
@@ -267,7 +287,13 @@ export function ReadFunction({
                 }
               }}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              {isLoading ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : showCheckmark ? (
+                <Check className="mr-2 h-4 w-4" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
               Refresh
             </Button>
           </div>
@@ -373,7 +399,7 @@ export function ReadFunction({
               ) : (
                 <div className="border rounded-md overflow-hidden" style={{ minHeight: "65px", height: editorHeight === "auto" ? "auto" : editorHeight }}>
                   <Editor
-                    height="100%"
+                    height={editorHeight}
                     language={format === "raw" ? "plaintext" : format}
                     theme={editorTheme}
                     value={resultContent || ""}
@@ -385,7 +411,7 @@ export function ReadFunction({
                       fontSize: 13,
                       lineNumbers: "off",
                       folding: false,
-                      automaticLayout: false,
+                      automaticLayout: true,
                     }}
                   />
                 </div>
