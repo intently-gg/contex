@@ -88,7 +88,7 @@ export function ExpandResultModal({
               <div className="space-y-2">
                 <div className="text-sm font-medium">Value</div>
                 <div className="rounded-md bg-muted p-3 text-sm border">
-                  {String(sanitizedResult)}
+                  Result: {String(sanitizedResult)}
                 </div>
               </div>
             ) : (

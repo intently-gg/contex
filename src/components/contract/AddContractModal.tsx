@@ -86,7 +86,7 @@ export function AddContractModal({
     setAddress(cleaned)
     
     // Auto-populate address label if empty and address is valid
-    if (!addressLabel && cleaned.length === 42 && isAddress(cleaned)) {
+    if (!addressLabel && cleaned.length === 42 && isAddress(cleaned, { strict: false })) {
       const abiLabel = getABILabel(abiLabels, abiFileName)
       const addr = getAddress(cleaned)
       const label = `${abiLabel} ${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -130,8 +130,8 @@ export function AddContractModal({
       return
     }
     
-    // Final validation with viem
-    if (isAddress(cleaned)) {
+    // Final validation with viem (no checksum required)
+    if (isAddress(cleaned, { strict: false })) {
       handleAddressChange(cleaned)
     } else {
       toast.error("Invalid address", {
@@ -149,7 +149,7 @@ export function AddContractModal({
   }
 
   const handleDetect = async () => {
-    if (!address || !isAddress(address)) {
+    if (!address || !isAddress(address, { strict: false })) {
       toast.error("Please enter a valid contract address first")
       return
     }
@@ -199,7 +199,7 @@ export function AddContractModal({
       return
     }
 
-    if (!isAddress(address)) {
+    if (!isAddress(address, { strict: false })) {
       toast.error("Invalid contract address")
       return
     }
@@ -348,7 +348,7 @@ export function AddContractModal({
                     variant="outline"
                     size="sm"
                     onClick={handleDetect}
-                    disabled={isDetecting || !address || !isAddress(address)}
+                    disabled={isDetecting || !address || !isAddress(address, { strict: false })}
                   >
                     {isDetecting ? (
                       <>

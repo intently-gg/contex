@@ -77,4 +77,25 @@
   button:disabled {
     cursor: not-allowed;
   }
+
+  /* Utility classes for opacity with CSS variables - fixes Tailwind v4 opacity modifier issue */
+  .bg-muted-50 {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+  
+  .bg-muted-40 {
+    background-color: hsl(var(--muted) / 0.4);
+  }
+  
+  .bg-muted-60 {
+    background-color: hsl(var(--muted) / 0.6);
+  }
+  
+  .bg-muted-80 {
+    background-color: hsl(var(--muted) / 0.8);
+  }
+  
+  .border-border-50 {
+    border-color: hsl(var(--border) / 0.5);
+  }
 }

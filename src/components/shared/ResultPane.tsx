@@ -71,15 +71,22 @@ export function ResultPane({
       return text
     }
     if (result !== undefined) {
-      if (typeof result === "string") return result.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
-      if (typeof result === "number" || typeof result === "bigint") return String(result)
-      if (typeof result === "boolean") return String(result)
-      try {
-        const str = safeStringify(result)
-        return str.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
-      } catch {
-        return String(result)
+      let formattedResult: string
+      if (typeof result === "string") {
+        formattedResult = result.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+      } else if (typeof result === "number" || typeof result === "bigint") {
+        formattedResult = String(result)
+      } else if (typeof result === "boolean") {
+        formattedResult = String(result)
+      } else {
+        try {
+          const str = safeStringify(result)
+          formattedResult = str.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+        } catch {
+          formattedResult = String(result)
+        }
       }
+      return `Result: ${formattedResult}`
     }
     return ""
   }
@@ -158,6 +165,27 @@ export function ResultPane({
           </Button>
         ) : null}
 
+        {/* Result Text */}
+        {hasResult && (
+          <div
+            ref={textRef}
+            className="text-sm"
+            style={{
+              flex: "1 1 0%",
+              minWidth: 0,
+              width: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              color: isError ? "hsl(var(--destructive))" : undefined,
+            }}
+          >
+            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+            {resultText}
+          </div>
+        )}
+
         {/* Copy Button - only show if there's a result */}
         {hasResult && (
           <Tooltip>
@@ -194,27 +222,6 @@ export function ResultPane({
             </TooltipTrigger>
             <TooltipContent>Expand result</TooltipContent>
           </Tooltip>
-        )}
-
-        {/* Result Text */}
-        {hasResult && (
-          <div
-            ref={textRef}
-            className="text-sm"
-            style={{
-              flex: "1 1 0%",
-              minWidth: 0,
-              width: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              color: isError ? "hsl(var(--destructive))" : undefined,
-            }}
-          >
-            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {resultText}
-          </div>
         )}
       </div>
 

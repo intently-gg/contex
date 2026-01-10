@@ -32,7 +32,7 @@ export function generateFormFields(inputs: AbiParameter[]): FormField[] {
     } else {
       baseField.component = "input"
       if (input.type.startsWith("uint") || input.type.startsWith("int")) {
-        baseField.placeholder = `Number (${input.type})`
+        baseField.placeholder = `12345...`
       } else if (input.type === "address") {
         baseField.placeholder = "0x..."
       }
@@ -107,6 +107,7 @@ export function parseInputValue(
         // Get the base type (e.g., "uint256[]" -> "uint256")
         const baseType = type.replace("[]", "")
         // Recursively parse each element according to the base type
+        // This will handle address[] correctly by calling parseInputValue with "address"
         return parsed.map((item) => parseInputValue(String(item), baseType))
       }
     } catch {
@@ -128,7 +129,10 @@ export function parseInputValue(
   }
 
   if (type === "address") {
-    return value.trim()
+    // Normalize to lowercase to avoid checksum validation issues
+    const trimmed = value.trim().toLowerCase()
+    // Ensure it starts with 0x
+    return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`
   }
 
   if (type.includes("bytes")) {

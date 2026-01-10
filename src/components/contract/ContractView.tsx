@@ -242,7 +242,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           onSelectFunction={(functionName) => setSelectedFunction(contractLabel, functionName)}
         />
       )}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col" style={{ maxWidth: '1125px' }}>
         <div className="p-4 border-b flex items-center gap-4">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">Contract Address:</label>

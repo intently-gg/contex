@@ -81,7 +81,7 @@ export function InputControl({
         const baseType = fieldType.replace("[]", "")
         let placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
         if (baseType.startsWith("tuple")) {
-          placeholder = "Recommended to use the helper →"
+          placeholder = "Recommended to use the helper →→→"
         }
         return (
           <Textarea
@@ -195,7 +195,7 @@ export function InputControl({
       } else if (baseType === "string") {
         placeholder = `Array of strings, e.g. ["value1", "value2"]`
       } else if (baseType.startsWith("tuple")) {
-        placeholder = "Recommended to use the helper →"
+        placeholder = "Recommended to use the helper →→→"
       }
       
       return (
@@ -257,7 +257,7 @@ export function InputControl({
         type="text"
         placeholder={
           fieldType.startsWith("uint") || fieldType.startsWith("int")
-            ? `Number (${fieldType})`
+            ? `12345... `
             : ""
         }
         value={String(value || "")}
@@ -270,7 +270,7 @@ export function InputControl({
   // Get placeholder for tuple types
   const getTuplePlaceholder = () => {
     if (isTuple) {
-      return "Recommended to use the helper →"
+      return "Recommended to use the helper →→→"
     }
     return undefined
   }
@@ -278,7 +278,7 @@ export function InputControl({
   return (
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
-        {fieldName} ({fieldType})
+        {fieldName} <span style={{ color: 'hsl(var(--muted-foreground))' }}>({fieldType})</span>
       </Label>
       <div className="flex gap-0.5">
         {isTuple ? (

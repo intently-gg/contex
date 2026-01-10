@@ -6,7 +6,7 @@ import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pin, PinOff } from "lucide-react"
+import { Pin, PinOff, Eye } from "lucide-react"
 import { toast } from "sonner"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultPane } from "@/components/shared/ResultPane"
@@ -176,13 +176,45 @@ export function ReadFunction({
         <div className="flex flex-col min-h-0" style={{ width: "100%", minWidth: 0 }}>
           <div className="flex-1 overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
             <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
-              <div className="flex items-center gap-2">
+              <div 
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: 'hsl(var(--muted) / 0.5)',
+                  borderColor: 'hsl(var(--border) / 0.5)'
+                }}
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex items-center justify-center w-7 h-7 rounded-full"
+                      style={{
+                        backgroundColor: 'hsl(var(--primary) / 0.2)',
+                        color: 'hsl(var(--primary-foreground))'
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Read-Only Function</TooltipContent>
+                </Tooltip>
+                <span className="text-base font-medium">{func.name}</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-7 w-7 transition-colors"
+                      style={{
+                        borderColor: 'hsl(var(--border))'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
+                        e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = ''
+                        e.currentTarget.style.borderColor = 'hsl(var(--border))'
+                      }}
                       onClick={() => toggleFavorite(contractLabel, func.name)}
                     >
                       {isFav ? (
@@ -196,7 +228,6 @@ export function ReadFunction({
                     {isFav ? "Unpin from favorites" : "Pin to favorites"}
                   </TooltipContent>
                 </Tooltip>
-                <span className="text-base font-medium">{func.name}</span>
               </div>
 
               {/* Input Fields */}
