@@ -7,6 +7,32 @@ import { WrapText, Copy, Check } from "lucide-react"
 import Editor from "@monaco-editor/react"
 import { stringify as yamlStringify } from "yaml"
 import { safeStringify, copyToClipboard } from "@/lib/utils"
+
+/**
+ * Serialize array without quoting numbers/BigInts (for RAW format)
+ */
+function serializeArrayWithoutQuotingNumbers(arr: unknown[]): string {
+  const items = arr.map((item) => {
+    if (typeof item === "bigint") {
+      return item.toString()
+    }
+    if (typeof item === "number") {
+      return item.toString()
+    }
+    if (typeof item === "boolean") {
+      return item.toString()
+    }
+    if (item === null) {
+      return "null"
+    }
+    if (Array.isArray(item)) {
+      return serializeArrayWithoutQuotingNumbers(item)
+    }
+    // For strings and other types, use JSON.stringify to get proper quoting
+    return JSON.stringify(item)
+  })
+  return `[${items.join(",")}]`
+}
 import { useThemeStore } from "@/stores/themeStore"
 import { toast } from "sonner"
 
@@ -27,6 +53,10 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
     }
     
     if (fmt === "raw") {
+      // For arrays, use custom serializer that doesn't quote numbers
+      if (Array.isArray(val)) {
+        return serializeArrayWithoutQuotingNumbers(val)
+      }
       return safeStringify(val)
     }
     

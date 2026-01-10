@@ -45,7 +45,7 @@ async function checkIconExists(url: string): Promise<boolean> {
   }
 }
 
-async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T & { iconUrl: string }> {
+async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T & { iconUrl: string; iconBackground: string }> {
   const chainWithAny = chain as any
   const existingIcon = chainWithAny.iconUrl || (chainWithAny.nativeCurrency as any)?.iconUrl
   
@@ -53,6 +53,7 @@ async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T &
     return {
       ...chain,
       iconUrl: existingIcon,
+      iconBackground: '#d3d3d3', // Light gray background
     }
   }
   
@@ -62,6 +63,7 @@ async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T &
   return {
     ...chain,
     iconUrl: iconExists ? cdnIconUrl : DEFAULT_CHAIN_ICON,
+    iconBackground: '#d3d3d3', // Light gray background
   }
 }
 

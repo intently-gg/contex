@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useContractStore } from "@/stores/contractStore"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ContractView } from "./ContractView"
@@ -16,7 +17,17 @@ export function ContractTabs({ onAddContract }: ContractTabsProps) {
     return null
   }
 
-  const activeContract = selectedContract || contractLabels[0]
+  // Validate that selectedContract still exists, fallback to first if not
+  const activeContract = (selectedContract && contractLabels.includes(selectedContract))
+    ? selectedContract
+    : contractLabels[0]
+
+  // Update store if selectedContract was invalid
+  useEffect(() => {
+    if (activeContract !== selectedContract) {
+      setSelectedContract(activeContract)
+    }
+  }, [activeContract, selectedContract, setSelectedContract])
 
   return (
     <Tabs
@@ -33,12 +44,12 @@ export function ContractTabs({ onAddContract }: ContractTabsProps) {
               value={label}
               style={{
                 transition: 'all 150ms',
-                backgroundColor: activeContract === label ? 'hsl(var(--background))' : 'transparent',
+                backgroundColor: activeContract === label ? 'hsl(var(--background))' : 'hsl(var(--muted) / 0.4)',
                 color: activeContract === label ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
                 boxShadow: activeContract === label ? '0 2px 4px 0 rgb(0 0 0 / 0.1)' : 'none',
                 fontWeight: activeContract === label ? '600' : '400',
                 border: '1px solid',
-                borderColor: activeContract === label ? 'hsl(var(--border))' : 'transparent',
+                borderColor: activeContract === label ? 'hsl(var(--border))' : 'hsl(var(--border) / 0.5)',
               }}
               className="!inline-flex !items-center !justify-center !whitespace-nowrap !rounded-md !px-4 !py-1.5 !text-sm !font-medium !ring-offset-background !transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:!bg-background/70 hover:!shadow-sm"
               onMouseEnter={(e) => {

@@ -9,6 +9,8 @@ import { safeStringify, formatValueForDisplay, isEmptyValue } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 
+const EMPTY_FAVORITES_ARRAY: string[] = []
+
 interface FunctionSidebarProps {
   contractLabel: string
   address: Address
@@ -31,7 +33,9 @@ export function FunctionSidebar({
   const chainId = useChainId()
   
   // Subscribe to favorites to force re-render when they change
-  const favorites = useContractStore((state) => state.favorites[contractLabel] || [])
+  // Selector returns the actual array (or undefined), then useMemo provides stable empty array
+  const favoritesArray = useContractStore((state) => state.favorites[contractLabel])
+  const favorites = useMemo(() => favoritesArray ?? EMPTY_FAVORITES_ARRAY, [favoritesArray])
 
   const allFunctions = useMemo(() => parseABI(abi), [abi])
 

@@ -10,7 +10,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
+import { ValueParserModal } from "./ValueParserModal"
 import { parseTupleValue, serializeTupleAsArray, tupleToArray } from "@/lib/tupleParser"
+import { needsValueParser } from "@/lib/formGenerator"
 import { toast } from "sonner"
 import type { AbiParameter } from "viem"
 
@@ -39,14 +41,15 @@ export function TupleHelperModal({
   onValueHelper,
   onTupleHelper,
   onListHelper,
-  contractLabel: _contractLabel,
-  address: _address,
-  functionName: _functionName,
+  contractLabel,
+  address,
+  functionName,
 }: TupleHelperModalProps) {
   const components = (abiParam as any).components || []
   
   // Initialize tuple values
   const [tupleValues, setTupleValues] = useState<Record<string, unknown>>({})
+  const [valueParserOpen, setValueParserOpen] = useState<{ fieldName: string; fieldType: string; currentValue: string } | null>(null)
 
   // Try to load from current value
   useEffect(() => {
@@ -110,15 +113,20 @@ export function TupleHelperModal({
   }
 
   const handleValueHelper = (compName: string) => {
-    if (onValueHelper) {
-      const comp = components.find((c: AbiParameter) => (c.name || "") === compName)
-      if (comp) {
-        onValueHelper(
-          compName,
-          comp.type,
-          String(tupleValues[compName] || "")
-        )
-      }
+    const comp = components.find((c: AbiParameter) => (c.name || "") === compName)
+    if (comp) {
+      setValueParserOpen({
+        fieldName: compName,
+        fieldType: comp.type,
+        currentValue: String(tupleValues[compName] || "")
+      })
+    }
+  }
+
+  const handleValueParserApply = (value: string) => {
+    if (valueParserOpen) {
+      handleFieldChange(valueParserOpen.fieldName, value)
+      setValueParserOpen(null)
     }
   }
 
@@ -175,7 +183,7 @@ export function TupleHelperModal({
                   abiParam={comp}
                   value={tupleValues[compName] ?? ""}
                   onChange={(value) => handleFieldChange(compName, value)}
-                  onValueHelper={onValueHelper ? () => handleValueHelper(compName) : undefined}
+                  onValueHelper={needsValueParser(compName, comp.type) ? () => handleValueHelper(compName) : undefined}
                   onTupleHelper={onTupleHelper ? (name, param) => handleTupleHelper(name, param) : undefined}
                   onListHelper={onListHelper ? (name, param) => handleListHelper(name, param) : undefined}
                 />
@@ -202,6 +210,26 @@ export function TupleHelperModal({
           <Button onClick={handleApply}>Apply</Button>
         </DialogFooter>
       </DialogContent>
+      {components.map((comp: AbiParameter, index: number) => {
+        const compName = comp.name || `param_${index}`
+        if (needsValueParser(compName, comp.type)) {
+          return (
+            <ValueParserModal
+              key={`value-${compName}`}
+              open={valueParserOpen?.fieldName === compName}
+              onOpenChange={(open) => setValueParserOpen(open ? { fieldName: compName, fieldType: comp.type, currentValue: String(tupleValues[compName] || "") } : null)}
+              onApply={handleValueParserApply}
+              fieldName={compName}
+              fieldType={comp.type}
+              currentValue={String(tupleValues[compName] || "")}
+              contractLabel={contractLabel}
+              address={address}
+              functionName={functionName}
+            />
+          )
+        }
+        return null
+      })}
     </Dialog>
   )
 }

@@ -15,6 +15,7 @@ import { EditLabelDialog } from "./EditLabelDialog"
 import { EditContractAddressModal } from "./EditContractAddressModal"
 import { AutoRefreshFunctions } from "./AutoRefreshFunctions"
 import { toast } from "sonner"
+import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
 import type { Address, Abi } from "viem"
 
 interface ContractViewProps {
@@ -253,18 +254,72 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             >
               <SelectTrigger className="w-[300px]">
                 <SelectValue>
-                  {selectedAddress
-                    ? `${selectedAddress.label} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
-                    : "Select address"}
+                  {selectedAddress ? (
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <span className="flex-1 min-w-0 truncate">
+                        {selectedAddress.label} ({selectedAddress.address.slice(0, 6)}...{selectedAddress.address.slice(-4)})
+                      </span>
+                      <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
+                        {chains
+                          .filter((chain) => selectedAddress.chainIds.includes(chain.id))
+                          .map((chain, index) => {
+                            const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
+                            const iconBackground = (chain as any).iconBackground || '#d3d3d3'
+                            return (
+                              <img
+                                key={chain.id}
+                                src={iconUrl || DEFAULT_CHAIN_ICON}
+                                alt={chain.name}
+                                className="w-4 h-4 rounded-full"
+                                title={chain.name}
+                                style={{
+                                  marginLeft: index > 0 ? '-8px' : '0',
+                                  zIndex: chains.filter((c) => selectedAddress.chainIds.includes(c.id)).length - index,
+                                  backgroundColor: iconBackground,
+                                }}
+                              />
+                            )
+                          })}
+                      </div>
+                    </div>
+                  ) : (
+                    "Select address"
+                  )}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {contract.addresses.map((addr, idx) => (
-                  <SelectItem key={idx} value={String(idx)}>
-                    {addr.label} ({addr.address.slice(0, 6)}...
-                    {addr.address.slice(-4)})
-                  </SelectItem>
-                ))}
+                {contract.addresses.map((addr, idx) => {
+                  const addrChains = chains.filter((chain) => addr.chainIds.includes(chain.id))
+                  return (
+                    <SelectItem key={idx} value={String(idx)}>
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="flex-1 min-w-0 truncate">
+                          {addr.label} ({addr.address.slice(0, 6)}...{addr.address.slice(-4)})
+                        </span>
+                        <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
+                          {addrChains.map((chain, index) => {
+                            const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
+                            const iconBackground = (chain as any).iconBackground || '#d3d3d3'
+                            return (
+                              <img
+                                key={chain.id}
+                                src={iconUrl || DEFAULT_CHAIN_ICON}
+                                alt={chain.name}
+                                className="w-4 h-4 rounded-full"
+                                title={chain.name}
+                                style={{
+                                  marginLeft: index > 0 ? '-8px' : '0',
+                                  zIndex: addrChains.length - index,
+                                  backgroundColor: iconBackground,
+                                }}
+                              />
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             {selectedAddress && (

@@ -10,8 +10,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
+import { ValueParserModal } from "./ValueParserModal"
 import { parseListValue, serializeListValue } from "@/lib/tupleParser"
-import { getBaseType, isTupleType } from "@/lib/formGenerator"
+import { getBaseType, isTupleType, needsValueParser } from "@/lib/formGenerator"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 import type { AbiParameter } from "viem"
@@ -41,9 +42,9 @@ export function ListHelperModal({
   onValueHelper,
   onTupleHelper,
   onListHelper,
-  contractLabel: _contractLabel,
-  address: _address,
-  functionName: _functionName,
+  contractLabel,
+  address,
+  functionName,
 }: ListHelperModalProps) {
   const baseType = getBaseType(abiParam.type)
   const isTuple = isTupleType(baseType)
@@ -53,6 +54,7 @@ export function ListHelperModal({
   
   // Initialize list values
   const [listValues, setListValues] = useState<unknown[]>([])
+  const [valueParserOpen, setValueParserOpen] = useState<{ index: number; fieldType: string; currentValue: string } | null>(null)
 
   // Try to load from current value
   useEffect(() => {
@@ -98,12 +100,17 @@ export function ListHelperModal({
   }
 
   const handleValueHelper = (index: number) => {
-    if (onValueHelper) {
-      onValueHelper(
-        `item_${index}`,
-        baseType,
-        String(listValues[index] || "")
-      )
+    setValueParserOpen({
+      index,
+      fieldType: baseType,
+      currentValue: String(listValues[index] || "")
+    })
+  }
+
+  const handleValueParserApply = (value: string) => {
+    if (valueParserOpen !== null) {
+      handleItemChange(valueParserOpen.index, value)
+      setValueParserOpen(null)
     }
   }
 
@@ -187,7 +194,7 @@ export function ListHelperModal({
                     abiParam={itemParam}
                     value={value}
                     onChange={(val) => handleItemChange(index, val)}
-                    onValueHelper={onValueHelper ? () => handleValueHelper(index) : undefined}
+                    onValueHelper={needsValueParser(itemName, baseType) ? () => handleValueHelper(index) : undefined}
                     onTupleHelper={onTupleHelper ? (_name, param) => handleTupleHelper(index, param) : undefined}
                     onListHelper={onListHelper ? (_name, param) => handleListHelper(index, param) : undefined}
                   />
@@ -217,6 +224,26 @@ export function ListHelperModal({
           <Button onClick={handleApply}>Apply</Button>
         </DialogFooter>
       </DialogContent>
+      {listValues.map((_, index) => {
+        const itemName = `item_${index}`
+        if (needsValueParser(itemName, baseType)) {
+          return (
+            <ValueParserModal
+              key={`value-${index}`}
+              open={valueParserOpen?.index === index}
+              onOpenChange={(open) => setValueParserOpen(open ? { index, fieldType: baseType, currentValue: String(listValues[index] || "") } : null)}
+              onApply={handleValueParserApply}
+              fieldName={itemName}
+              fieldType={baseType}
+              currentValue={String(listValues[index] || "")}
+              contractLabel={contractLabel}
+              address={address}
+              functionName={functionName}
+            />
+          )
+        }
+        return null
+      })}
     </Dialog>
   )
 }

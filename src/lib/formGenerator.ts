@@ -26,7 +26,7 @@ export function generateFormFields(inputs: AbiParameter[]): FormField[] {
       baseField.component = "checkbox"
     } else if (input.type.includes("bytes") && input.type !== "bytes") {
       baseField.component = "textarea"
-      baseField.placeholder = `Hex string for ${input.type}`
+      baseField.placeholder = `0x...`
     } else if (input.type === "string" || input.type === "bytes") {
       baseField.component = "textarea"
     } else {
@@ -78,9 +78,26 @@ export function getBaseType(fieldType: string): string {
 export function parseInputValue(
   value: string,
   type: string
-): string | number | bigint | boolean | string[] {
+): string | number | bigint | boolean | string[] | unknown[] {
   if (type === "bool") {
     return value === "true" || value === "1"
+  }
+
+  // Handle tuples - viem expects them as arrays
+  if (type.startsWith("tuple") && !type.includes("[]")) {
+    try {
+      const parsed = JSON.parse(value)
+      // If it's already an array, return it directly (viem expects tuples as arrays)
+      if (Array.isArray(parsed)) {
+        return parsed
+      }
+      // If it's an object, we'd need components to convert it, but for now return as-is
+      // The WriteFunction should handle this case
+      return parsed
+    } catch {
+      // If parsing fails, return as string and let viem handle it
+      return value
+    }
   }
 
   if (type.includes("[]")) {

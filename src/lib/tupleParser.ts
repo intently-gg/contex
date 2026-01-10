@@ -66,12 +66,35 @@ export function tupleToArray(tuple: Record<string, unknown>, components: readonl
 }
 
 /**
+ * Custom serializer that doesn't quote numbers/BigInts
+ */
+function serializeArrayWithoutQuotingNumbers(arr: unknown[]): string {
+  const items = arr.map((item) => {
+    if (typeof item === "bigint") {
+      return item.toString()
+    }
+    if (typeof item === "number") {
+      return item.toString()
+    }
+    if (typeof item === "boolean") {
+      return item.toString()
+    }
+    if (item === null) {
+      return "null"
+    }
+    // For strings and other types, use JSON.stringify to get proper quoting
+    return JSON.stringify(item)
+  })
+  return `[${items.join(",")}]`
+}
+
+/**
  * Serialize tuple as array of stringified values
  */
 export function serializeTupleAsArray(tuple: Record<string, unknown>, components: readonly AbiParameter[]): string {
   const arrayValue = tupleToArray(tuple, components)
-  // Use safeStringify to handle BigInt serialization
-  return safeStringify(arrayValue)
+  // Use custom serializer to avoid quoting numbers
+  return serializeArrayWithoutQuotingNumbers(arrayValue)
 }
 
 /**

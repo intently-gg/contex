@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useChainId } from "wagmi"
 import { useWriteContractFunction } from "@/hooks/useContractFunctions"
-import { generateFormFields, parseInputValue, needsValueParser } from "@/lib/formGenerator"
+import { generateFormFields, parseInputValue, needsValueParser, isTupleType } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,6 +72,30 @@ export function WriteFunction({
       if (val === undefined || val === "") {
         return undefined
       }
+      
+      // Special handling for tuples - parse array elements according to component types
+      if (isTupleType(field.type) && !field.type.includes("[]")) {
+        const components = (field.abiParam as any).components || []
+        try {
+          const parsed = JSON.parse(String(val))
+          // If it's an array, parse each element according to its component type
+          if (Array.isArray(parsed)) {
+            return parsed.map((item, index) => {
+              const component = components[index]
+              if (component) {
+                return parseInputValue(String(item), component.type)
+              }
+              return item
+            })
+          }
+          // If it's an object, return as-is (shouldn't happen with direct input, but handle it)
+          return parsed
+        } catch {
+          // If parsing fails, try regular parsing
+          return parseInputValue(String(val), field.type)
+        }
+      }
+      
       return parseInputValue(String(val), field.type)
     })
 
@@ -224,10 +248,19 @@ export function WriteFunction({
           {/* Right Column: Results */}
           <div className="space-y-2" style={{ paddingRight: '10px' }}>
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="max-w-full">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription className="text-pink-600 dark:text-pink-400 break-words overflow-wrap-anywhere">
+                <AlertDescription 
+                  className="text-pink-600 dark:text-pink-400 break-words overflow-wrap-anywhere whitespace-pre-wrap overflow-y-auto max-h-96"
+                  style={{ 
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                    maxWidth: '100%',
+                    overflowX: 'hidden',
+                    paddingLeft: '3px'
+                  }}
+                >
                   {error.message || "Transaction failed"}
                 </AlertDescription>
               </Alert>

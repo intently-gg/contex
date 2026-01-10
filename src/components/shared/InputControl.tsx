@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Sparkles } from "lucide-react"
@@ -39,16 +39,36 @@ export function InputControl({
 
   const renderInput = () => {
     if (fieldType === "bool") {
+      // Convert value to string for RadioGroup, use empty string for undefined/null
+      const radioValue = value === true ? "true" : value === false ? "false" : ""
+      
       return (
-        <div className="flex items-center space-x-2 flex-1">
-          <Checkbox
-            id={fieldName}
-            checked={Boolean(value)}
-            onCheckedChange={(checked) => onChange(checked)}
-          />
-          <Label htmlFor={fieldName} className="text-sm">
-            {String(value || "false")}
-          </Label>
+        <div className="flex items-center space-x-4 flex-1">
+          <RadioGroup
+            value={radioValue}
+            onValueChange={(val) => {
+              // If clicking the same value, deselect it (set to undefined)
+              if (val === radioValue) {
+                onChange(undefined)
+              } else {
+                onChange(val === "true")
+              }
+            }}
+            className="flex flex-row gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="true" id={`${fieldName}-true`} />
+              <Label htmlFor={`${fieldName}-true`} className="text-sm cursor-pointer">
+                True
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="false" id={`${fieldName}-false`} />
+              <Label htmlFor={`${fieldName}-false`} className="text-sm cursor-pointer">
+                False
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
       )
     }
@@ -80,10 +100,12 @@ export function InputControl({
           />
         )
       }
+      // Fixed-size bytes (bytes32, bytes16, etc.) - use single-line Input
       return (
-        <Textarea
+        <Input
           id={fieldName}
-          placeholder={`Hex string for ${fieldType}`}
+          type="text"
+          placeholder="0x..."
           value={String(value || "")}
           onChange={(e) => {
             const val = e.target.value
@@ -189,7 +211,7 @@ export function InputControl({
             }
           }}
           className="flex-1 font-mono text-sm"
-          rows={3}
+          rows={5}
         />
       )
     }
@@ -272,7 +294,7 @@ export function InputControl({
               }
             }}
             className="flex-1 font-mono text-sm"
-            rows={3}
+            rows={5}
           />
         ) : (
           renderInput()

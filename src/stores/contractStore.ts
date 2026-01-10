@@ -225,6 +225,7 @@ export const useContractStore = create<ContractStore>()(
     {
       name: "contract-explorer-storage",
       partialize: (state) => ({
+        selectedContract: state.selectedContract,
         selectedAddresses: state.selectedAddresses,
         selectedFunction: state.selectedFunction,
         readResults: state.readResults,

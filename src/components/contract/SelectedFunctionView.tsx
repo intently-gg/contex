@@ -4,7 +4,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Network, ArrowLeft } from "lucide-react"
+import { Network, ArrowRight } from "lucide-react"
 import { ReadFunction } from "./ReadFunction"
 import { WriteFunction } from "./WriteFunction"
 import { parseABI } from "@/lib/abiParser"
@@ -134,8 +134,8 @@ export function SelectedFunctionView({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <ArrowLeft className="h-12 w-12 mx-auto mb-4 opacity-50" style={{ transform: "scaleX(-1)" }} />
-          <p className="text-lg">Select a function to get started.</p>
+          <ArrowRight className="h-12 w-12 mx-auto mb-4 opacity-50" style={{ transform: "scaleX(-1)" }} />
+          <span className="text-lg">Select a function to get started.</span>
         </div>
       </div>
     )
