@@ -8,15 +8,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileJson, Plus } from "lucide-react"
+import { FileJson, Plus, Calculator } from "lucide-react"
 import { useState } from "react"
 import { AddContractModal } from "@/components/contract/AddContractModal"
 import { ABIManagerModal } from "@/components/contract/ABIManagerModal"
+import { ValueParserModal } from "@/components/contract/ValueParserModal"
 
 export function Header() {
   const { theme, toggleTheme } = useThemeStore()
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
+  const [isValueHelperOpen, setIsValueHelperOpen] = useState(false)
 
   return (
     <header className="bg-background">
@@ -29,6 +31,7 @@ export function Header() {
                 variant="ghost"
                 size="icon"
                 aria-label="Menu"
+                className="hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -42,6 +45,10 @@ export function Header() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Contract
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsValueHelperOpen(true)}>
+                <Calculator className="mr-2 h-4 w-4" />
+                Value Helper
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -49,6 +56,7 @@ export function Header() {
             size="icon"
             onClick={toggleTheme}
             aria-label="Toggle theme"
+            className="hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" />
@@ -68,6 +76,13 @@ export function Header() {
       <ABIManagerModal
         open={isABIManagerOpen}
         onOpenChange={setIsABIManagerOpen}
+      />
+      <ValueParserModal
+        open={isValueHelperOpen}
+        onOpenChange={setIsValueHelperOpen}
+        fieldName="value"
+        fieldType="uint256"
+        disconnected={true}
       />
     </header>
   )

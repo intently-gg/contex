@@ -125,3 +125,16 @@ export function deleteAddress(
   return newContracts
 }
 
+export function updateAddressChainIds(
+  contracts: ContractsRegistry,
+  contractLabel: string,
+  addressIndex: number,
+  chainIds: number[]
+): ContractsRegistry {
+  const newContracts = { ...contracts }
+  if (newContracts[contractLabel]?.addresses[addressIndex]) {
+    newContracts[contractLabel].addresses[addressIndex].chainIds = chainIds
+  }
+  return newContracts
+}
+

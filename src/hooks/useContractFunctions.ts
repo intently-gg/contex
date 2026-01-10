@@ -17,7 +17,8 @@ export function useReadContractFunction(
   const chainId = useChainId()
   const { setReadResult, getReadResult } = useContractStore()
 
-  // NEVER run query unless explicitly enabled - even if args change
+  // NEVER run query unless explicitly enabled
+  // Disable all automatic refetching - we control it manually
   const result = useReadContract({
     address,
     abi,
@@ -29,6 +30,9 @@ export function useReadContractFunction(
       refetchOnMount: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      // Disable automatic refetching on any other triggers
+      staleTime: Infinity,
+      gcTime: Infinity,
     },
   })
 
@@ -41,6 +45,7 @@ export function useReadContractFunction(
       if (!cached || cachedStr !== currentStr) {
         setReadResult(contractLabel, chainId, functionName, address, result.data)
       }
+
     }
   }, [result.data, contractLabel, chainId, functionName, address, getReadResult, setReadResult])
 
@@ -104,4 +109,5 @@ export function useWriteContractFunction(
     isConfirmed,
   }
 }
+
 

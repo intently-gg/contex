@@ -53,6 +53,7 @@ interface ContractStore {
   ) => Record<string, unknown> | undefined
   toggleFavorite: (contractLabel: string, functionName: string) => void
   isFavorite: (contractLabel: string, functionName: string) => boolean
+  clearReadResultsForContract: (contractLabel: string) => void
 }
 
 function getResultKey(
@@ -124,6 +125,31 @@ export const useContractStore = create<ContractStore>()(
       getReadResult: (contractLabel, chainId, functionName, address) => {
         const key = getResultKey(contractLabel, chainId, functionName, address)
         return get().readResults[key]
+      },
+
+      clearReadResultsForContract: (contractLabel) => {
+        console.debug('[contractStore] Clearing cache for contract', {
+          contractLabel,
+          totalResultsBefore: Object.keys(get().readResults).length,
+        })
+        set((state) => {
+          const newReadResults: Record<string, any> = {}
+          let clearedCount = 0
+          for (const [key, value] of Object.entries(state.readResults)) {
+            // Only keep results that don't match this contract label
+            if (!key.startsWith(`${contractLabel}:`)) {
+              newReadResults[key] = value
+            } else {
+              clearedCount++
+            }
+          }
+          console.debug('[contractStore] Cache cleared', {
+            contractLabel,
+            clearedCount,
+            remainingResults: Object.keys(newReadResults).length,
+          })
+          return { readResults: newReadResults }
+        })
       },
 
       setFormState: (abiFileName, functionName, inputs) => {

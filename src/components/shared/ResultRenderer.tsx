@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { WrapText, Copy } from "lucide-react"
+import { WrapText, Copy, Check } from "lucide-react"
 import Editor from "@monaco-editor/react"
 import { stringify as yamlStringify } from "yaml"
-import { safeStringify } from "@/lib/utils"
+import { safeStringify, copyToClipboard } from "@/lib/utils"
 import { useThemeStore } from "@/stores/themeStore"
 import { toast } from "sonner"
 
@@ -19,6 +19,7 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
   const { theme } = useThemeStore()
   const [format, setFormat] = useState<"yaml" | "json" | "raw">("yaml")
   const [wordWrap, setWordWrap] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const formatResult = (val: unknown, fmt: "yaml" | "json" | "raw"): string => {
     if (val === null || val === undefined) {
@@ -51,9 +52,15 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
     return `${Math.max(calculatedHeight, 65)}px`
   }, [resultContent, wordWrap])
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(resultContent)
-    toast.success("Copied to clipboard")
+  const handleCopy = async () => {
+    const success = await copyToClipboard(resultContent)
+    if (success) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1000)
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Failed to copy to clipboard")
+    }
   }
 
   const editorTheme = theme === "dark" ? "vs-dark" : "light"
@@ -109,7 +116,11 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
                 className="h-7 w-7"
                 onClick={handleCopy}
               >
-                <Copy className="h-3.5 w-3.5" />
+                {copied ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>Copy to clipboard</TooltipContent>

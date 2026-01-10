@@ -3,7 +3,7 @@ import { useChainId } from "wagmi"
 import { useContractStore } from "@/stores/contractStore"
 import { parseABI } from "@/lib/abiParser"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Pin, Eye, Pencil } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { safeStringify, formatValueForDisplay, isEmptyValue } from "@/lib/utils"
 import type { Address, Abi } from "viem"
@@ -170,8 +170,9 @@ export function FunctionSidebar({
       <div className="flex-1 overflow-y-auto">
         {pinnedFunctions.length > 0 && (
           <div className="p-2">
-            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded">
-              Pinned
+            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded flex items-center gap-2">
+              <Pin className="h-3 w-3" />
+              Pinned Functions
             </h3>
             <div className="space-y-0.5">
               {pinnedFunctions.map(renderFunctionItem)}
@@ -181,8 +182,9 @@ export function FunctionSidebar({
 
         {filteredReadFunctions.length > 0 && (
           <div className="p-2">
-            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded">
-              Read
+            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded flex items-center gap-2">
+              <Eye className="h-3 w-3" />
+              Read Functions
             </h3>
             <div className="space-y-0.5">
               {filteredReadFunctions.map(renderFunctionItem)}
@@ -192,8 +194,9 @@ export function FunctionSidebar({
 
         {filteredWriteFunctions.length > 0 && (
           <div className="p-2">
-            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded">
-              Write
+            <h3 style={{ backgroundColor: 'hsl(var(--muted))' }} className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-2 py-1 rounded flex items-center gap-2">
+              <Pencil className="h-3 w-3" />
+              Write Functions
             </h3>
             <div className="space-y-0.5">
               {filteredWriteFunctions.map(renderFunctionItem)}

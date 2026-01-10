@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pin, PinOff, AlertCircle, CheckCircle2, Zap, RotateCcw } from "lucide-react"
+import { Pin, PinOff, AlertCircle, CheckCircle2, Zap, RotateCcw, Sparkles } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
@@ -175,13 +175,29 @@ export function WriteFunction({
             {isPayable && (
               <div className="space-y-2">
                 <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
-                <Input
-                  id={`${func.name}-value`}
-                  type="text"
-                  placeholder="0"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                />
+                <div className="flex gap-1">
+                  <Input
+                    id={`${func.name}-value`}
+                    type="text"
+                    placeholder="0"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 flex items-center justify-center"
+                        onClick={() => setValueParserOpen("value")}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Value Helper</TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             )}
 

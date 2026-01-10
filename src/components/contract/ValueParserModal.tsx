@@ -12,18 +12,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { parseUnits, formatUnits } from "viem"
 import { toast } from "sonner"
-import { ResultRenderer } from "@/components/shared/ResultRenderer"
+import { Copy, Check } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { copyToClipboard } from "@/lib/utils"
 
 interface ValueParserModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onApply: (value: string) => void
+  onApply?: (value: string) => void
   fieldName: string
   fieldType: string
   currentValue?: string
   contractLabel?: string
   address?: string
   functionName?: string
+  disconnected?: boolean // If true, show Copy button instead of Apply
 }
 
 // In-memory storage for decimals per parameter
@@ -43,6 +46,7 @@ export function ValueParserModal({
   contractLabel = "",
   address = "",
   functionName = "",
+  disconnected = false,
 }: ValueParserModalProps) {
   const isWei = fieldType.toLowerCase().includes("wei") || fieldName.toLowerCase().includes("wei")
   const memoryKey = contractLabel && address && functionName 
@@ -101,7 +105,9 @@ export function ValueParserModal({
     setDecimals(presetDecimals)
   }
 
-  const handleApply = () => {
+  const [copied, setCopied] = useState(false)
+
+  const handleApply = async () => {
     if (!units || !decimals) {
       toast.error("Please provide both decimals and units")
       return
@@ -134,9 +140,21 @@ export function ValueParserModal({
         decimalsMemory[memoryKey] = decimals
       }
       
-      onApply(result)
-      onOpenChange(false)
-      setUnits("")
+      if (disconnected) {
+        // Copy to clipboard instead of applying
+        const success = await copyToClipboard(result)
+        if (success) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1000)
+          toast.success("Copied to clipboard")
+        } else {
+          toast.error("Failed to copy to clipboard")
+        }
+      } else if (onApply) {
+        onApply(result)
+        onOpenChange(false)
+        setUnits("")
+      }
     } catch (error) {
       toast.error("Failed to parse value", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -153,66 +171,85 @@ export function ValueParserModal({
             Parse {fieldName} ({fieldType}) value from decimals and units
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="decimals">Decimals</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="decimals"
-                  type="number"
-                  value={decimals}
-                  onChange={(e) => setDecimals(e.target.value)}
-                  placeholder={isWei ? "18" : "0"}
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePreset("6")}
-                >
-                  6
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePreset("8")}
-                >
-                  8
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePreset("18")}
-                >
-                  18
-                </Button>
-              </div>
-              {isWei && (
-                <p className="text-xs text-muted-foreground">
-                  Default: 18 (for wei/ether). You can override this.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="units">Units</Label>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="decimals">Decimals</Label>
+            <div className="flex gap-2">
               <Input
-                id="units"
+                id="decimals"
                 type="number"
-                step="any"
-                value={units}
-                onChange={(e) => setUnits(e.target.value)}
-                placeholder="12.345"
+                value={decimals}
+                onChange={(e) => setDecimals(e.target.value)}
+                placeholder={isWei ? "18" : "0"}
+                className="flex-1"
               />
-              <p className="text-xs text-muted-foreground">
-                Example: 12.345 with 6 decimals = 12345000
-              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePreset("6")}
+              >
+                6
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePreset("8")}
+              >
+                8
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePreset("18")}
+              >
+                18
+              </Button>
             </div>
+            {isWei && (
+              <p className="text-xs text-muted-foreground">
+                Default: 18 (for wei/ether). You can override this.
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="units">Units</Label>
+            <Input
+              id="units"
+              type="number"
+              step="any"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              placeholder="12.345"
+            />
+            <p className="text-xs text-muted-foreground">
+              Example: 12.345 with 6 decimals = 12345000
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Preview</Label>
             {preview ? (
-              <ResultRenderer value={preview} />
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono">
+                  {preview}
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10"
+                      onClick={handleApply}
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy to clipboard</TooltipContent>
+                </Tooltip>
+              </div>
             ) : (
               <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
                 Enter values to see preview
@@ -224,7 +261,9 @@ export function ValueParserModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply}>Apply</Button>
+          {!disconnected && (
+            <Button onClick={handleApply}>Apply</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -18,6 +18,7 @@ interface SelectedFunctionViewProps {
   abiFileName: string
   functionName: string | null
   supportedChainIds: number[]
+  refreshKey?: number
   onBack?: () => void
 }
 
@@ -28,6 +29,7 @@ export function SelectedFunctionView({
   abiFileName,
   functionName,
   supportedChainIds,
+  refreshKey,
   onBack: _onBack,
 }: SelectedFunctionViewProps) {
   const { contracts, selectedAddresses } = useContractStore()
@@ -150,6 +152,7 @@ export function SelectedFunctionView({
             abiFileName={abiFileName}
             function={selectedFunc}
             supportedChainIds={supportedChainIds}
+            refreshKey={refreshKey}
           />
         ) : (
           <WriteFunction

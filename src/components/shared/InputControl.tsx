@@ -56,6 +56,30 @@ export function InputControl({
     const isBytes = fieldType.includes("bytes")
     
     if (isBytes && fieldType !== "bytes") {
+      // Check if it's an array
+      if (fieldType.includes("[]")) {
+        const baseType = fieldType.replace("[]", "")
+        let placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
+        if (baseType.startsWith("tuple")) {
+          placeholder = "Recommended to use the helper →"
+        }
+        return (
+          <Textarea
+            id={fieldName}
+            placeholder={placeholder}
+            value={String(value || "")}
+            onChange={(e) => {
+              const val = e.target.value
+              // Allow array characters: [ ] " , space and hex chars
+              if (val === "" || /^[\s\[\]\"\,0-9a-fA-Fx]*$/.test(val)) {
+                onChange(val)
+              }
+            }}
+            className="flex-1 font-mono text-sm"
+            rows={3}
+          />
+        )
+      }
       return (
         <Textarea
           id={fieldName}
@@ -157,7 +181,13 @@ export function InputControl({
           id={fieldName}
           placeholder={placeholder}
           value={String(value || "")}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value
+            // Allow array characters: [ ] " , space and data type specific chars
+            if (val === "" || /^[\s\[\]\"\,0-9a-fA-Fx\-\.]*$/.test(val)) {
+              onChange(val)
+            }
+          }}
           className="flex-1 font-mono text-sm"
           rows={3}
         />
@@ -234,7 +264,13 @@ export function InputControl({
             id={fieldName}
             placeholder={getTuplePlaceholder()}
             value={String(value || "")}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value
+              // Allow tuple characters: [ ] " , space and data type specific chars
+              if (val === "" || /^[\s\[\]\"\,\{\}0-9a-fA-Fx\-\.]*$/.test(val)) {
+                onChange(val)
+              }
+            }}
             className="flex-1 font-mono text-sm"
             rows={3}
           />

@@ -81,6 +81,15 @@
 
 /* Hide ETH balance text in RainbowKit ConnectButton, but keep address */
 [data-rk] [data-testid="rk-account-button__balance"],
-[data-rk] span[class*="balance"]:not([class*="address"]) {
+[data-rk] span[class*="balance"]:not([class*="address"]),
+[data-rk] button[class*="balance"],
+[data-rk] *[class*="balance"]:not([class*="address"]):not([class*="avatar"]) {
+  display: none !important;
+}
+
+/* Hide NaN ETH - more aggressive targeting */
+[data-rk] button[class*="rk"] > div > span:last-child:not([class*="address"]),
+[data-rk] button[class*="rk"] span[class*="balance"],
+[data-rk] [class*="rk-account-button"] span:not([class*="address"]):not([class*="avatar"]) {
   display: none !important;
 }

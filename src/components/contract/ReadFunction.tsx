@@ -4,12 +4,12 @@ import { useReadContractFunction } from "@/hooks/useContractFunctions"
 import { generateFormFields, parseInputValue } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
 import { useThemeStore } from "@/stores/themeStore"
-import { safeStringify } from "@/lib/utils"
+import { safeStringify, copyToClipboard } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { RefreshCw, Pin, PinOff, Loader2, WrapText, Copy } from "lucide-react"
+import { RefreshCw, Pin, PinOff, Loader2, WrapText, Copy, Check } from "lucide-react"
 import Editor from "@monaco-editor/react"
 import { stringify as yamlStringify } from "yaml"
 import { toast } from "sonner"
@@ -28,6 +28,7 @@ interface ReadFunctionProps {
   abiFileName: string
   function: ParsedFunction
   supportedChainIds: number[]
+  refreshKey?: number
 }
 
 export function ReadFunction({
@@ -37,6 +38,7 @@ export function ReadFunction({
   abiFileName,
   function: func,
   supportedChainIds: _supportedChainIds,
+  refreshKey,
 }: ReadFunctionProps) {
   const { getFormState, setFormState, isFavorite, toggleFavorite } =
     useContractStore()
@@ -61,8 +63,12 @@ export function ReadFunction({
     return parseInputValue(String(value), field.type)
   })
 
-  // NEVER auto-refresh - user must click refresh button
-  const shouldAutoRefresh = false
+  // NEVER auto-refresh functions with input parameters
+  // Only auto-refresh functions with NO params when refreshKey is set
+  const hasNoParams = func.inputs.length === 0
+  // Enable query only for functions with no params when refreshKey is set (and > 0)
+  // This ensures the query is ready to run when we trigger it
+  const shouldAutoRefresh = hasNoParams && refreshKey !== undefined && refreshKey > 0
 
   const { data, isLoading, error, refetch } = useReadContractFunction(
     address,
@@ -73,13 +79,34 @@ export function ReadFunction({
     shouldAutoRefresh
   )
 
-  // Load cached result when component mounts or address changes
+  // When refreshKey changes for functions with no params, trigger refetch
+  // This is the ONLY way functions auto-refresh (controlled by refreshKey in ContractView)
+  useEffect(() => {
+    if (hasNoParams && refreshKey !== undefined && refreshKey > 0) {
+      // Small delay to ensure cache is cleared first (happens synchronously in ContractView)
+      const timer = setTimeout(() => {
+        console.debug('[ReadFunction] Attempting to auto-refresh value', {
+          contractLabel,
+          functionName: func.name,
+          address,
+          refreshKey,
+          hasNoParams,
+        })
+        refetch()
+      }, 10)
+      return () => clearTimeout(timer)
+    }
+  }, [refreshKey, hasNoParams, refetch, contractLabel, func.name, address])
+
+  // Load cached result - but only if we have no fresh data
+  // For functions with params, never show cached data unless manually refreshed
   const { getReadResult } = useContractStore()
   const chainId = useChainId()
   const cachedResult = getReadResult(contractLabel, chainId, func.name, address)
   
-  // Use cached result if available and no fresh data
-  const displayData = data !== undefined ? data : (cachedResult?.value !== undefined ? cachedResult.value : undefined)
+  // Use fresh data if available, otherwise use cached (for no-param functions only)
+  // When address changes, the component remounts (via key prop), so we don't need to check for address changes here
+  const displayData = data !== undefined ? data : (hasNoParams && cachedResult?.value !== undefined ? cachedResult.value : undefined)
 
   useEffect(() => {
     setFormState(abiFileName, func.name, inputs)
@@ -135,10 +162,18 @@ export function ReadFunction({
     return `${Math.max(calculatedHeight, 65)}px`
   }, [resultContent, isSimpleValue])
 
-  const handleCopy = () => {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
     if (resultContent) {
-      navigator.clipboard.writeText(resultContent)
-      toast.success("Copied to clipboard")
+      const success = await copyToClipboard(resultContent)
+      if (success) {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1000)
+        toast.success("Copied to clipboard")
+      } else {
+        toast.error("Failed to copy to clipboard")
+      }
     }
   }
 
@@ -324,7 +359,11 @@ export function ReadFunction({
                           className="h-10 w-10"
                           onClick={handleCopy}
                         >
-                          <Copy className="h-4 w-4" />
+                          {copied ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Copy to clipboard</TooltipContent>

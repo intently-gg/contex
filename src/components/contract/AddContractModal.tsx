@@ -204,13 +204,40 @@ export function AddContractModal({
       return
     }
 
+    // Check for duplicate address across all contracts
+    const normalizedAddress = getAddress(address)
+    for (const [label, contract] of Object.entries(contracts)) {
+      for (const addr of contract.addresses) {
+        if (getAddress(addr.address) === normalizedAddress) {
+          toast.error("Contract address already configured", {
+            description: `Contract address ${normalizedAddress} is already configured in ${label}`,
+          })
+          return
+        }
+      }
+    }
+
+    // Check for unique address label per ABI
+    const abiLabel = getABILabel(abiLabels, abiFileName)
+    for (const [label, contract] of Object.entries(contracts)) {
+      if (contract.abi === abiFileName) {
+        for (const addr of contract.addresses) {
+          if (addr.label === addressLabel) {
+            toast.error("Address label must be unique per ABI", {
+              description: `Address label "${addressLabel}" already exists for this ABI in ${label}`,
+            })
+            return
+          }
+        }
+      }
+    }
+
     try {
-      const abiLabel = getABILabel(abiLabels, abiFileName)
       const newContracts = addContract(
         contracts,
         abiLabel,
         abiFileName,
-        getAddress(address),
+        normalizedAddress,
         addressLabel,
         chainIds
       )

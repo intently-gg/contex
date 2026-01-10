@@ -21,12 +21,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Trash2, Plus, Pencil, Eye, Copy } from "lucide-react"
+import { Trash2, Plus, Pencil, Eye, Copy, Check } from "lucide-react"
 import { loadABILabels, saveABILabels, getABILabel } from "@/lib/abiLabels"
 import { EditLabelDialog } from "./EditLabelDialog"
 import Editor from "@monaco-editor/react"
 import { useThemeStore } from "@/stores/themeStore"
-import { safeStringify } from "@/lib/utils"
+import { safeStringify, copyToClipboard } from "@/lib/utils"
 
 interface ABIManagerModalProps {
   open: boolean
@@ -47,6 +47,7 @@ export function ABIManagerModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<string | null>(null)
   const [viewingAbi, setViewingAbi] = useState<string | null>(null)
   const [jsonError, setJsonError] = useState<string | null>(null)
+  const [copiedAbi, setCopiedAbi] = useState(false)
   const { theme } = useThemeStore()
 
   useEffect(() => {
@@ -96,8 +97,17 @@ export function ABIManagerModal({
         throw new Error("Failed to save ABI")
       }
 
-      // Save label if provided
+      // Check for unique ABI label globally
       if (newAbiLabel) {
+        // Check if label already exists
+        for (const [existingFilename, existingLabel] of Object.entries(abiLabels)) {
+          if (existingLabel === newAbiLabel && existingFilename !== filename) {
+            toast.error("ABI label must be unique", {
+              description: `ABI label "${newAbiLabel}" already exists for ${existingFilename}`,
+            })
+            return
+          }
+        }
         const updatedLabels = { ...abiLabels, [filename]: newAbiLabel }
         await saveABILabels(updatedLabels)
         setAbiLabels(updatedLabels)
@@ -165,10 +175,12 @@ export function ABIManagerModal({
   }
 
   const handleCopyAbi = async (abi: unknown) => {
-    try {
-      await navigator.clipboard.writeText(safeStringify(abi))
+    const success = await copyToClipboard(safeStringify(abi))
+    if (success) {
+      setCopiedAbi(true)
+      setTimeout(() => setCopiedAbi(false), 1000)
       toast.success("ABI copied to clipboard")
-    } catch {
+    } else {
       toast.error("Failed to copy ABI")
     }
   }
@@ -395,7 +407,11 @@ export function ABIManagerModal({
               <Button
                 onClick={() => viewingAbi && abis[viewingAbi] && handleCopyAbi(abis[viewingAbi])}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                {copiedAbi ? (
+                  <Check className="mr-2 h-4 w-4" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
                 Copy ABI
               </Button>
             </div>

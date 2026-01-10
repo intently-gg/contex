@@ -1,15 +1,19 @@
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useContractStore } from "@/stores/contractStore"
-import { updateContractLabel, updateAddressLabel, saveContracts } from "@/lib/contractRegistry"
+import { updateContractLabel, saveContracts } from "@/lib/contractRegistry"
+import { copyToClipboard } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Pencil, Network } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Pencil, Network, Copy, ExternalLink, Check } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
 import { EditLabelDialog } from "./EditLabelDialog"
+import { EditContractAddressModal } from "./EditContractAddressModal"
+import { AutoRefreshFunctions } from "./AutoRefreshFunctions"
 import { toast } from "sonner"
 import type { Address, Abi } from "viem"
 
@@ -18,14 +22,19 @@ interface ContractViewProps {
 }
 
 export function ContractView({ contractLabel }: ContractViewProps) {
-  const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction } = useContractStore()
-  const { isConnected } = useAccount()
+  const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract } = useContractStore()
+  const { isConnected, address: walletAddress } = useAccount()
   const chainId = useChainId()
   const chains = useChains()
   const { switchChain } = useSwitchChain()
   const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
-  const [isEditAddressLabelOpen, setIsEditAddressLabelOpen] = useState(false)
+  const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
   const [abis, setAbis] = useState<Record<string, Abi>>({})
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [copied, setCopied] = useState(false)
+  const prevAddressRef = useRef<string | null>(null)
+  const prevChainIdRef = useRef<number | null>(null)
+  const prevWalletAddressRef = useRef<string | null>(null)
 
   useEffect(() => {
     fetch("/api/abis")
@@ -42,6 +51,45 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const selectedFunction = getSelectedFunction(contractLabel)
   const abi = abis[contract.abi]
 
+  // Auto-refresh read functions with no params when address/chain/wallet changes
+  useEffect(() => {
+    if (!selectedAddress || !abi || !isConnected) return
+
+    const currentAddress = selectedAddress.address
+    const addressChanged = prevAddressRef.current !== currentAddress
+    const chainChanged = prevChainIdRef.current !== chainId
+    const walletChanged = prevWalletAddressRef.current !== walletAddress
+    const isInitialLoad = prevAddressRef.current === null
+
+    if (addressChanged || chainChanged || walletChanged || isInitialLoad) {
+      // STEP 1: Clear ALL cached read results for this contract FIRST
+      // This erases any cached or currently displayed values
+      console.debug('[ContractView] Attempting to clear cache after repointing to new contract', {
+        contractLabel,
+        addressChanged,
+        chainChanged,
+        walletChanged,
+        isInitialLoad,
+        currentAddress,
+        prevAddress: prevAddressRef.current,
+        chainId,
+        prevChainId: prevChainIdRef.current,
+        walletAddress,
+        prevWalletAddress: prevWalletAddressRef.current,
+      })
+      clearReadResultsForContract(contractLabel)
+      
+      // STEP 2: Trigger refresh for all read functions with no params
+      // The refreshKey change will cause those functions to auto-refresh
+      setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+      
+      // Update refs to track current state
+      prevAddressRef.current = currentAddress
+      prevChainIdRef.current = chainId
+      prevWalletAddressRef.current = walletAddress || null
+    }
+  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi, clearReadResultsForContract])
+
   const handleUpdateContractLabel = async (newLabel: string) => {
     try {
       const updated = updateContractLabel(contracts, contractLabel, newLabel)
@@ -53,16 +101,6 @@ export function ContractView({ contractLabel }: ContractViewProps) {
     }
   }
 
-  const handleUpdateAddressLabel = async (newLabel: string) => {
-    try {
-      const updated = updateAddressLabel(contracts, contractLabel, addressIndex, newLabel)
-      await saveContracts(updated)
-      setContracts(updated)
-      toast.success("Address label updated")
-    } catch (error) {
-      toast.error("Failed to update address label")
-    }
-  }
 
   const enabledChains = useMemo(() => {
     if (!selectedAddress) return []
@@ -74,6 +112,23 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const isCurrentChainEnabled = selectedAddress
     ? selectedAddress.chainIds.includes(chainId)
     : false
+
+  const scannerUrl = useMemo(() => {
+    if (!selectedAddress) return null
+    const currentChain = chains.find((c) => c.id === chainId && selectedAddress.chainIds.includes(c.id))
+    const chain = currentChain || chains.find((c) => selectedAddress.chainIds.includes(c.id))
+    if (!chain?.blockExplorers?.default?.url) return null
+    return `${chain.blockExplorers.default.url}/address/${selectedAddress.address}`
+  }, [selectedAddress, chainId, chains])
+
+  const handleCopyAddress = async () => {
+    if (!selectedAddress) return
+    const success = await copyToClipboard(selectedAddress.address)
+    if (success) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   // Check wallet connection first
   if (!isConnected) {
@@ -162,6 +217,18 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   // Wallet connected and chain is enabled - show full interface with sidebar
   return (
     <div className="flex h-[calc(100vh-200px)]">
+      {/* Hidden component that renders all ReadFunction components for functions with no params */}
+      {/* This ensures they all receive refreshKey and can auto-refresh */}
+      {/* Key includes address to force remount when address changes */}
+      {selectedAddress && abi && (
+        <AutoRefreshFunctions
+          key={`${contractLabel}-${selectedAddress.address}-${chainId}`}
+          contractLabel={contractLabel}
+          address={selectedAddress.address as Address}
+          abi={abi}
+          refreshKey={refreshKey}
+        />
+      )}
       {selectedAddress && (
         <FunctionSidebar
           contractLabel={contractLabel}
@@ -202,21 +269,65 @@ export function ContractView({ contractLabel }: ContractViewProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsEditAddressLabelOpen(true)}
+                onClick={() => setIsEditAddressOpen(true)}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
           </div>
+          {selectedAddress && scannerUrl && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                >
+                  <a
+                    href={scannerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Open in block explorer</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {selectedAddress && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyAddress}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Copy address</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         {selectedAddress && (
           <SelectedFunctionView
+            key={`${contractLabel}-${selectedAddress.address}-${chainId}-${selectedFunction || 'none'}`}
             contractLabel={contractLabel}
             address={selectedAddress.address as Address}
             abi={abi}
             abiFileName={contract.abi}
             functionName={selectedFunction}
             supportedChainIds={selectedAddress.chainIds}
+            refreshKey={refreshKey}
           />
         )}
       </div>
@@ -230,13 +341,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
         description="Update the label for this contract"
       />
       {selectedAddress && (
-        <EditLabelDialog
-          open={isEditAddressLabelOpen}
-          onOpenChange={setIsEditAddressLabelOpen}
-          currentLabel={selectedAddress.label}
-          onSave={handleUpdateAddressLabel}
-          title="Edit Address Label"
-          description="Update the label for this address"
+        <EditContractAddressModal
+          open={isEditAddressOpen}
+          onOpenChange={setIsEditAddressOpen}
+          contractLabel={contractLabel}
+          addressIndex={addressIndex}
         />
       )}
     </div>
