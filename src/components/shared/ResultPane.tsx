@@ -5,6 +5,7 @@ import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2 } fro
 import { copyToClipboard, safeStringify, sanitizeForSerialization } from "@/lib/utils"
 import { toast } from "sonner"
 import { ExpandResultModal } from "./ExpandResultModal"
+import { ResultRenderer } from "./ResultRenderer"
 
 interface ResultPaneProps {
   type: "write" | "read"
@@ -91,6 +92,15 @@ export function ResultPane({
     return ""
   }
 
+  // Determine if result is complex (array/object) - for read functions, use ResultRenderer
+  const isComplexValue = useMemo(() => {
+    if (sanitizedError || sanitizedResult === undefined) return false
+    return typeof sanitizedResult === "object" && sanitizedResult !== null && !(sanitizedResult instanceof Date)
+  }, [sanitizedResult, sanitizedError])
+
+  const isSimpleValue = !sanitizedError && sanitizedResult !== undefined && !isComplexValue
+  const shouldUseRenderer = type === "read" && isComplexValue && !sanitizedError && !hash
+
   const resultText = getResultText()
   const isError = !!sanitizedError
   const hasResult = sanitizedError || hash || result !== undefined
@@ -125,7 +135,7 @@ export function ResultPane({
   return (
     <>
       <div 
-        className="flex items-center gap-2 border-t pt-2 mt-4 flex-shrink-0" 
+        className={`border-t pt-2 mt-4 flex-shrink-0 ${shouldUseRenderer ? 'flex flex-col gap-2' : 'flex items-center gap-2'}`}
         style={{ 
           width: "100%", 
           minWidth: 0, 
@@ -134,94 +144,104 @@ export function ResultPane({
           boxSizing: "border-box"
         }}
       >
-        {/* Execute/Refresh Button */}
-        {type === "write" ? (
-          <Button
-            onClick={onExecute}
-            disabled={isLoading || isConfirming || disabled}
-            size="sm"
-            variant="default"
-            className="flex-shrink-0"
-          >
-            <Zap className={`mr-2 h-4 w-4 ${isLoading || isConfirming ? "animate-pulse" : ""}`} />
-            Execute
-          </Button>
-        ) : onRefresh ? (
-          <Button
-            onClick={onRefresh}
-            disabled={isLoading}
-            size="sm"
-            variant="outline"
-            className="flex-shrink-0"
-          >
-            {isLoading ? (
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            ) : showCheckmark ? (
-              <Check className="mr-2 h-4 w-4" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Read
-          </Button>
-        ) : null}
+        {/* Button Row */}
+        <div className="flex items-center gap-2">
+          {/* Execute/Refresh Button */}
+          {type === "write" ? (
+            <Button
+              onClick={onExecute}
+              disabled={isLoading || isConfirming || disabled}
+              size="sm"
+              variant="default"
+              className="flex-shrink-0"
+            >
+              <Zap className={`mr-2 h-4 w-4 ${isLoading || isConfirming ? "animate-pulse" : ""}`} />
+              Execute
+            </Button>
+          ) : onRefresh ? (
+            <Button
+              onClick={onRefresh}
+              disabled={isLoading}
+              size="sm"
+              variant="outline"
+              className="flex-shrink-0"
+            >
+              {isLoading ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : showCheckmark ? (
+                <Check className="mr-2 h-4 w-4" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Read
+            </Button>
+          ) : null}
 
-        {/* Result Text */}
-        {hasResult && (
-          <div
-            ref={textRef}
-            className="text-sm"
-            style={{
-              flex: "1 1 0%",
-              minWidth: 0,
-              width: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              color: isError ? "hsl(var(--destructive))" : undefined,
-            }}
-          >
-            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {resultText}
+          {/* Result Text - only show for simple values */}
+          {hasResult && !shouldUseRenderer && (
+            <div
+              ref={textRef}
+              className="text-sm"
+              style={{
+                flex: "1 1 0%",
+                minWidth: 0,
+                width: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                color: isError ? "hsl(var(--destructive))" : undefined,
+              }}
+            >
+              {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+              {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
+              {resultText}
+            </div>
+          )}
+
+          {/* Copy Button - only show if there's a result and not using ResultRenderer (which has its own copy button) */}
+          {hasResult && !shouldUseRenderer && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy to clipboard</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Expand Button - show when there's a result */}
+          {hasResult && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => setExpandOpen(true)}
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Expand result</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* ResultRenderer - show below buttons for complex read results */}
+        {shouldUseRenderer && (
+          <div className="w-full">
+            <ResultRenderer value={sanitizedResult} />
           </div>
-        )}
-
-        {/* Copy Button - only show if there's a result */}
-        {hasResult && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 flex-shrink-0"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy to clipboard</TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Expand Button - show when there's a result */}
-        {hasResult && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 flex-shrink-0"
-                onClick={() => setExpandOpen(true)}
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Expand result</TooltipContent>
-          </Tooltip>
         )}
       </div>
 
