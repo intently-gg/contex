@@ -10,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pencil, Network, Copy, ExternalLink, Check, Plus } from "lucide-react"
+import { Pencil, Network, Copy, ExternalLink, Check, Plus, Search } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
 import { EditLabelDialog } from "./EditLabelDialog"
 import { EditContractAddressModal } from "./EditContractAddressModal"
 import { AutoRefreshFunctions } from "./AutoRefreshFunctions"
 import { AddContractModal } from "./AddContractModal"
+import { ContractSearchModal } from "./ContractSearchModal"
 import { toast } from "sonner"
 import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
 import type { Address, Abi } from "viem"
@@ -35,6 +36,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copied, setCopied] = useState(false)
   const prevAddressRef = useRef<string | null>(null)
@@ -355,6 +357,24 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setIsSearchModalOpen(true)}
+                  style={{
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setIsEditAddressOpen(true)}
                   style={{
                     transition: 'all 0.2s ease-in-out',
@@ -488,6 +508,10 @@ export function ContractView({ contractLabel }: ContractViewProps) {
         open={isAddContractOpen}
         onOpenChange={setIsAddContractOpen}
         defaultAbiKey={contract.abi}
+      />
+      <ContractSearchModal
+        open={isSearchModalOpen}
+        onOpenChange={setIsSearchModalOpen}
       />
     </div>
   )
