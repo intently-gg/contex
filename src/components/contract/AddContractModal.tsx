@@ -46,12 +46,14 @@ export function AddContractModal({
   useEffect(() => {
     if (open) {
       setStep("select-abi")
-      setAbiKey("")
+      const abiKeys = Object.keys(abis)
+      // If there's only one ABI, preselect it
+      setAbiKey(abiKeys.length === 1 ? abiKeys[0] : "")
       setAddress("")
       setAddressLabel("")
       setChainIds([])
     }
-  }, [open])
+  }, [open, abis])
 
   const availableChains = config.chains
 
