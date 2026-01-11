@@ -251,17 +251,35 @@ export function InputControl({
       )
     }
 
+    const isUint = fieldType.startsWith("uint")
+    const isInt = fieldType.startsWith("int")
+    
     return (
       <Input
         id={fieldName}
         type="text"
         placeholder={
-          fieldType.startsWith("uint") || fieldType.startsWith("int")
+          isUint || isInt
             ? `12345... `
             : ""
         }
         value={String(value || "")}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value
+          if (isUint) {
+            // Only allow digits 0-9
+            if (val === "" || /^[0-9]*$/.test(val)) {
+              onChange(val)
+            }
+          } else if (isInt) {
+            // Allow digits 0-9 and negative symbol
+            if (val === "" || /^-?[0-9]*$/.test(val)) {
+              onChange(val)
+            }
+          } else {
+            onChange(val)
+          }
+        }}
         className="flex-1"
       />
     )
