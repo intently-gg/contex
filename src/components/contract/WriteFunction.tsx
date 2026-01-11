@@ -54,7 +54,7 @@ export function WriteFunction({
 
   useEffect(() => {
     setFormState(abiKey, func.name, inputs)
-  }, [inputs, abiFileName, func.name, setFormState])
+  }, [inputs, abiKey, func.name, setFormState])
 
   const isFav = isFavorite(contractLabel, func.name)
   const isPayable = func.stateMutability === "payable"

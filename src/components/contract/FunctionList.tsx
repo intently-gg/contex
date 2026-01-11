@@ -121,7 +121,7 @@ export function FunctionList({
                     contractLabel={contractLabel}
                     address={address}
                     abi={abi}
-                    abiFileName={abiFileName}
+                    abiKey={abiKey}
                     function={func}
                     supportedChainIds={supportedChainIds}
                   />
@@ -155,7 +155,7 @@ export function FunctionList({
                     contractLabel={contractLabel}
                     address={address}
                     abi={abi}
-                    abiFileName={abiFileName}
+                    abiKey={abiKey}
                     function={func}
                     supportedChainIds={supportedChainIds}
                   />

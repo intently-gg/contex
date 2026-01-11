@@ -106,7 +106,7 @@ export function ReadFunction({
 
   useEffect(() => {
     setFormState(abiKey, func.name, inputs)
-  }, [inputs, abiFileName, func.name, setFormState])
+  }, [inputs, abiKey, func.name, setFormState])
 
   const wasLoadingRef = useRef(false)
 
