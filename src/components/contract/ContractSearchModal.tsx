@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Search, FileCode, Scroll } from "lucide-react"
 import { getABILabel } from "@/lib/abiLabels"
 import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
+import { truncateLabel } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Address } from "viem"
 
 interface ContractSearchModalProps {
@@ -104,12 +106,22 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
             <div className="space-y-4">
               {Object.entries(filteredAbiContractMap).map(([abiKey, contractList]) => {
                 const abiLabel = getABILabel(abiLabels, abiKey)
+                const truncatedAbiLabel = truncateLabel(abiLabel)
                 
                 return (
                   <div key={abiKey} className="space-y-2">
                     <div className="flex items-center gap-2 px-2 py-1.5 bg-muted rounded-md">
                       <FileCode className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-semibold text-sm">{abiLabel}</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="font-semibold text-sm truncate">{truncatedAbiLabel.display}</span>
+                        </TooltipTrigger>
+                        {truncatedAbiLabel.display !== truncatedAbiLabel.full ? (
+                          <TooltipContent>
+                            <p>{truncatedAbiLabel.full}</p>
+                          </TooltipContent>
+                        ) : null}
+                      </Tooltip>
                     </div>
                     
                     <div className="ml-4 space-y-1">
@@ -127,9 +139,27 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <Scroll className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium truncate">
-                                  {contract.label} ({contract.address.slice(0, 6)}...{contract.address.slice(-4)})
-                                </div>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-sm font-medium truncate">
+                                      {(() => {
+                                        const truncated = truncateLabel(contract.label)
+                                        const labelText = `${contract.label} (${contract.address.slice(0, 6)}...${contract.address.slice(-4)})`
+                                        return truncated.display !== truncated.full
+                                          ? `${truncated.display} (${contract.address.slice(0, 6)}...${contract.address.slice(-4)})`
+                                          : labelText
+                                      })()}
+                                    </div>
+                                  </TooltipTrigger>
+                                  {(() => {
+                                    const truncated = truncateLabel(contract.label)
+                                    return truncated.display !== truncated.full ? (
+                                      <TooltipContent>
+                                        <p>{contract.label}</p>
+                                      </TooltipContent>
+                                    ) : null
+                                  })()}
+                                </Tooltip>
                                 <div className="text-xs text-muted-foreground truncate">
                                   {contract.address}
                                 </div>

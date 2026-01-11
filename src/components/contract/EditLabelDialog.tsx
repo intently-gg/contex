@@ -31,8 +31,12 @@ export function EditLabelDialog({
   const [newLabel, setNewLabel] = useState(currentLabel)
 
   const handleSave = () => {
-    if (newLabel.trim()) {
-      onSave(newLabel.trim())
+    const trimmed = newLabel.trim()
+    if (trimmed) {
+      if (trimmed.length > 75) {
+        return
+      }
+      onSave(trimmed)
       onOpenChange(false)
     }
   }
@@ -50,6 +54,7 @@ export function EditLabelDialog({
             id="label-input"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
+            maxLength={75}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSave()

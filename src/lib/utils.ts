@@ -152,3 +152,14 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Truncate label to 75 characters, returning both truncated and original
+ */
+export function truncateLabel(label: string, maxLength: number = 75): { display: string; full: string } {
+  const full = label || ""
+  if (full.length <= maxLength) {
+    return { display: full, full: full }
+  }
+  return { display: full.slice(0, maxLength) + "...", full }
+}

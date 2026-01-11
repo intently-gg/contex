@@ -4,7 +4,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { updateContractLabel, updateContractABI, saveContracts } from "@/lib/contractRegistry"
-import { copyToClipboard } from "@/lib/utils"
+import { copyToClipboard, truncateLabel } from "@/lib/utils"
 import { getABILabel } from "@/lib/abiLabels"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -264,15 +264,45 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             >
               <SelectTrigger style={{ width: '200px', maxWidth: '200px' }}>
                 <SelectValue>
-                  {getABILabel(abiLabels, contract.abi)}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate block">
+                        {truncateLabel(getABILabel(abiLabels, contract.abi)).display}
+                      </span>
+                    </TooltipTrigger>
+                    {(() => {
+                      const abiLabel = getABILabel(abiLabels, contract.abi)
+                      const truncated = truncateLabel(abiLabel)
+                      return truncated.display !== truncated.full ? (
+                        <TooltipContent>
+                          <p>{truncated.full}</p>
+                        </TooltipContent>
+                      ) : null
+                    })()}
+                  </Tooltip>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {Object.keys(abis).map((abiKey) => (
-                  <SelectItem key={abiKey} value={abiKey}>
-                    {getABILabel(abiLabels, abiKey)}
-                  </SelectItem>
-                ))}
+                {Object.keys(abis).map((abiKey) => {
+                  const abiLabel = getABILabel(abiLabels, abiKey)
+                  const truncated = truncateLabel(abiLabel)
+                  return (
+                    <SelectItem key={abiKey} value={abiKey}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate block">
+                            {truncated.display}
+                          </span>
+                        </TooltipTrigger>
+                        {truncated.display !== truncated.full ? (
+                          <TooltipContent>
+                            <p>{truncated.full}</p>
+                          </TooltipContent>
+                        ) : null}
+                      </Tooltip>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             <label className="text-sm font-medium pl-2">Contract:</label>
@@ -286,9 +316,27 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                 <SelectValue>
                   {selectedAddress ? (
                     <div className="flex items-center justify-between w-full gap-2">
-                      <span className="flex-1 min-w-0 truncate">
-                        {selectedAddress.label} ({selectedAddress.address.slice(0, 6)}...{selectedAddress.address.slice(-4)})
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex-1 min-w-0 truncate">
+                            {(() => {
+                              const labelText = `${selectedAddress.label} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
+                              const truncated = truncateLabel(selectedAddress.label)
+                              return truncated.display !== truncated.full 
+                                ? `${truncated.display} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
+                                : labelText
+                            })()}
+                          </span>
+                        </TooltipTrigger>
+                        {(() => {
+                          const truncated = truncateLabel(selectedAddress.label)
+                          return truncated.display !== truncated.full ? (
+                            <TooltipContent>
+                              <p>{selectedAddress.label}</p>
+                            </TooltipContent>
+                          ) : null
+                        })()}
+                      </Tooltip>
                       <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
                         {chains
                           .filter((chain) => selectedAddress.chainIds.includes(chain.id))
@@ -320,12 +368,24 @@ export function ContractView({ contractLabel }: ContractViewProps) {
               <SelectContent>
                 {contract.addresses.map((addr, idx) => {
                   const addrChains = chains.filter((chain) => addr.chainIds.includes(chain.id))
+                  const truncated = truncateLabel(addr.label)
                   return (
                     <SelectItem key={idx} value={String(idx)}>
                       <div className="flex items-center justify-between w-full gap-2">
-                        <span className="flex-1 min-w-0 truncate">
-                          {addr.label} ({addr.address.slice(0, 6)}...{addr.address.slice(-4)})
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex-1 min-w-0 truncate">
+                              {truncated.display !== truncated.full
+                                ? `${truncated.display} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`
+                                : `${addr.label} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`}
+                            </span>
+                          </TooltipTrigger>
+                          {truncated.display !== truncated.full ? (
+                            <TooltipContent>
+                              <p>{addr.label}</p>
+                            </TooltipContent>
+                          ) : null}
+                        </Tooltip>
                         <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
                           {addrChains.map((chain, index) => {
                             const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)

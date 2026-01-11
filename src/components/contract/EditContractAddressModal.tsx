@@ -74,8 +74,16 @@ export function EditContractAddressModal({
   }, [open, address, contract])
 
   const handleSave = async () => {
-    if (!addressLabel.trim()) {
+    const trimmedLabel = addressLabel.trim()
+    if (!trimmedLabel) {
       toast.error("Address label is required")
+      return
+    }
+
+    if (trimmedLabel.length > 75) {
+      toast.error("Address Label is too long", {
+        description: "Address label must be 75 characters or less",
+      })
       return
     }
 
@@ -85,7 +93,7 @@ export function EditContractAddressModal({
     }
 
     try {
-      let updated = updateAddressLabel(contracts, contractLabel, addressIndex, addressLabel.trim())
+      let updated = updateAddressLabel(contracts, contractLabel, addressIndex, trimmedLabel)
       updated = updateAddressChainIds(updated, contractLabel, addressIndex, chainIds)
       await saveContracts(updated)
       setContracts(updated)
@@ -225,6 +233,7 @@ export function EditContractAddressModal({
                 value={addressLabel}
                 onChange={(e) => setAddressLabel(e.target.value)}
                 placeholder="Main Deployment"
+                maxLength={75}
               />
             </div>
             <div className="space-y-2">

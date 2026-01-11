@@ -59,6 +59,14 @@ export function AddABIModal({
       return
     }
 
+    const trimmedLabel = newAbiLabel.trim()
+    if (trimmedLabel.length > 75) {
+      toast.error("ABI Label is too long", {
+        description: "ABI label must be 75 characters or less",
+      })
+      return
+    }
+
     if (!newAbiContent) {
       toast.error("ABI content is required")
       return
@@ -72,16 +80,16 @@ export function AddABIModal({
     }
 
     // Check for unique ABI label
-    if (!isLabelUnique(newAbiLabel.trim())) {
+    if (!isLabelUnique(trimmedLabel)) {
       toast.error("ABI label must be unique", {
-        description: `ABI label "${newAbiLabel.trim()}" already exists`,
+        description: `ABI label "${trimmedLabel}" already exists`,
       })
       return
     }
 
     try {
       const parsedContent = JSON.parse(newAbiContent)
-      addABI(newAbiLabel.trim(), parsedContent)
+      addABI(trimmedLabel, parsedContent)
       toast.success("ABI added successfully")
       onOpenChange(false)
     } catch (error) {
@@ -105,6 +113,7 @@ export function AddABIModal({
               placeholder="My Contract"
               value={newAbiLabel}
               onChange={(e) => setNewAbiLabel(e.target.value)}
+              maxLength={75}
               required
             />
           </div>

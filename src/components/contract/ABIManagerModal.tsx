@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { Trash2, Plus, Pencil, Eye, Copy, Check } from "lucide-react"
 import { getABILabel } from "@/lib/abiLabels"
@@ -27,7 +28,7 @@ import { EditLabelDialog } from "./EditLabelDialog"
 import { AddABIModal } from "./AddABIModal"
 import Editor from "@monaco-editor/react"
 import { useThemeStore } from "@/stores/themeStore"
-import { safeStringify, copyToClipboard } from "@/lib/utils"
+import { safeStringify, copyToClipboard, truncateLabel } from "@/lib/utils"
 
 interface ABIManagerModalProps {
   open: boolean
@@ -55,20 +56,28 @@ export function ABIManagerModal({
   }, [contracts, deleteConfirmAbiKey])
 
   const handleUpdateLabel = (abiKey: string, newLabel: string) => {
-    if (!newLabel || !newLabel.trim()) {
+    const trimmedLabel = newLabel.trim()
+    if (!trimmedLabel) {
       toast.error("ABI Label is required")
       return
     }
 
-    if (!isLabelUnique(newLabel.trim(), abiKey)) {
+    if (trimmedLabel.length > 75) {
+      toast.error("ABI Label is too long", {
+        description: "ABI label must be 75 characters or less",
+      })
+      return
+    }
+
+    if (!isLabelUnique(trimmedLabel, abiKey)) {
       toast.error("ABI label must be unique", {
-        description: `ABI label "${newLabel.trim()}" already exists`,
+        description: `ABI label "${trimmedLabel}" already exists`,
       })
       return
     }
 
     try {
-      setABILabel(abiKey, newLabel.trim())
+      setABILabel(abiKey, trimmedLabel)
       setEditingAbiKey(null)
       toast.success("Label updated")
     } catch (error) {
@@ -156,6 +165,7 @@ export function ABIManagerModal({
             ) : (
               Object.keys(abis).map((abiKey) => {
                 const label = getABILabel(abiLabels, abiKey)
+                const truncated = truncateLabel(label)
                 return (
                   <div
                     key={abiKey}
@@ -163,7 +173,16 @@ export function ABIManagerModal({
                   >
                     <div className="flex items-center gap-3">
                       <div>
-                        <div className="font-medium">{label}</div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="font-medium truncate">{truncated.display}</div>
+                          </TooltipTrigger>
+                          {truncated.display !== truncated.full ? (
+                            <TooltipContent>
+                              <p>{truncated.full}</p>
+                            </TooltipContent>
+                          ) : null}
+                        </Tooltip>
                       </div>
                       <Button
                         variant="ghost"

@@ -3,6 +3,7 @@ import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { addContract, saveContracts } from "@/lib/contractRegistry"
 import { getABILabel } from "@/lib/abiLabels"
+import { truncateLabel } from "@/lib/utils"
 import { config } from "@/lib/wagmi"
 import {
   Dialog,
@@ -206,6 +207,14 @@ export function AddContractModal({
       return
     }
 
+    const trimmedLabel = addressLabel.trim()
+    if (trimmedLabel.length > 75) {
+      toast.error("Address Label is too long", {
+        description: "Address label must be 75 characters or less",
+      })
+      return
+    }
+
     if (!isAddress(address, { strict: false })) {
       toast.error("Invalid contract address")
       return
@@ -229,9 +238,9 @@ export function AddContractModal({
     for (const [label, contract] of Object.entries(contracts)) {
       if (contract.abi === abiKey) {
         for (const addr of contract.addresses) {
-          if (addr.label === addressLabel) {
+          if (addr.label === trimmedLabel) {
             toast.error("Address label must be unique per ABI", {
-              description: `Address label "${addressLabel}" already exists for this ABI in ${label}`,
+              description: `Address label "${trimmedLabel}" already exists for this ABI in ${label}`,
             })
             return
           }
@@ -245,7 +254,7 @@ export function AddContractModal({
         abiLabel,
         abiKey,
         normalizedAddress,
-        addressLabel,
+        trimmedLabel,
         chainIds
       )
       await saveContracts(newContracts)
@@ -309,9 +318,10 @@ export function AddContractModal({
                     <SelectContent className="z-[100] bg-popover">
                       {Object.keys(abis).map((key) => {
                         const label = getABILabel(abiLabels, key)
+                        const truncated = truncateLabel(label)
                         return (
                           <SelectItem key={key} value={key}>
-                            {label}
+                            {truncated.display}
                           </SelectItem>
                         )
                       })}
@@ -349,6 +359,7 @@ export function AddContractModal({
                 placeholder="Main Deployment"
                 value={addressLabel}
                 onChange={(e) => setAddressLabel(e.target.value)}
+                maxLength={75}
               />
             </div>
             <div className="space-y-2">
