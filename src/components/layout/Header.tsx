@@ -22,8 +22,11 @@ export function Header() {
 
   return (
     <header className="bg-background">
-      <div className="w-full flex h-16 items-center justify-between px-4">
-        <h1 className="text-xl font-bold">Contex</h1>
+      <div className="w-full flex h-12 border-b border-border items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <img src="/contex.svg" alt="Contex" className="h-6 w-6" />
+          <h1 className="text-xl font-bold">Contex</h1>
+        </div>
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
