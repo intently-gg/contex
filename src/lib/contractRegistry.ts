@@ -127,3 +127,18 @@ export function updateAddressChainIds(
   return newContracts
 }
 
+export function updateContractABI(
+  contracts: ContractsRegistry,
+  contractLabel: string,
+  newAbiKey: string
+): ContractsRegistry {
+  const newContracts = { ...contracts }
+  if (newContracts[contractLabel]) {
+    newContracts[contractLabel] = {
+      ...newContracts[contractLabel],
+      abi: newAbiKey,
+    }
+  }
+  return newContracts
+}
+

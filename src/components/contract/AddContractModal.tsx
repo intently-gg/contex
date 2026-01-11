@@ -25,6 +25,7 @@ import { AddABIModal } from "./AddABIModal"
 interface AddContractModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  defaultAbiKey?: string
 }
 
 type Step = "select-abi" | "contract-details"
@@ -32,6 +33,7 @@ type Step = "select-abi" | "contract-details"
 export function AddContractModal({
   open,
   onOpenChange,
+  defaultAbiKey,
 }: AddContractModalProps) {
   const { contracts, setContracts } = useContractStore()
   const { abis, abiLabels } = useABIStore()
@@ -45,15 +47,21 @@ export function AddContractModal({
 
   useEffect(() => {
     if (open) {
-      setStep("select-abi")
       const abiKeys = Object.keys(abis)
-      // If there's only one ABI, preselect it
-      setAbiKey(abiKeys.length === 1 ? abiKeys[0] : "")
+      // If defaultAbiKey is provided and exists, use it and skip to contract-details
+      if (defaultAbiKey && abiKeys.includes(defaultAbiKey)) {
+        setAbiKey(defaultAbiKey)
+        setStep("contract-details")
+      } else {
+        setStep("select-abi")
+        // If there's only one ABI, preselect it
+        setAbiKey(abiKeys.length === 1 ? abiKeys[0] : "")
+      }
       setAddress("")
       setAddressLabel("")
       setChainIds([])
     }
-  }, [open, abis])
+  }, [open, abis, defaultAbiKey])
 
   const availableChains = config.chains
 

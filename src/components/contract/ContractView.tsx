@@ -3,18 +3,20 @@ import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
-import { updateContractLabel, saveContracts } from "@/lib/contractRegistry"
+import { updateContractLabel, updateContractABI, saveContracts } from "@/lib/contractRegistry"
 import { copyToClipboard } from "@/lib/utils"
+import { getABILabel } from "@/lib/abiLabels"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pencil, Network, Copy, ExternalLink, Check } from "lucide-react"
+import { Pencil, Network, Copy, ExternalLink, Check, Plus } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
 import { EditLabelDialog } from "./EditLabelDialog"
 import { EditContractAddressModal } from "./EditContractAddressModal"
 import { AutoRefreshFunctions } from "./AutoRefreshFunctions"
+import { AddContractModal } from "./AddContractModal"
 import { toast } from "sonner"
 import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
 import type { Address, Abi } from "viem"
@@ -25,13 +27,14 @@ interface ContractViewProps {
 
 export function ContractView({ contractLabel }: ContractViewProps) {
   const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract } = useContractStore()
-  const { abis } = useABIStore()
+  const { abis, abiLabels } = useABIStore()
   const { isConnected, address: walletAddress } = useAccount()
   const chainId = useChainId()
   const chains = useChains()
   const { switchChain } = useSwitchChain()
   const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
+  const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copied, setCopied] = useState(false)
   const prevAddressRef = useRef<string | null>(null)
@@ -95,6 +98,19 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       toast.success("Contract label updated")
     } catch (error) {
       toast.error("Failed to update contract label")
+    }
+  }
+
+  const handleUpdateContractABI = async (newAbiKey: string) => {
+    try {
+      const updated = updateContractABI(contracts, contractLabel, newAbiKey)
+      await saveContracts(updated)
+      setContracts(updated)
+      clearReadResultsForContract(contractLabel)
+      setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+      toast.success("Contract ABI updated")
+    } catch (error) {
+      toast.error("Failed to update contract ABI")
     }
   }
 
@@ -238,15 +254,33 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       )}
       <div className="flex-1 flex flex-col" style={{ maxWidth: '1125px' }}>
         <div className="p-4 border-b flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Contract Address:</label>
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <label className="text-sm font-medium">ABI:</label>
+            <Select
+              value={contract.abi}
+              onValueChange={handleUpdateContractABI}
+            >
+              <SelectTrigger style={{ width: '200px', maxWidth: '200px' }}>
+                <SelectValue>
+                  {getABILabel(abiLabels, contract.abi)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(abis).map((abiKey) => (
+                  <SelectItem key={abiKey} value={abiKey}>
+                    {getABILabel(abiLabels, abiKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="text-sm font-medium pl-2">Contract:</label>
             <Select
               value={String(addressIndex)}
               onValueChange={(value) =>
                 setSelectedAddress(contractLabel, Number(value))
               }
             >
-              <SelectTrigger className="w-[300px]">
+              <SelectTrigger className="flex-1" style={{ maxWidth: '500px' }}>
                 <SelectValue>
                   {selectedAddress ? (
                     <div className="flex items-center justify-between w-full gap-2">
@@ -317,57 +351,108 @@ export function ContractView({ contractLabel }: ContractViewProps) {
               </SelectContent>
             </Select>
             {selectedAddress && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsEditAddressOpen(true)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center" style={{ gap: '4px' }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsEditAddressOpen(true)}
+                  style={{
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsAddContractOpen(true)}
+                  style={{
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                {scannerUrl && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        style={{
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                          e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)'
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <a
+                          href={scannerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Open in block explorer</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleCopyAddress}
+                      style={{
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy address</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             )}
           </div>
-          {selectedAddress && scannerUrl && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                >
-                  <a
-                    href={scannerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Open in block explorer</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {selectedAddress && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyAddress}
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Copy address</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
         </div>
         {selectedAddress && (
           <SelectedFunctionView
@@ -399,6 +484,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           addressIndex={addressIndex}
         />
       )}
+      <AddContractModal
+        open={isAddContractOpen}
+        onOpenChange={setIsAddContractOpen}
+        defaultAbiKey={contract.abi}
+      />
     </div>
   )
 }
