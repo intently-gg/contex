@@ -22,7 +22,7 @@ interface ReadFunctionProps {
   contractLabel: string
   address: Address
   abi: Abi
-  abiFileName: string
+  abiKey: string
   function: ParsedFunction
   supportedChainIds: number[]
   refreshKey?: number
@@ -32,7 +32,7 @@ export function ReadFunction({
   contractLabel,
   address,
   abi,
-  abiFileName,
+  abiKey,
   function: func,
   supportedChainIds: _supportedChainIds,
   refreshKey,
@@ -45,7 +45,7 @@ export function ReadFunction({
   const [showCheckmark, setShowCheckmark] = useState(false)
 
   const formFields = generateFormFields([...func.inputs])
-  const savedFormState = getFormState(abiFileName, func.name) || {}
+  const savedFormState = getFormState(abiKey, func.name) || {}
   const [inputs, setInputs] = useState<Record<string, unknown>>(
     savedFormState
   )
@@ -105,7 +105,7 @@ export function ReadFunction({
   const displayData = data !== undefined ? data : (hasNoParams && cachedResult?.value !== undefined ? cachedResult.value : undefined)
 
   useEffect(() => {
-    setFormState(abiFileName, func.name, inputs)
+    setFormState(abiKey, func.name, inputs)
   }, [inputs, abiFileName, func.name, setFormState])
 
   const wasLoadingRef = useRef(false)

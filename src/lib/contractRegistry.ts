@@ -1,5 +1,4 @@
 import type { Address } from "viem"
-import { safeStringify } from "@/lib/utils"
 
 export interface ContractAddress {
   address: Address
@@ -19,6 +18,8 @@ export interface ContractsRegistry {
 const CONTRACTS_FILE = "/contracts.json"
 
 export async function loadContracts(): Promise<ContractsRegistry> {
+  // Try to load from file for one-time migration, but contracts are now stored in localStorage
+  // via the contractStore. This is only used for initial migration from file-based storage.
   try {
     const response = await fetch(CONTRACTS_FILE)
     if (!response.ok) {
@@ -33,16 +34,10 @@ export async function loadContracts(): Promise<ContractsRegistry> {
 export async function saveContracts(
   contracts: ContractsRegistry
 ): Promise<void> {
-  try {
-      await fetch("/api/contracts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: safeStringify(contracts, 2),
-      })
-  } catch (error) {
-    console.error("Failed to save contracts:", error)
-    throw error
-  }
+  // Contracts are now stored in localStorage via the contractStore's persist middleware.
+  // This function is kept for API compatibility, but the actual persistence happens
+  // automatically when setContracts() is called on the store.
+  // No-op since the store handles persistence automatically.
 }
 
 export function addContract(

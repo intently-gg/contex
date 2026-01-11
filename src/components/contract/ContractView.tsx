@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useContractStore } from "@/stores/contractStore"
+import { useABIStore } from "@/stores/abiStore"
 import { updateContractLabel, saveContracts } from "@/lib/contractRegistry"
 import { copyToClipboard } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -24,25 +25,18 @@ interface ContractViewProps {
 
 export function ContractView({ contractLabel }: ContractViewProps) {
   const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract } = useContractStore()
+  const { abis } = useABIStore()
   const { isConnected, address: walletAddress } = useAccount()
   const chainId = useChainId()
   const chains = useChains()
   const { switchChain } = useSwitchChain()
   const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
-  const [abis, setAbis] = useState<Record<string, Abi>>({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [copied, setCopied] = useState(false)
   const prevAddressRef = useRef<string | null>(null)
   const prevChainIdRef = useRef<number | null>(null)
   const prevWalletAddressRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    fetch("/api/abis")
-      .then((res) => res.json())
-      .then(setAbis)
-      .catch(console.error)
-  }, [])
 
   const contract = contracts[contractLabel]
   if (!contract) return null
@@ -52,7 +46,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const selectedFunction = getSelectedFunction(contractLabel)
   
   // Stabilize ABI reference to prevent infinite loops with large ABIs
-  const abi = useMemo(() => abis[contract.abi], [abis, contract.abi])
+  const abi = useMemo(() => abis[contract.abi] as Abi | undefined, [abis, contract.abi])
 
   // Auto-refresh read functions with no params when address/chain/wallet changes
   useEffect(() => {
@@ -237,7 +231,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           contractLabel={contractLabel}
           address={selectedAddress.address as Address}
           abi={abi}
-          abiFileName={contract.abi}
+          abiKey={contract.abi}
           selectedFunction={selectedFunction}
           onSelectFunction={(functionName) => setSelectedFunction(contractLabel, functionName)}
         />
@@ -381,7 +375,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             contractLabel={contractLabel}
             address={selectedAddress.address as Address}
             abi={abi}
-            abiFileName={contract.abi}
+            abiKey={contract.abi}
             functionName={selectedFunction}
             supportedChainIds={selectedAddress.chainIds}
             refreshKey={refreshKey}

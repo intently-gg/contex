@@ -10,7 +10,7 @@ interface ReadResult {
 }
 
 interface FormState {
-  [abiFileName: string]: {
+  [abiKey: string]: {
     [functionName: string]: Record<string, unknown>
   }
 }
@@ -43,12 +43,12 @@ interface ContractStore {
     address: Address
   ) => ReadResult | undefined
   setFormState: (
-    abiFileName: string,
+    abiKey: string,
     functionName: string,
     inputs: Record<string, unknown>
   ) => void
   getFormState: (
-    abiFileName: string,
+    abiKey: string,
     functionName: string
   ) => Record<string, unknown> | undefined
   toggleFavorite: (contractLabel: string, functionName: string) => void
@@ -152,12 +152,12 @@ export const useContractStore = create<ContractStore>()(
         })
       },
 
-      setFormState: (abiFileName, functionName, inputs) => {
+      setFormState: (abiKey, functionName, inputs) => {
         set((state) => {
           const newFormState = {
             ...state.formState,
-            [abiFileName]: {
-              ...state.formState[abiFileName],
+            [abiKey]: {
+              ...state.formState[abiKey],
               [functionName]: inputs,
             },
           }
@@ -174,19 +174,19 @@ export const useContractStore = create<ContractStore>()(
         })
       },
 
-      getFormState: (abiFileName, functionName) => {
+      getFormState: (abiKey, functionName) => {
         // Try to load from sessionStorage first
         try {
           const stored = sessionStorage.getItem("contract-explorer-form-state")
           if (stored) {
             const parsed = JSON.parse(stored)
-            return parsed[abiFileName]?.[functionName]
+            return parsed[abiKey]?.[functionName]
           }
         } catch (e) {
           console.warn("Failed to load form state from sessionStorage", e)
         }
         // Fallback to in-memory state
-        return get().formState[abiFileName]?.[functionName]
+        return get().formState[abiKey]?.[functionName]
       },
 
       toggleFavorite: (contractLabel, functionName) =>

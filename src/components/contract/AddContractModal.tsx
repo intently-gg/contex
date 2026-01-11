@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/stores/contractStore"
+import { useABIStore } from "@/stores/abiStore"
 import { addContract, saveContracts } from "@/lib/contractRegistry"
-import { loadABILabels, getABILabel } from "@/lib/abiLabels"
+import { getABILabel } from "@/lib/abiLabels"
 import { config } from "@/lib/wagmi"
 import {
   Dialog,
@@ -16,9 +17,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, ChevronRight, ChevronLeft } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, Plus } from "lucide-react"
 import type { Address } from "viem"
 import { isAddress, getAddress } from "viem"
+import { AddABIModal } from "./AddABIModal"
 
 interface AddContractModalProps {
   open: boolean
@@ -32,24 +34,19 @@ export function AddContractModal({
   onOpenChange,
 }: AddContractModalProps) {
   const { contracts, setContracts } = useContractStore()
+  const { abis, abiLabels } = useABIStore()
   const [step, setStep] = useState<Step>("select-abi")
-  const [abiFileName, setAbiFileName] = useState("")
+  const [abiKey, setAbiKey] = useState("")
   const [address, setAddress] = useState("")
   const [addressLabel, setAddressLabel] = useState("")
   const [chainIds, setChainIds] = useState<number[]>([])
-  const [abis, setAbis] = useState<Record<string, unknown>>({})
-  const [abiLabels, setAbiLabels] = useState<Record<string, string>>({})
   const [isDetecting, setIsDetecting] = useState(false)
+  const [isAddABIOpen, setIsAddABIOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
-      fetch("/api/abis")
-        .then((res) => res.json())
-        .then(setAbis)
-        .catch(console.error)
-      loadABILabels().then(setAbiLabels).catch(console.error)
       setStep("select-abi")
-      setAbiFileName("")
+      setAbiKey("")
       setAddress("")
       setAddressLabel("")
       setChainIds([])
@@ -59,7 +56,7 @@ export function AddContractModal({
   const availableChains = config.chains
 
   const handleABISelected = () => {
-    if (!abiFileName) {
+    if (!abiKey) {
       toast.error("Please select an ABI")
       return
     }
@@ -86,8 +83,8 @@ export function AddContractModal({
     setAddress(cleaned)
     
     // Auto-populate address label if empty and address is valid
-    if (!addressLabel && cleaned.length === 42 && isAddress(cleaned, { strict: false })) {
-      const abiLabel = getABILabel(abiLabels, abiFileName)
+    if (!addressLabel && cleaned.length === 42 && isAddress(cleaned, { strict: false }) && abiKey) {
+      const abiLabel = getABILabel(abiLabels, abiKey)
       const addr = getAddress(cleaned)
       const label = `${abiLabel} ${addr.slice(0, 6)}...${addr.slice(-4)}`
       setAddressLabel(label)
@@ -194,7 +191,7 @@ export function AddContractModal({
   }
 
   const handleAdd = async () => {
-    if (!abiFileName || !address || !addressLabel || chainIds.length === 0) {
+    if (!abiKey || !address || !addressLabel || chainIds.length === 0) {
       toast.error("Please fill in all fields")
       return
     }
@@ -218,9 +215,9 @@ export function AddContractModal({
     }
 
     // Check for unique address label per ABI
-    const abiLabel = getABILabel(abiLabels, abiFileName)
+    const abiLabel = getABILabel(abiLabels, abiKey)
     for (const [label, contract] of Object.entries(contracts)) {
-      if (contract.abi === abiFileName) {
+      if (contract.abi === abiKey) {
         for (const addr of contract.addresses) {
           if (addr.label === addressLabel) {
             toast.error("Address label must be unique per ABI", {
@@ -236,7 +233,7 @@ export function AddContractModal({
       const newContracts = addContract(
         contracts,
         abiLabel,
-        abiFileName,
+        abiKey,
         normalizedAddress,
         addressLabel,
         chainIds
@@ -246,7 +243,7 @@ export function AddContractModal({
       toast.success("Contract added successfully")
       onOpenChange(false)
       setStep("select-abi")
-      setAbiFileName("")
+      setAbiKey("")
       setAddress("")
       setAddressLabel("")
       setChainIds([])
@@ -265,7 +262,7 @@ export function AddContractModal({
     )
   }
 
-  const selectedABILabel = abiFileName ? getABILabel(abiLabels, abiFileName) : ""
+  const selectedABILabel = abiKey ? getABILabel(abiLabels, abiKey) : ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -283,24 +280,45 @@ export function AddContractModal({
 
         {step === "select-abi" ? (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="abi-file">ABI File</Label>
-              <Select value={abiFileName} onValueChange={setAbiFileName}>
-                <SelectTrigger className="w-full z-10">
-                  <SelectValue placeholder="Select ABI file" />
-                </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover">
-                  {Object.keys(abis).map((filename) => {
-                    const label = getABILabel(abiLabels, filename)
-                    return (
-                      <SelectItem key={filename} value={filename}>
-                        {label} ({filename})
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+            {Object.keys(abis).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <p className="text-muted-foreground">No ABIs registered yet.</p>
+                <Button onClick={() => setIsAddABIOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add ABI
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="abi-file">ABI</Label>
+                <div className="flex gap-2">
+                  <Select value={abiKey} onValueChange={setAbiKey}>
+                    <SelectTrigger className="w-full z-10">
+                      <SelectValue placeholder="Select ABI" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100] bg-popover">
+                      {Object.keys(abis).map((key) => {
+                        const label = getABILabel(abiLabels, key)
+                        return (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsAddABIOpen(true)}
+                    title="Add ABI"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -387,7 +405,7 @@ export function AddContractModal({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleABISelected} disabled={!abiFileName}>
+              <Button onClick={handleABISelected} disabled={!abiKey}>
                 Next <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </>
@@ -408,6 +426,10 @@ export function AddContractModal({
           )}
         </DialogFooter>
       </DialogContent>
+      <AddABIModal
+        open={isAddABIOpen}
+        onOpenChange={setIsAddABIOpen}
+      />
     </Dialog>
   )
 }

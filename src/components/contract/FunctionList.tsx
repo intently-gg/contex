@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useContractStore } from "@/stores/contractStore"
+import { useABIStore } from "@/stores/abiStore"
 import { parseABI } from "@/lib/abiParser"
 import { ReadFunction } from "./ReadFunction"
 import { WriteFunction } from "./WriteFunction"
@@ -10,28 +11,21 @@ import type { Address, Abi } from "viem"
 interface FunctionListProps {
   contractLabel: string
   address: Address
-  abiFileName: string
+  abiKey: string
   supportedChainIds: number[]
 }
 
 export function FunctionList({
   contractLabel,
   address,
-  abiFileName,
+  abiKey,
   supportedChainIds,
 }: FunctionListProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const { isFavorite } = useContractStore()
-  const [abis, setAbis] = useState<Record<string, Abi>>({})
+  const { abis } = useABIStore()
 
-  useEffect(() => {
-    fetch("/api/abis")
-      .then((res) => res.json())
-      .then(setAbis)
-      .catch(console.error)
-  }, [])
-
-  const abi = abis[abiFileName]
+  const abi = abis[abiKey] as Abi | undefined
   
   const allFunctions = useMemo(() => {
     if (!abi) return []
@@ -113,7 +107,7 @@ export function FunctionList({
                       contractLabel={contractLabel}
                       address={address}
                       abi={abi}
-                      abiFileName={abiFileName}
+                      abiKey={abiKey}
                       function={func}
                       supportedChainIds={supportedChainIds}
                     />
@@ -147,7 +141,7 @@ export function FunctionList({
                       contractLabel={contractLabel}
                       address={address}
                       abi={abi}
-                      abiFileName={abiFileName}
+                      abiKey={abiKey}
                       function={func}
                       supportedChainIds={supportedChainIds}
                     />

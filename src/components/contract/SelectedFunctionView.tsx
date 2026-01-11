@@ -15,7 +15,7 @@ interface SelectedFunctionViewProps {
   contractLabel: string
   address: Address
   abi: Abi
-  abiFileName: string
+  abiKey: string
   functionName: string | null
   supportedChainIds: number[]
   refreshKey?: number
@@ -26,7 +26,7 @@ export function SelectedFunctionView({
   contractLabel,
   address,
   abi,
-  abiFileName,
+  abiKey,
   functionName,
   supportedChainIds,
   refreshKey,
@@ -149,7 +149,7 @@ export function SelectedFunctionView({
             contractLabel={contractLabel}
             address={address}
             abi={abi}
-            abiFileName={abiFileName}
+            abiKey={abiKey}
             function={selectedFunc}
             supportedChainIds={supportedChainIds}
             refreshKey={refreshKey}
@@ -159,7 +159,7 @@ export function SelectedFunctionView({
             contractLabel={contractLabel}
             address={address}
             abi={abi}
-            abiFileName={abiFileName}
+            abiKey={abiKey}
             function={selectedFunc}
             supportedChainIds={supportedChainIds}
           />

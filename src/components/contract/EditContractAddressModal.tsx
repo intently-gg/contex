@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react"
 import { useChainId, useChains } from "wagmi"
 import { useContractStore } from "@/stores/contractStore"
+import { useABIStore } from "@/stores/abiStore"
 import { updateAddressLabel, updateAddressChainIds, deleteAddress, saveContracts } from "@/lib/contractRegistry"
-import { loadABILabels, getABILabel } from "@/lib/abiLabels"
+import { getABILabel } from "@/lib/abiLabels"
 import { copyToClipboard } from "@/lib/utils"
 import { config } from "@/lib/wagmi"
 import {
@@ -45,10 +46,10 @@ export function EditContractAddressModal({
   addressIndex,
 }: EditContractAddressModalProps) {
   const { contracts, setContracts } = useContractStore()
+  const { abiLabels } = useABIStore()
   const [addressLabel, setAddressLabel] = useState("")
   const [chainIds, setChainIds] = useState<number[]>([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [abiLabels, setAbiLabels] = useState<Record<string, string>>({})
   const [copied, setCopied] = useState(false)
   const chainId = useChainId()
   const chains = useChains()
@@ -69,7 +70,6 @@ export function EditContractAddressModal({
     if (open && address) {
       setAddressLabel(address.label)
       setChainIds(address.chainIds)
-      loadABILabels().then(setAbiLabels).catch(console.error)
     }
   }, [open, address, contract])
 

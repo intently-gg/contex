@@ -15,7 +15,7 @@ interface FunctionSidebarProps {
   contractLabel: string
   address: Address
   abi: Abi
-  abiFileName: string
+  abiKey: string
   selectedFunction: string | null
   onSelectFunction: (functionName: string) => void
 }
@@ -24,7 +24,7 @@ export function FunctionSidebar({
   contractLabel,
   address,
   abi,
-  abiFileName: _abiFileName,
+  abiKey: _abiKey,
   selectedFunction,
   onSelectFunction,
 }: FunctionSidebarProps) {

@@ -5,30 +5,31 @@ import { ContractTabs } from "./ContractTabs"
 import { AddContractModal } from "./AddContractModal"
 import { ABIManagerModal } from "./ABIManagerModal"
 import { Button } from "@/components/ui/button"
-import { Plus, FileJson } from "lucide-react"
+import { Plus } from "lucide-react"
 
 export function ContractExplorer() {
   const { contracts, setContracts } = useContractStore()
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
+  const [hasMigrated, setHasMigrated] = useState(false)
 
   useEffect(() => {
-    // Only load from file if store is empty (first load)
-    if (!hasLoaded && Object.keys(contracts).length === 0) {
+    // One-time migration from file to localStorage (if file exists and store is empty)
+    // After migration, contracts are stored in localStorage via the contractStore's persist middleware
+    if (!hasMigrated && Object.keys(contracts).length === 0) {
       loadContracts().then((fileContracts) => {
         if (Object.keys(fileContracts).length > 0) {
           setContracts(fileContracts)
         }
-        setHasLoaded(true)
+        setHasMigrated(true)
       })
     } else {
-      setHasLoaded(true)
+      setHasMigrated(true)
     }
     // Initialize formState from sessionStorage
     const { initializeFormState } = useContractStore.getState()
     initializeFormState()
-  }, [contracts, setContracts, hasLoaded])
+  }, [contracts, setContracts, hasMigrated])
 
   const contractLabels = Object.keys(contracts)
 
@@ -36,25 +37,15 @@ export function ContractExplorer() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground mb-4">
-          No contracts registered. Add your first contract to get started.
+          No contracts registered yet. Add your first contract to get started.
         </p>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsABIManagerOpen(true)}>
-            <FileJson className="mr-2 h-4 w-4" />
-            Manage ABIs
-          </Button>
-          <Button onClick={() => setIsAddContractOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Contract
-          </Button>
-        </div>
+        <Button onClick={() => setIsAddContractOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Contract
+        </Button>
         <AddContractModal
           open={isAddContractOpen}
           onOpenChange={setIsAddContractOpen}
-        />
-        <ABIManagerModal
-          open={isABIManagerOpen}
-          onOpenChange={setIsABIManagerOpen}
         />
       </div>
     )

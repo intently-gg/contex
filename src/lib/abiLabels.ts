@@ -36,8 +36,8 @@ export async function saveABILabels(
 
 export function getABILabel(
   labels: Record<string, string>,
-  filename: string
+  abiKey: string
 ): string {
-  return labels[filename] || filename.replace(/\.json$/, "")
+  return labels[abiKey] || abiKey
 }
 

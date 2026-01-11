@@ -22,7 +22,7 @@ interface WriteFunctionProps {
   contractLabel: string
   address: Address
   abi: Abi
-  abiFileName: string
+  abiKey: string
   function: ParsedFunction
   supportedChainIds: number[]
 }
@@ -31,7 +31,7 @@ export function WriteFunction({
   contractLabel,
   address,
   abi,
-  abiFileName,
+  abiKey,
   function: func,
   supportedChainIds,
 }: WriteFunctionProps) {
@@ -40,7 +40,7 @@ export function WriteFunction({
     useContractStore()
 
   const formFields = generateFormFields([...func.inputs])
-  const savedFormState = getFormState(abiFileName, func.name) || {}
+  const savedFormState = getFormState(abiKey, func.name) || {}
   const [inputs, setInputs] = useState<Record<string, unknown>>(
     savedFormState
   )
@@ -53,7 +53,7 @@ export function WriteFunction({
     useWriteContractFunction(address, abi, func.name)
 
   useEffect(() => {
-    setFormState(abiFileName, func.name, inputs)
+    setFormState(abiKey, func.name, inputs)
   }, [inputs, abiFileName, func.name, setFormState])
 
   const isFav = isFavorite(contractLabel, func.name)
