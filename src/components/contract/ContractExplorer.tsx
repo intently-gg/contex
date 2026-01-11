@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useContractStore } from "@/stores/contractStore"
-import { loadContracts } from "@/lib/contractRegistry"
 import { ContractTabs } from "./ContractTabs"
 import { AddContractModal } from "./AddContractModal"
 import { ABIManagerModal } from "./ABIManagerModal"
@@ -8,28 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 
 export function ContractExplorer() {
-  const { contracts, setContracts } = useContractStore()
+  const { contracts } = useContractStore()
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
-  const [hasMigrated, setHasMigrated] = useState(false)
 
   useEffect(() => {
-    // One-time migration from file to localStorage (if file exists and store is empty)
-    // After migration, contracts are stored in localStorage via the contractStore's persist middleware
-    if (!hasMigrated && Object.keys(contracts).length === 0) {
-      loadContracts().then((fileContracts) => {
-        if (Object.keys(fileContracts).length > 0) {
-          setContracts(fileContracts)
-        }
-        setHasMigrated(true)
-      })
-    } else {
-      setHasMigrated(true)
-    }
     // Initialize formState from sessionStorage
     const { initializeFormState } = useContractStore.getState()
     initializeFormState()
-  }, [contracts, setContracts, hasMigrated])
+  }, [])
 
   const contractLabels = Object.keys(contracts)
 

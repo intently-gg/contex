@@ -15,26 +15,10 @@ export interface ContractsRegistry {
   [contractLabel: string]: ContractEntry
 }
 
-const CONTRACTS_FILE = "/contracts.json"
-
-export async function loadContracts(): Promise<ContractsRegistry> {
-  // Try to load from file for one-time migration, but contracts are now stored in localStorage
-  // via the contractStore. This is only used for initial migration from file-based storage.
-  try {
-    const response = await fetch(CONTRACTS_FILE)
-    if (!response.ok) {
-      return {}
-    }
-    return await response.json()
-  } catch {
-    return {}
-  }
-}
-
 export async function saveContracts(
   contracts: ContractsRegistry
 ): Promise<void> {
-  // Contracts are now stored in localStorage via the contractStore's persist middleware.
+  // Contracts are stored in localStorage via the contractStore's persist middleware.
   // This function is kept for API compatibility, but the actual persistence happens
   // automatically when setContracts() is called on the store.
   // No-op since the store handles persistence automatically.

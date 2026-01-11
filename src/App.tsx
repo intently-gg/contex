@@ -9,6 +9,7 @@ import { Header } from "@/components/layout/Header"
 import { ContractExplorer } from "@/components/contract/ContractExplorer"
 import { useThemeStore } from "@/stores/themeStore"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { AuthCheck } from "@/components/auth/AuthCheck"
 
 const queryClient = new QueryClient()
 
@@ -20,15 +21,17 @@ function AppContent() {
   }, [theme])
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="w-full">
-          <ContractExplorer />
-        </main>
-        <Toaster />
-      </div>
-    </TooltipProvider>
+    <AuthCheck>
+      <TooltipProvider>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <main className="w-full">
+            <ContractExplorer />
+          </main>
+          <Toaster />
+        </div>
+      </TooltipProvider>
+    </AuthCheck>
   )
 }
 
