@@ -164,7 +164,7 @@ export function abiPlugin(): Plugin {
         if (req.method === "POST") {
           res.setHeader("Content-Type", "application/json")
           let body = ""
-          req.on("data", (chunk) => {
+          req.on("data", (chunk: Buffer) => {
             body += chunk.toString()
           })
           req.on("end", async () => {
@@ -178,7 +178,7 @@ export function abiPlugin(): Plugin {
               }
 
               const { createHash } = await import("crypto")
-              const DISCLAIMER_TEXT = `By using contex, you acknowledge it is an experimental beta feature provided 'as is' by intently [INTENTLY LLC]. We disclaim all warranties and assume no liability for any loss of funds, smart contract failures, or damages resulting from your use. You acknowledge that blockchain transactions are irreversible and that you are solely responsible for your own assets and risk. Use of contex does not constitute financial advice.`
+              const DISCLAIMER_TEXT = `By using contex, you acknowledge it is a beta feature provided 'as is' by intently [INTENTLY LLC]. We disclaim all warranties and assume no liability for any loss of funds, smart contract failures, or damages resulting from your use. You acknowledge that blockchain transactions are irreversible and that you are solely responsible for your own assets and risk.`
               
               const termsHash = createHash("sha256")
                 .update(DISCLAIMER_TEXT)
@@ -241,7 +241,7 @@ export function abiPlugin(): Plugin {
           }
         } else if (req.method === "POST") {
           let body = ""
-          req.on("data", (chunk) => {
+          req.on("data", (chunk: Buffer) => {
             body += chunk.toString()
           })
           req.on("end", async () => {
@@ -295,7 +295,7 @@ export function abiPlugin(): Plugin {
       server.middlewares.use("/api/contracts", async (req, res, next) => {
         if (req.method === "POST") {
           let body = ""
-          req.on("data", (chunk) => {
+          req.on("data", (chunk: Buffer) => {
             body += chunk.toString()
           })
           req.on("end", async () => {
@@ -335,7 +335,7 @@ export function abiPlugin(): Plugin {
           }
         } else if (req.method === "POST") {
           let body = ""
-          req.on("data", (chunk) => {
+          req.on("data", (chunk: Buffer) => {
             body += chunk.toString()
           })
           req.on("end", async () => {

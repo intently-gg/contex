@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -61,6 +61,7 @@ export function ValueParserModal({
     return isWei ? "18" : "0"
   })
   const [units, setUnits] = useState("")
+  const previewRef = useRef<HTMLDivElement>(null)
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -116,6 +117,52 @@ export function ValueParserModal({
   }
 
   const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!preview) {
+      toast.error("No preview value to copy")
+      return
+    }
+    
+    // Try modern clipboard API first
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(preview)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1000)
+        toast.success("Copied to clipboard")
+        return
+      }
+    } catch {
+      // Fall through to Selection API fallback
+    }
+    
+    // Fallback: Select from preview element using Selection API
+    try {
+      if (previewRef.current) {
+        const range = document.createRange()
+        range.selectNodeContents(previewRef.current)
+        const selection = window.getSelection()
+        if (selection) {
+          selection.removeAllRanges()
+          selection.addRange(range)
+          const successful = document.execCommand("copy")
+          selection.removeAllRanges()
+          
+          if (successful) {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1000)
+            toast.success("Copied to clipboard")
+            return
+          }
+        }
+      }
+    } catch {
+      // Fall through to error
+    }
+    
+    toast.error("Failed to copy. Please select and copy manually.")
+  }
 
   const handleApply = async () => {
     if (!units || !decimals) {
@@ -240,7 +287,20 @@ export function ValueParserModal({
             <Label>Preview</Label>
             {preview ? (
               <div className="flex items-center gap-2">
-                <div className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono">
+                <div 
+                  ref={previewRef}
+                  className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono select-all cursor-text"
+                  onClick={(e) => {
+                    // Allow text selection on click
+                    const range = document.createRange()
+                    range.selectNodeContents(e.currentTarget)
+                    const selection = window.getSelection()
+                    if (selection) {
+                      selection.removeAllRanges()
+                      selection.addRange(range)
+                    }
+                  }}
+                >
                   {preview}
                 </div>
                 <Tooltip>
@@ -249,7 +309,7 @@ export function ValueParserModal({
                       variant="outline"
                       size="icon"
                       className="h-10 w-10"
-                      onClick={handleApply}
+                      onClick={handleCopy}
                     >
                       {copied ? (
                         <Check className="h-4 w-4" />

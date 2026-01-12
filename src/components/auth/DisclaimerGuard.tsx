@@ -30,7 +30,7 @@ export function DisclaimerGuard({ children }: DisclaimerGuardProps) {
           setShowDisclaimer(true)
         }
       } catch (error) {
-        setSigningError("Failed to check disclaimer status. Please refresh the page.")
+        setSigningError("Failed to check status. Please refresh the page.")
       } finally {
         setIsChecking(false)
       }

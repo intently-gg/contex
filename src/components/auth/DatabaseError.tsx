@@ -16,8 +16,7 @@ export function DatabaseError() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            We're experiencing a temporary issue with our database connection. 
-            Our team has been notified and the service should be restored soon.
+            Database connection failed. Please try again later.
           </p>
         </CardContent>
       </Card>

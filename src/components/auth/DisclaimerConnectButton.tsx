@@ -40,7 +40,7 @@ export function DisclaimerConnectButton() {
           }
         })
         .catch((error) => {
-          const errorMessage = error instanceof Error ? error.message : "Failed to check disclaimer"
+          const errorMessage = error instanceof Error ? error.message : "Failed to check"
           setSigningError(errorMessage)
         })
     }

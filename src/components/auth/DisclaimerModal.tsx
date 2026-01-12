@@ -1,4 +1,3 @@
-import { useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-const DISCLAIMER_TEXT = `By using contex, you acknowledge it is an experimental beta feature provided 'as is' by intently [INTENTLY LLC]. We disclaim all warranties and assume no liability for any loss of funds, smart contract failures, or damages resulting from your use. You acknowledge that blockchain transactions are irreversible and that you are solely responsible for your own assets and risk. Use of contex does not constitute financial advice.`
+const DISCLAIMER_TEXT = `By using contex, you acknowledge it is a beta feature provided 'as is' by intently [INTENTLY LLC]. We disclaim all warranties and assume no liability for any loss of funds, smart contract failures, or damages resulting from your use. You acknowledge that blockchain transactions are irreversible and that you are solely responsible for your own assets and risk.`
 
 interface DisclaimerModalProps {
   open: boolean

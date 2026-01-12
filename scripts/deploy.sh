@@ -36,8 +36,37 @@ if ! ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "test -d $DEPLO
   exit 1
 fi
 
-echo "Syncing files to $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH..."
-rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" "$PROJECT_ROOT/dist/" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+echo "Syncing static files to $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH..."
+rsync -avz --delete \
+  --filter='protect node_modules/' \
+  --filter='protect node_modules/**' \
+  --filter='protect .env' \
+  --filter='protect server.js' \
+  --filter='protect package.json' \
+  --filter='protect contex.service' \
+  --filter='protect public/' \
+  -e "ssh -o StrictHostKeyChecking=no" \
+  "$PROJECT_ROOT/dist/" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+echo "Syncing server files to $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH..."
+rsync -avz \
+  -e "ssh -o StrictHostKeyChecking=no" \
+  "$PROJECT_ROOT/server.js" \
+  "$PROJECT_ROOT/package.json" \
+  "$PROJECT_ROOT/contex.service" \
+  "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+echo "Installing/updating dependencies on server..."
+ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "cd $DEPLOY_PATH && pnpm install --production --frozen-lockfile"
+
+echo "Setting up systemd service..."
+ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "sudo cp $DEPLOY_PATH/contex.service /etc/systemd/system/contex.service && sudo systemctl daemon-reload"
+
+echo "Restarting service..."
+ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "sudo systemctl restart contex.service || sudo systemctl start contex.service"
+
+echo "Checking service status..."
+ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "sudo systemctl status contex.service --no-pager -l"
 
 echo "Deployment complete!"
 

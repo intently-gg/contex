@@ -95,21 +95,9 @@ export function FunctionSidebar({
     }
   }
 
-  const getFunctionParams = (func: ParsedFunction): string => {
-    if (func.inputs.length === 0) return "No parameters"
-    return func.inputs
-      .map((input) => {
-        const name = input.name || "unnamed"
-        const type = input.type
-        return `${name}: ${type}`
-      })
-      .join("\n")
-  }
-
   const renderFunctionItem = (func: ParsedFunction) => {
     const isSelected = selectedFunction === func.name
     const result = getFunctionResult(func)
-    const params = getFunctionParams(func)
 
     return (
       <Tooltip key={func.name}>

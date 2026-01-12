@@ -28,7 +28,7 @@ export async function checkDisclaimerSignature(
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || "Failed to check disclaimer signature")
+      throw new Error(errorData.error || "Failed to check signature")
     }
     
     return await response.json()

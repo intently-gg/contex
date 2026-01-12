@@ -1,0 +1,186 @@
+import express from 'express'
+import { config } from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { Pool } from 'pg'
+import fs from 'fs/promises'
+import { createHash } from 'crypto'
+
+// Load .env from current working directory
+config()
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const app = express()
+
+// Middleware
+app.use(express.json())
+app.use(express.static(path.join(__dirname, 'dist')))
+
+// Database connection
+let pool = null
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'contex',
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    })
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err)
+    })
+  }
+  return pool
+}
+
+async function query(text, params) {
+  const pool = getPool()
+  const result = await pool.query(text, params)
+  return result.rows
+}
+
+async function queryOne(text, params) {
+  const rows = await query(text, params)
+  return rows[0] || null
+}
+
+// API Routes
+
+// Health check
+app.get('/api/health', async (req, res) => {
+  try {
+    await query('SELECT 1')
+    res.json({ status: 'ok' })
+  } catch (error) {
+    res.status(503).json({ status: 'unavailable', error: String(error) })
+  }
+})
+
+// Disclaimer check
+app.get('/api/disclaimer/check', async (req, res) => {
+  try {
+    const walletAddress = req.query.walletAddress
+    if (!walletAddress) {
+      return res.status(400).json({ error: 'Missing walletAddress' })
+    }
+
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                      req.ip || 
+                      'unknown'
+
+    const signature = await queryOne(
+      `SELECT * FROM signatures 
+       WHERE ip_address = $1 AND wallet_address = $2`,
+      [ipAddress, String(walletAddress).toLowerCase()]
+    )
+
+    if (signature) {
+      res.json({
+        signed: true,
+        signature: {
+          walletAddress: signature.wallet_address,
+          timestamp: signature.timestamp.toISOString(),
+          versionId: signature.version_id,
+          ipAddress: signature.ip_address,
+          userAgent: signature.user_agent,
+          termsHash: signature.terms_hash,
+        }
+      })
+    } else {
+      res.json({ signed: false })
+    }
+  } catch (error) {
+    console.error('[DISCLAIMER CHECK] Error:', error)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
+
+// Disclaimer sign
+app.post('/api/disclaimer/sign', async (req, res) => {
+  try {
+    const { walletAddress, versionId } = req.body
+    
+    if (!walletAddress || !versionId) {
+      return res.status(400).json({ error: 'Missing walletAddress or versionId' })
+    }
+
+    const DISCLAIMER_TEXT = `By using contex, you acknowledge it is a beta feature provided 'as is' by intently [INTENTLY LLC]. We disclaim all warranties and assume no liability for any loss of funds, smart contract failures, or damages resulting from your use. You acknowledge that blockchain transactions are irreversible and that you are solely responsible for your own assets and risk.`
+    
+    const termsHash = createHash('sha256')
+      .update(DISCLAIMER_TEXT)
+      .digest('hex')
+
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                      req.ip || 
+                      'unknown'
+    const userAgent = req.headers['user-agent'] || 'unknown'
+
+    await query(
+      `INSERT INTO signatures (wallet_address, ip_address, version_id, user_agent, terms_hash)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (ip_address, wallet_address) 
+       DO UPDATE SET 
+         timestamp = NOW(),
+         version_id = $3,
+         user_agent = $4,
+         terms_hash = $5`,
+      [
+        walletAddress.toLowerCase(),
+        ipAddress,
+        versionId,
+        userAgent,
+        termsHash,
+      ]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('[DISCLAIMER SIGN] Error:', error)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
+
+// ABI labels - GET
+app.get('/api/abi-labels', async (req, res) => {
+  try {
+    const labelsPath = path.join(__dirname, 'public', 'abi-labels.json')
+    try {
+      const content = await fs.readFile(labelsPath, 'utf-8')
+      res.json(JSON.parse(content))
+    } catch {
+      res.json({})
+    }
+  } catch (error) {
+    console.error('[ABI LABELS GET] Error:', error)
+    res.status(500).json({ error: 'Failed to read labels' })
+  }
+})
+
+// ABI labels - POST
+app.post('/api/abi-labels', async (req, res) => {
+  try {
+    const labelsPath = path.join(__dirname, 'public', 'abi-labels.json')
+    await fs.mkdir(path.dirname(labelsPath), { recursive: true })
+    await fs.writeFile(labelsPath, JSON.stringify(req.body, null, 2))
+    res.json({ success: true })
+  } catch (error) {
+    console.error('[ABI LABELS POST] Error:', error)
+    res.status(500).json({ error: 'Failed to save labels' })
+  }
+})
+
+// Fallback to index.html for SPA routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'))
+})
+
+const port = process.env.PORT || process.env.VITE_PORT || 3000
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`)
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+})
+

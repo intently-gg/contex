@@ -1,10 +1,10 @@
 import { Pool } from "pg"
+import type { QueryResultRow } from "pg"
 import { config } from "dotenv"
 
 config()
 
 let pool: Pool | null = null
-let isInitialized = false
 
 function getPool(): Pool {
   if (!pool) {
@@ -48,7 +48,7 @@ async function withRetry<T>(
   }
 }
 
-export async function query<T = any>(
+export async function query<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<T[]> {
@@ -59,7 +59,7 @@ export async function query<T = any>(
   })
 }
 
-export async function queryOne<T = any>(
+export async function queryOne<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<T | null> {

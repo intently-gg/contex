@@ -17,7 +17,7 @@ export function SigningError({ onRetry, error }: SigningErrorProps) {
             <CardTitle>Unable to Complete Setup</CardTitle>
           </div>
           <CardDescription>
-            We were unable to save your disclaimer agreement. Please try again.
+            We were unable to finish setting up contex. Please try again.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

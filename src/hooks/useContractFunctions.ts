@@ -93,8 +93,8 @@ export function useWriteContractFunction(
             if (cancelled) return
             
             const status = fetchedReceipt.status
-            const isRevertedStatus = status === "reverted" || status === 0 || (typeof status === "number" && status === 0)
-            const isSuccessStatus = status === "success" || status === 1 || (typeof status === "number" && status === 1)
+            const isRevertedStatus = status === "reverted" || (typeof status === "number" && status === 0)
+            const isSuccessStatus = status === "success" || (typeof status === "number" && status === 1)
             
             if (isRevertedStatus) {
               // Transaction reverted - extract revert reason
@@ -335,7 +335,6 @@ export function useWriteContractFunction(
   const receiptStatus = receipt?.status
   const isReverted = !!revertError || 
                       receiptStatus === "reverted" || 
-                      receiptStatus === 0 || 
                       (typeof receiptStatus === "number" && receiptStatus === 0) ||
                       (receiptError && !isConfirming)
 
