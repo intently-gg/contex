@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
@@ -36,7 +36,6 @@ export function ResultPane({
 }: ResultPaneProps) {
   const [copied, setCopied] = useState(false)
   const [expandOpen, setExpandOpen] = useState(false)
-  const [isOverflowing, setIsOverflowing] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
 
   // Sanitize result and error for React DevTools (convert BigInt to string)
@@ -98,27 +97,12 @@ export function ResultPane({
     return typeof sanitizedResult === "object" && sanitizedResult !== null && !(sanitizedResult instanceof Date)
   }, [sanitizedResult, sanitizedError])
 
-  const isSimpleValue = !sanitizedError && sanitizedResult !== undefined && !isComplexValue
   const shouldUseRenderer = type === "read" && isComplexValue && !sanitizedError && !hash
 
   const resultText = getResultText()
   const isError = !!sanitizedError
   const hasResult = sanitizedError || hash || result !== undefined
 
-  // Check if text is overflowing
-  useEffect(() => {
-    if (textRef.current && hasResult) {
-      // Use requestAnimationFrame to ensure layout is complete
-      requestAnimationFrame(() => {
-        if (textRef.current) {
-          const element = textRef.current
-          setIsOverflowing(element.scrollWidth > element.clientWidth)
-        }
-      })
-    } else {
-      setIsOverflowing(false)
-    }
-  }, [resultText, hasResult])
 
   const handleCopy = async () => {
     if (!hasResult) return
@@ -224,10 +208,14 @@ export function ResultPane({
             style={{
               width: "100%",
               minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              // overflow: "hidden",
+              // textOverflow: "ellipsis",
+              // whiteSpace: "nowrap",
               color: isError ? "hsl(var(--destructive))" : undefined,
+              wordBreak: "break-word",
+              //overflowWrap: "anywhere"
+              overflowY: "scroll",
+              maxHeight: "300px",
             }}
           >
             {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}

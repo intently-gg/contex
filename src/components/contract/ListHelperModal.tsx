@@ -39,7 +39,7 @@ export function ListHelperModal({
   fieldName,
   abiParam,
   currentValue = "",
-  onValueHelper,
+  onValueHelper: _onValueHelper,
   onTupleHelper,
   onListHelper,
   contractLabel,

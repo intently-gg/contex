@@ -16,7 +16,7 @@ export interface ContractsRegistry {
 }
 
 export async function saveContracts(
-  contracts: ContractsRegistry
+  _contracts: ContractsRegistry
 ): Promise<void> {
   // Contracts are stored in localStorage via the contractStore's persist middleware.
   // This function is kept for API compatibility, but the actual persistence happens

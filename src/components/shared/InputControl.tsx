@@ -81,7 +81,7 @@ export function InputControl({
         const baseType = fieldType.replace("[]", "")
         let placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
         if (baseType.startsWith("tuple")) {
-          placeholder = "Recommended to use the helper →→→"
+          placeholder = "Recommended to use the helper ➔"
         }
         return (
           <Textarea
@@ -195,7 +195,7 @@ export function InputControl({
       } else if (baseType === "string") {
         placeholder = `Array of strings, e.g. ["value1", "value2"]`
       } else if (baseType.startsWith("tuple")) {
-        placeholder = "Recommended to use the helper →→→"
+        placeholder = "Recommended to use the helper ➔"
       }
       
       return (
@@ -288,7 +288,7 @@ export function InputControl({
   // Get placeholder for tuple types
   const getTuplePlaceholder = () => {
     if (isTuple) {
-      return "Recommended to use the helper →→→"
+      return "Recommended to use the helper ➔"
     }
     return undefined
   }

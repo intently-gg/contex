@@ -18,7 +18,7 @@ interface ContractSearchModalProps {
 
 export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalProps) {
   const { contracts, setSelectedContract, setSelectedAddress } = useContractStore()
-  const { abis, abiLabels } = useABIStore()
+  const { abiLabels } = useABIStore()
   const chains = useChains()
   const [searchQuery, setSearchQuery] = useState("")
 

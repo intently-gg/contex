@@ -38,7 +38,7 @@ export function TupleHelperModal({
   fieldName,
   abiParam,
   currentValue = "",
-  onValueHelper,
+  onValueHelper: _onValueHelper,
   onTupleHelper,
   onListHelper,
   contractLabel,

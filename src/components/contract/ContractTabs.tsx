@@ -7,7 +7,7 @@ interface ContractTabsProps {
   onAddContract?: () => void
 }
 
-export function ContractTabs({ onAddContract }: ContractTabsProps) {
+export function ContractTabs({ onAddContract: _onAddContract }: ContractTabsProps) {
   const { contracts, selectedContract, setSelectedContract } = useContractStore()
   const contractLabels = Object.keys(contracts)
 
