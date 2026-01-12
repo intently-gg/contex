@@ -139,20 +139,13 @@ export function FunctionSidebar({
             </div>
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <div>
-            <div className="font-semibold mb-1">{func.name}</div>
-            <pre className="text-xs whitespace-pre-wrap">{params}</pre>
-            {result && (
-              <div className="mt-2 pt-2 border-t">
-                <div className="text-xs font-semibold mb-1">Result:</div>
-                <pre className="text-xs whitespace-pre-wrap break-words">
-                  {safeStringify(result.full, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </TooltipContent>
+        {result && (
+          <TooltipContent className="max-h-[75px] overflow-y-auto">
+            <pre className="text-xs whitespace-pre-wrap break-words">
+              {safeStringify(result.full, 2)}
+            </pre>
+          </TooltipContent>
+        )}
       </Tooltip>
     )
   }

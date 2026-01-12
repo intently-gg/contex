@@ -31,10 +31,10 @@ export function ContractTabs({ onAddContract: _onAddContract }: ContractTabsProp
     <Tabs
       value={activeContract}
       onValueChange={setSelectedContract}
-      className="w-full"
+      className="w-full h-full flex flex-col min-h-0"
     >
       {contractLabels.map((label) => (
-        <TabsContent key={label} value={label}>
+        <TabsContent key={label} value={label} className="h-full flex flex-col min-h-0">
           <ContractView contractLabel={label} />
         </TabsContent>
       ))}

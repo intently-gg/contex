@@ -64,6 +64,11 @@
     border-color: hsl(var(--border));
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));

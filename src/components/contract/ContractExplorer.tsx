@@ -38,7 +38,7 @@ export function ContractExplorer() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col min-h-0 overflow-hidden">
       <ContractTabs 
         onAddContract={() => setIsAddContractOpen(true)}
       />

@@ -148,7 +148,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   // Check wallet connection first
   if (!isConnected) {
     return (
-      <div className="flex h-[calc(100vh-200px)]">
+      <div className="flex h-full min-h-0">
         <div className="flex-1 flex items-center justify-center">
           <Card>
             <CardHeader>
@@ -169,7 +169,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   // Check chain compatibility
   if (!isCurrentChainEnabled && selectedAddress) {
     return (
-      <div className="flex h-[calc(100vh-200px)]">
+      <div className="flex h-full min-h-0">
         <div className="flex-1 flex items-center justify-center">
           <Card>
             <CardHeader>
@@ -221,7 +221,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
 
   if (!abi || !selectedAddress) {
     return (
-      <div className="flex h-[calc(100vh-200px)]">
+      <div className="flex h-full min-h-0">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground">Loading...</div>
         </div>
@@ -231,7 +231,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
 
   // Wallet connected and chain is enabled - show full interface with sidebar
   return (
-    <div className="flex h-[calc(100vh-200px)]">
+    <div className="flex flex-1 min-h-0">
       {/* Hidden component that renders all ReadFunction components for functions with no params */}
       {/* This ensures they all receive refreshKey and can auto-refresh */}
       {/* Key includes address to force remount when address changes */}
@@ -254,7 +254,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           onSelectFunction={(functionName) => setSelectedFunction(contractLabel, functionName)}
         />
       )}
-      <div className="flex-1 flex flex-col" style={{ maxWidth: '1125px' }}>
+      <div className="flex-1 flex flex-col min-h-0" style={{ maxWidth: '1125px' }}>
         <div className="p-4 border-b flex items-center gap-4">
           <div className="flex items-center gap-1 flex-1 min-w-0">
             <label className="text-sm font-medium">ABI:</label>

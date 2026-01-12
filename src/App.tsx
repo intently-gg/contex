@@ -23,11 +23,22 @@ function AppContent() {
   return (
     <AuthCheck>
       <TooltipProvider>
-        <div className="min-h-screen bg-background">
+        <div className="h-screen bg-background flex flex-col overflow-hidden">
           <Header />
-          <main className="w-full">
+          <main className="w-full flex-1 flex flex-col overflow-hidden min-h-0">
             <ContractExplorer />
           </main>
+          <footer className="w-full flex items-center justify-between px-4 py-1 text-[11px] text-muted-foreground border-t border-border flex-none">
+            <span>Contex © {new Date().getFullYear()}</span>
+            <a
+              href="https://intently.gg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Built by Intently
+            </a>
+          </footer>
           <Toaster />
         </div>
       </TooltipProvider>
