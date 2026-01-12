@@ -192,9 +192,9 @@ export function WriteFunction({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardContent className="p-4 flex flex-col max-h-[calc(100vh-200px)]" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
-        <div className="flex flex-col min-h-0" style={{ width: "100%", minWidth: 0 }}>
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
+      <CardContent className="p-4 flex flex-col max-h-[calc(100vh-200px)] flex-1 min-h-0" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div className="flex flex-col min-h-0 flex-1" style={{ width: "100%", minWidth: 0 }}>
+          <div className="overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
             <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
               <div 
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border"
@@ -316,7 +316,7 @@ export function WriteFunction({
           </div>
 
           {/* Result Pane - Pinned to bottom when content overflows */}
-          <div className="flex-shrink-0" style={{ width: "100%", minWidth: 0 }}>
+          <div className="flex-1 min-h-0" style={{ width: "100%", minWidth: 0, minHeight: "155px" }}>
             <ResultPane
               type="write"
               isLoading={isPending}

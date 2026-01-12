@@ -125,11 +125,12 @@ export function ResultPane({
           minWidth: 0, 
           maxWidth: "100%",
           overflow: "hidden",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
+          height: "100%"
         }}
       >
         {/* Button Row */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Execute/Refresh Button */}
           {type === "write" ? (
             <Button
@@ -204,18 +205,15 @@ export function ResultPane({
         {hasResult && !shouldUseRenderer && (
           <div
             ref={textRef}
-            className="text-sm"
+            className="w-full"
             style={{
               width: "100%",
               minWidth: 0,
-              // overflow: "hidden",
-              // textOverflow: "ellipsis",
-              // whiteSpace: "nowrap",
-              color: isError ? "hsl(var(--destructive))" : undefined,
+              flex: "1 1 0",
+              minHeight: 0,
+              overflowY: "auto",
               wordBreak: "break-word",
-              //overflowWrap: "anywhere"
-              overflowY: "scroll",
-              maxHeight: "300px",
+              color: isError ? "hsl(var(--destructive))" : undefined,
             }}
           >
             {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
