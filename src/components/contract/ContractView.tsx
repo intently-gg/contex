@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pencil, Network, Copy, ExternalLink, Check, Plus, Search } from "lucide-react"
+import { Pencil, Copy, ExternalLink, Check, Plus, Search, Network, AlertCircle } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
 import { EditLabelDialog } from "./EditLabelDialog"
@@ -20,6 +20,7 @@ import { AddContractModal } from "./AddContractModal"
 import { ContractSearchModal } from "./ContractSearchModal"
 import { toast } from "sonner"
 import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
+import { parseABI } from "@/lib/abiParser"
 import type { Address, Abi } from "viem"
 
 interface ContractViewProps {
@@ -60,6 +61,28 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   
   // Stabilize ABI reference to prevent infinite loops with large ABIs
   const abi = useMemo(() => abis[contract.abi] as Abi | undefined, [abis, contract.abi])
+
+  // Check for ABI parse error
+  const abiParseError = useMemo(() => {
+    if (!abi) return false
+    const parsed = parseABI(abi)
+    return parsed === null
+  }, [abi])
+
+  // Check for chain compatibility error
+  const chainError = useMemo(() => {
+    if (!selectedAddress || !isConnected) return false
+    return !selectedAddress.chainIds.includes(chainId)
+  }, [selectedAddress, chainId, isConnected])
+
+  const enabledChains = useMemo(() => {
+    if (!selectedAddress) return []
+    return chains.filter((chain) =>
+      selectedAddress.chainIds.includes(chain.id)
+    )
+  }, [selectedAddress, chains])
+
+  const hasError = abiParseError || chainError
 
   // Auto-refresh read functions with no params when address/chain/wallet changes
   useEffect(() => {
@@ -167,17 +190,6 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   }
 
 
-  const enabledChains = useMemo(() => {
-    if (!selectedAddress) return []
-    return chains.filter((chain) =>
-      selectedAddress.chainIds.includes(chain.id)
-    )
-  }, [selectedAddress, chains])
-
-  const isCurrentChainEnabled = selectedAddress
-    ? selectedAddress.chainIds.includes(chainId)
-    : false
-
   const scannerUrl = useMemo(() => {
     if (!selectedAddress) return null
     const currentChain = chains.find((c) => c.id === chainId && selectedAddress.chainIds.includes(c.id))
@@ -216,58 +228,6 @@ export function ContractView({ contractLabel }: ContractViewProps) {
     )
   }
 
-  // Check chain compatibility
-  if (!isCurrentChainEnabled && selectedAddress) {
-    return (
-      <div className="flex h-full min-h-0">
-        <div className="flex-1 flex items-center justify-center">
-          <Card>
-            <CardHeader>
-              <CardTitle>Switch to Enabled Chain</CardTitle>
-              <CardDescription>
-                This contract is not enabled on the currently connected chain.
-                Please switch to one of the enabled chains below.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap justify-center gap-2">
-                {enabledChains.map((chain) => {
-                  const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
-                  return (
-                    <Button
-                      key={chain.id}
-                      variant="outline"
-                      onClick={() => {
-                        try {
-                          switchChain({ chainId: chain.id })
-                        } catch (error) {
-                          toast.error("Failed to switch chain", {
-                            description: error instanceof Error ? error.message : "Unknown error",
-                          })
-                        }
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      {iconUrl ? (
-                        <img
-                          src={iconUrl}
-                          alt={chain.name}
-                          className="w-5 h-5 rounded-full"
-                        />
-                      ) : (
-                        <Network className="h-4 w-4" />
-                      )}
-                      {chain.name}
-                    </Button>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
 
   if (!abi || !selectedAddress) {
     return (
@@ -285,7 +245,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       {/* Hidden component that renders all ReadFunction components for functions with no params */}
       {/* This ensures they all receive refreshKey and can auto-refresh */}
       {/* Key includes address to force remount when address changes */}
-      {selectedAddress && abi && (
+      {selectedAddress && abi && !hasError && (
         <AutoRefreshFunctions
           key={`${contractLabel}-${selectedAddress.address}-${chainId}`}
           contractLabel={contractLabel}
@@ -294,7 +254,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           refreshKey={refreshKey}
         />
       )}
-      {selectedAddress && (
+      {selectedAddress && !hasError && (
         <FunctionSidebar
           contractLabel={contractLabel}
           address={selectedAddress.address as Address}
@@ -585,7 +545,69 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             )}
           </div>
         </div>
-        {selectedAddress && (
+        {hasError ? (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <Card className="w-full max-w-2xl">
+              <CardHeader>
+                {abiParseError ? (
+                  <>
+                    <CardTitle className="flex items-center gap-2" style={{ color: '#ec4899' }}>
+                      <AlertCircle className="h-5 w-5" />
+                      Could not parse this ABI
+                    </CardTitle>
+                    <CardDescription>
+                      The ABI for this contract could not be parsed. Please select a different ABI or contract.
+                    </CardDescription>
+                  </>
+                ) : chainError ? (
+                  <>
+                    <CardTitle>Switch to Enabled Chain</CardTitle>
+                    <CardDescription>
+                      This contract is not enabled on the currently connected chain.
+                      Please switch to one of the enabled chains below, or pick another ABI/Contract.
+                    </CardDescription>
+                  </>
+                ) : null}
+              </CardHeader>
+              {chainError && !abiParseError && enabledChains.length > 0 && (
+                <CardContent>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {enabledChains.map((chain) => {
+                      const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
+                      return (
+                        <Button
+                          key={chain.id}
+                          variant="outline"
+                          onClick={() => {
+                            try {
+                              switchChain({ chainId: chain.id })
+                            } catch (error) {
+                              toast.error("Failed to switch chain", {
+                                description: error instanceof Error ? error.message : "Unknown error",
+                              })
+                            }
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {iconUrl ? (
+                            <img
+                              src={iconUrl}
+                              alt={chain.name}
+                              className="w-5 h-5 rounded-full"
+                            />
+                          ) : (
+                            <Network className="h-4 w-4" />
+                          )}
+                          {chain.name}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </div>
+        ) : selectedAddress ? (
           <SelectedFunctionView
             key={`${contractLabel}-${selectedAddress.address}-${chainId}-${selectedFunction || 'none'}`}
             contractLabel={contractLabel}
@@ -596,7 +618,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             supportedChainIds={selectedAddress.chainIds}
             refreshKey={refreshKey}
           />
-        )}
+        ) : null}
       </div>
 
       <EditLabelDialog
