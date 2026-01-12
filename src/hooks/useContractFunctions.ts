@@ -1,7 +1,8 @@
-import { useEffect } from "react"
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useEffect, useState } from "react"
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
 import { useChainId } from "wagmi"
 import type { Address, Abi } from "viem"
+import { decodeErrorResult } from "viem"
 import { useContractStore } from "@/stores/contractStore"
 import { safeStringify } from "@/lib/utils"
 import { toast } from "sonner"
@@ -58,10 +59,178 @@ export function useWriteContractFunction(
   functionName: string
 ) {
   const { writeContract, data: hash, error, isPending } = useWriteContract()
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    })
+  const publicClient = usePublicClient()
+  const { 
+    data: receipt, 
+    isLoading: isConfirming, 
+    isSuccess: isConfirmed,
+    isError: receiptError,
+    error: receiptErrorData
+  } = useWaitForTransactionReceipt({
+    hash,
+  })
+
+  const [revertError, setRevertError] = useState<Error | null>(null)
+  const [isPollingReceipt, setIsPollingReceipt] = useState(false)
+
+  // Poll for receipt directly when we have a hash - don't wait for useWaitForTransactionReceipt
+  useEffect(() => {
+    if (!hash || !publicClient || isPollingReceipt || revertError) return
+    
+    let cancelled = false
+    setIsPollingReceipt(true)
+    
+    const pollReceipt = async () => {
+      try {
+        // Poll for receipt with a short interval
+        const checkReceipt = async (): Promise<void> => {
+          if (cancelled) return
+          
+          try {
+            const fetchedReceipt = await publicClient.getTransactionReceipt({ hash })
+            
+            if (cancelled) return
+            
+            const status = fetchedReceipt.status
+            const isRevertedStatus = status === "reverted" || status === 0 || (typeof status === "number" && status === 0)
+            const isSuccessStatus = status === "success" || status === 1 || (typeof status === "number" && status === 1)
+            
+            if (isRevertedStatus) {
+              // Transaction reverted - extract revert reason
+              let revertMessage = "Transaction reverted on-chain"
+              
+              try {
+                const tx = await publicClient.getTransaction({ hash })
+                // Try to simulate the call to get revert reason
+                try {
+                  await publicClient.call({
+                    account: tx.from,
+                    to: tx.to || address,
+                    data: tx.input as `0x${string}`,
+                    value: tx.value,
+                  })
+                } catch (callErr: any) {
+                  // Extract revert reason from error
+                  if (callErr?.data) {
+                    try {
+                      const decoded = decodeErrorResult({
+                        data: callErr.data as `0x${string}`,
+                        abi,
+                      })
+                      revertMessage = `Transaction reverted: ${decoded.errorName}${decoded.args && decoded.args.length > 0 ? ` (${decoded.args.join(", ")})` : ""}`
+                    } catch {
+                      if (callErr.message) {
+                        const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|\.|$)/i) ||
+                                            callErr.message.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i)
+                        if (messageMatch && messageMatch[1]) {
+                          revertMessage = `Transaction reverted: ${messageMatch[1].trim()}`
+                        } else {
+                          revertMessage = `Transaction reverted: ${callErr.message}`
+                        }
+                      }
+                    }
+                  } else if (callErr.message) {
+                    const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|\.|$)/i) ||
+                                        callErr.message.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
+                                        callErr.message.match(/Execution reverted with reason:\s*(.+?)(?:\n|\.|$)/i)
+                    if (messageMatch && messageMatch[1]) {
+                      revertMessage = `Transaction reverted: ${messageMatch[1].trim()}`
+                    } else if (callErr.message.includes("revert")) {
+                      revertMessage = `Transaction reverted: ${callErr.message}`
+                    }
+                  }
+                }
+              } catch {
+                // If we can't get transaction or simulate, use generic message
+              }
+              
+              const error = new Error(revertMessage)
+              error.name = "TransactionReverted"
+              setRevertError(error)
+              setIsPollingReceipt(false)
+            } else if (isSuccessStatus) {
+              // Transaction succeeded - clear any revert error
+              setRevertError(null)
+              setIsPollingReceipt(false)
+            }
+          } catch (err: any) {
+            // Receipt not available yet - retry after a short delay
+            // Check if it's a "not found" error (receipt not available yet)
+            const isNotFoundError = err?.name === "TransactionNotFoundError" || 
+                                   err?.name === "NotFoundError" ||
+                                   err?.message?.includes("not found") ||
+                                   err?.message?.includes("Transaction not found")
+            
+            if (!cancelled) {
+              if (isNotFoundError) {
+                // Receipt not available yet - retry after 200ms (faster polling)
+                setTimeout(() => {
+                  if (!cancelled) {
+                    checkReceipt()
+                  }
+                }, 200)
+              } else {
+                // Some other error - still retry but with longer delay
+                setTimeout(() => {
+                  if (!cancelled) {
+                    checkReceipt()
+                  }
+                }, 1000)
+              }
+            }
+          }
+        }
+        
+        // Start polling immediately
+        checkReceipt()
+      } catch (err) {
+        if (!cancelled) {
+          setIsPollingReceipt(false)
+        }
+      }
+    }
+    
+    pollReceipt()
+    
+    return () => {
+      cancelled = true
+      setIsPollingReceipt(false)
+    }
+  }, [hash, publicClient, address, abi, revertError])
+
+  // Fallback: also check receiptError from useWaitForTransactionReceipt as backup
+  // (but our polling should catch it first)
+  useEffect(() => {
+    if (receiptError && receiptErrorData && hash && !revertError) {
+      let revertMessage = "Transaction reverted on-chain"
+      
+      // Extract revert reason from the error data
+      const errorString = String(receiptErrorData)
+      
+      // Try to extract revert reason from error message
+      const reasonMatch = errorString.match(/Execution reverted with reason:\s*(.+?)(?:\n|\.|$)/i) ||
+                         errorString.match(/Details:\s*execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
+                         errorString.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
+                         errorString.match(/revert\s+(.+?)(?:\n|\.|$)/i)
+      
+      if (reasonMatch && reasonMatch[1]) {
+        revertMessage = `Transaction reverted: ${reasonMatch[1].trim()}`
+      }
+      
+      // Set the error (this is a fallback - polling should catch it first)
+      const error = new Error(revertMessage)
+      error.name = "TransactionReverted"
+      setRevertError(error)
+    }
+  }, [receiptError, receiptErrorData, hash, revertError])
+
+  // Reset revert error and polling state when hash changes (new transaction)
+  useEffect(() => {
+    if (hash) {
+      setRevertError(null)
+      setIsPollingReceipt(false)
+    }
+  }, [hash])
 
   const write = async (args: unknown[], value?: bigint) => {
     try {
@@ -93,20 +262,41 @@ export function useWriteContractFunction(
   }, [hash, isPending])
 
   useEffect(() => {
-    if (isConfirmed && hash) {
+    if (isConfirmed && hash && receipt?.status === "success") {
       toast.success("Transaction confirmed", {
         description: `Hash: ${hash}`,
       })
     }
-  }, [isConfirmed, hash])
+  }, [isConfirmed, hash, receipt])
+
+  useEffect(() => {
+    if (revertError && hash) {
+      toast.error("Transaction reverted", {
+        description: revertError.message,
+      })
+    }
+  }, [revertError, hash])
+
+  // Combine error and revertError - revertError takes precedence
+  const finalError = revertError || error
+
+  // Determine if transaction is reverted
+  const receiptStatus = receipt?.status
+  const isReverted = !!revertError || 
+                      receiptStatus === "reverted" || 
+                      receiptStatus === 0 || 
+                      (typeof receiptStatus === "number" && receiptStatus === 0) ||
+                      (receiptError && !isConfirming)
 
   return {
     write,
     hash,
-    error,
+    error: finalError,
     isPending,
-    isConfirming,
-    isConfirmed,
+    isConfirming: isConfirming || isPollingReceipt,
+    isConfirmed: isConfirmed && receipt?.status === "success",
+    isReverted,
+    revertError,
   }
 }
 

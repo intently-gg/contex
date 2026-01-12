@@ -49,7 +49,7 @@ export function WriteFunction({
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
 
-  const { write, hash, error, isPending, isConfirming, isConfirmed } =
+  const { write, hash, error, isPending, isConfirming, isConfirmed, isReverted } =
     useWriteContractFunction(address, abi, func.name)
 
   useEffect(() => {
@@ -192,7 +192,7 @@ export function WriteFunction({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardContent className="p-4 flex flex-col max-h-[calc(100vh-200px)] flex-1 min-h-0" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+      <CardContent className="p-4 flex flex-col max-h-[calc(100vh-200px)] flex-1 min-h-0" style={{ marginBottom: "10px", width: "100%", minWidth: 0, overflow: "hidden" }}>
         <div className="flex flex-col min-h-0 flex-1" style={{ width: "100%", minWidth: 0 }}>
           <div className="overflow-y-auto min-h-0" style={{ width: "100%", minWidth: 0 }}>
             <div className="space-y-4" style={{ width: "100%", minWidth: 0 }}>
@@ -324,6 +324,7 @@ export function WriteFunction({
               hash={hash}
               isConfirming={isConfirming}
               isConfirmed={isConfirmed}
+              isReverted={isReverted}
               onExecute={handleWrite}
               disabled={!supportedChainIds.includes(chainId)}
             />

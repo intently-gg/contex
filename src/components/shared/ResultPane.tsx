@@ -14,6 +14,7 @@ interface ResultPaneProps {
   hash?: string
   isConfirming?: boolean
   isConfirmed?: boolean
+  isReverted?: boolean
   result?: unknown
   onExecute?: () => void
   onRefresh?: () => void
@@ -28,6 +29,7 @@ export function ResultPane({
   hash,
   isConfirming = false,
   isConfirmed = false,
+  isReverted = false,
   result,
   onExecute,
   onRefresh,
@@ -66,8 +68,9 @@ export function ResultPane({
     }
     if (hash) {
       let text = `Hash: ${hash}`
-      if (isConfirming) text += " (Confirming...)"
-      if (isConfirmed) text += " (Confirmed!)"
+      if (isConfirming && !isReverted) text += " (Confirming...)"
+      if (isReverted) text += " (Reverted)"
+      else if (isConfirmed) text += " (Confirmed!)"
       return text
     }
     if (result !== undefined) {
@@ -238,6 +241,7 @@ export function ResultPane({
         hash={hash}
         isConfirming={isConfirming}
         isConfirmed={isConfirmed}
+        isReverted={isReverted}
         result={sanitizedResult}
       />
     </>

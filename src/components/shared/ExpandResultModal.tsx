@@ -18,6 +18,7 @@ interface ExpandResultModalProps {
   hash?: string
   isConfirming?: boolean
   isConfirmed?: boolean
+  isReverted?: boolean
   result?: unknown
 }
 
@@ -28,6 +29,7 @@ export function ExpandResultModal({
   hash,
   isConfirming = false,
   isConfirmed = false,
+  isReverted = false,
   result,
 }: ExpandResultModalProps) {
   const hasResult = error || hash || result !== undefined
@@ -74,13 +76,18 @@ export function ExpandResultModal({
               </AlertDescription>
             </Alert>
           ) : hash ? (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>Transaction Submitted</AlertTitle>
+            <Alert variant={isReverted ? "destructive" : "default"}>
+              {isReverted ? (
+                <AlertCircle className="h-4 w-4" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              <AlertTitle>{isReverted ? "Transaction Reverted" : "Transaction Submitted"}</AlertTitle>
               <AlertDescription>
                 Hash: {hash}
-                {isConfirming && " (Confirming...)"}
-                {isConfirmed && " (Confirmed!)"}
+                {isConfirming && !isReverted && " (Confirming...)"}
+                {isReverted && " (Reverted)"}
+                {isConfirmed && !isReverted && " (Confirmed!)"}
               </AlertDescription>
             </Alert>
           ) : sanitizedResult !== undefined ? (
