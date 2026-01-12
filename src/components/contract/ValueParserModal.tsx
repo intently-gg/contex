@@ -183,6 +183,21 @@ export function ValueParserModal({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="units">Units</Label>
+            <Input
+              id="units"
+              type="number"
+              step="any"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              placeholder="12.345"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              Example: 12.345 with 6 decimals = 12345000
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="decimals">Decimals</Label>
             <div className="flex gap-2">
               <Input
@@ -220,20 +235,6 @@ export function ValueParserModal({
                 Default: 18 (for wei/ether). You can override this.
               </p>
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="units">Units</Label>
-            <Input
-              id="units"
-              type="number"
-              step="any"
-              value={units}
-              onChange={(e) => setUnits(e.target.value)}
-              placeholder="12.345"
-            />
-            <p className="text-xs text-muted-foreground">
-              Example: 12.345 with 6 decimals = 12345000
-            </p>
           </div>
           <div className="space-y-2">
             <Label>Preview</Label>

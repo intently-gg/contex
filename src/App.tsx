@@ -25,7 +25,7 @@ function AppContent() {
       <TooltipProvider>
         <div className="h-screen bg-background flex flex-col overflow-hidden">
           <Header />
-          <main className="w-full flex-1 flex flex-col overflow-hidden min-h-0">
+          <main className="w-full flex-1 flex flex-col overflow-hidden min-h-0" >
             <ContractExplorer />
           </main>
           <footer className="w-full flex items-center justify-between px-4 py-1 text-[11px] text-muted-foreground border-t border-border flex-none">

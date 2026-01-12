@@ -142,7 +142,7 @@ export function SelectedFunctionView({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ maxWidth: '1125px' }}>
       <div className="flex-1 overflow-y-auto p-4">
         {selectedFunc.type === "read" ? (
           <ReadFunction

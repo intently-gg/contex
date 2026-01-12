@@ -254,7 +254,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           onSelectFunction={(functionName) => setSelectedFunction(contractLabel, functionName)}
         />
       )}
-      <div className="flex-1 flex flex-col min-h-0" style={{ maxWidth: '1125px' }}>
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="p-4 border-b flex items-center gap-4">
           <div className="flex items-center gap-1 flex-1 min-w-0">
             <label className="text-sm font-medium">ABI:</label>
