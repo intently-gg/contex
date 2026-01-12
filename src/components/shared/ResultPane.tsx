@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react"
+import { useChainId, useChains } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
@@ -40,6 +41,9 @@ export function ResultPane({
   const [expandOpen, setExpandOpen] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
 
+  const chainId = useChainId()
+  const chains = useChains()
+
   // Sanitize result and error for React DevTools (convert BigInt to string)
   const sanitizedResult = useMemo(() => {
     if (result === undefined) return undefined
@@ -61,17 +65,18 @@ export function ResultPane({
     return error
   }, [error])
 
+  const explorerTxUrl = useMemo(() => {
+    if (!hash) return null
+    const chain = chains.find((c) => c.id === chainId)
+    const baseUrl = chain?.blockExplorers?.default?.url
+    if (!baseUrl) return null
+    return `${baseUrl}/tx/${hash}`
+  }, [chains, chainId, hash])
+
   const getResultText = (): string => {
     if (sanitizedError) {
       // Replace newlines with spaces for single-line display
       return (sanitizedError.message || "Transaction failed").replace(/\n/g, " ").replace(/\s+/g, " ").trim()
-    }
-    if (hash) {
-      let text = `Hash: ${hash}`
-      if (isConfirming && !isReverted) text += " (Confirming...)"
-      if (isReverted) text += " (Reverted)"
-      else if (isConfirmed) text += " (Confirmed!)"
-      return text
     }
     if (result !== undefined) {
       let formattedResult: string
@@ -208,7 +213,7 @@ export function ResultPane({
         {hasResult && !shouldUseRenderer && (
           <div
             ref={textRef}
-            className="w-full"
+            className="w-full space-y-1"
             style={{
               width: "100%",
               minWidth: 0,
@@ -219,9 +224,40 @@ export function ResultPane({
               color: isError ? "hsl(var(--destructive))" : undefined,
             }}
           >
-            {isError && <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {hash && !isError && <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />}
-            {resultText}
+            {isError && (
+              <div>
+                <AlertCircle className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle" />
+                <span>{resultText}</span>
+              </div>
+            )}
+            {!isError && !hash && resultText && <div>{resultText}</div>}
+            {hash && (
+              <div>
+                {!isError && (
+                  <CheckCircle2 className="inline h-4 w-4 mr-1 flex-shrink-0 align-middle text-emerald-500" />
+                )}
+                <span>
+                  Hash:{" "}
+                  {explorerTxUrl ? (
+                    <a
+                      href={explorerTxUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      {hash}
+                    </a>
+                  ) : (
+                    hash
+                  )}
+                  {isConfirming && !isReverted && " (Confirming...)"}
+                  {isReverted && " (Reverted)"}
+                  {isConfirmed && !isReverted && (
+                    <span className="text-emerald-600"> (Confirmed!)</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -239,6 +275,7 @@ export function ResultPane({
         onOpenChange={setExpandOpen}
         error={sanitizedError}
         hash={hash}
+        explorerTxUrl={explorerTxUrl}
         isConfirming={isConfirming}
         isConfirmed={isConfirmed}
         isReverted={isReverted}

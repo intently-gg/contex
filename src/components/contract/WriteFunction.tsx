@@ -138,8 +138,6 @@ export function WriteFunction({
     const filteredArgs = args.filter((a) => a !== undefined) as unknown[]
     const valueBigInt = value ? BigInt(value) : undefined
 
-    console.log(filteredArgs)
-
     try {
       await write(filteredArgs, valueBigInt)
     } catch (err) {

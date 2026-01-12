@@ -16,6 +16,7 @@ interface ExpandResultModalProps {
   onOpenChange: (open: boolean) => void
   error?: Error | null
   hash?: string
+  explorerTxUrl?: string | null
   isConfirming?: boolean
   isConfirmed?: boolean
   isReverted?: boolean
@@ -27,6 +28,7 @@ export function ExpandResultModal({
   onOpenChange,
   error,
   hash,
+  explorerTxUrl,
   isConfirming = false,
   isConfirmed = false,
   isReverted = false,
@@ -62,8 +64,7 @@ export function ExpandResultModal({
             <Alert variant="destructive" className="max-w-full">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription
-                className="text-pink-600 dark:text-pink-400 break-words overflow-wrap-anywhere whitespace-pre-wrap"
+              <AlertDescription className="text-pink-600 dark:text-pink-400 break-words overflow-wrap-anywhere whitespace-pre-wrap"
                 style={{
                   wordBreak: "break-word",
                   overflowWrap: "anywhere",
@@ -73,6 +74,24 @@ export function ExpandResultModal({
                 }}
               >
                 {error.message || "Transaction failed"}
+                {hash && (
+                  <>
+                    <br />
+                    Hash:{" "}
+                    {explorerTxUrl ? (
+                      <a
+                        href={explorerTxUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        {hash}
+                      </a>
+                    ) : (
+                      hash
+                    )}
+                  </>
+                )}
               </AlertDescription>
             </Alert>
           ) : hash ? (
@@ -80,14 +99,28 @@ export function ExpandResultModal({
               {isReverted ? (
                 <AlertCircle className="h-4 w-4" />
               ) : (
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               )}
               <AlertTitle>{isReverted ? "Transaction Reverted" : "Transaction Submitted"}</AlertTitle>
               <AlertDescription>
-                Hash: {hash}
+                Hash:{" "}
+                {explorerTxUrl ? (
+                  <a
+                    href={explorerTxUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {hash}
+                  </a>
+                ) : (
+                  hash
+                )}
                 {isConfirming && !isReverted && " (Confirming...)"}
                 {isReverted && " (Reverted)"}
-                {isConfirmed && !isReverted && " (Confirmed!)"}
+                {isConfirmed && !isReverted && (
+                  <span className="text-emerald-600"> (Confirmed!)</span>
+                )}
               </AlertDescription>
             </Alert>
           ) : sanitizedResult !== undefined ? (

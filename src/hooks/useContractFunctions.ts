@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react"
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
-import { useChainId } from "wagmi"
+import React, { useEffect, useState } from "react"
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useChainId, useChains } from "wagmi"
 import type { Address, Abi } from "viem"
 import { decodeErrorResult } from "viem"
 import { useContractStore } from "@/stores/contractStore"
@@ -60,6 +59,8 @@ export function useWriteContractFunction(
 ) {
   const { writeContract, data: hash, error, isPending } = useWriteContract()
   const publicClient = usePublicClient()
+   const chainId = useChainId()
+   const chains = useChains()
   const { 
     data: receipt, 
     isLoading: isConfirming, 
@@ -120,8 +121,8 @@ export function useWriteContractFunction(
                       revertMessage = `Transaction reverted: ${decoded.errorName}${decoded.args && decoded.args.length > 0 ? ` (${decoded.args.join(", ")})` : ""}`
                     } catch {
                       if (callErr.message) {
-                        const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|\.|$)/i) ||
-                                            callErr.message.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i)
+                        const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|$)/i) ||
+                                            callErr.message.match(/execution reverted:\s*(.+?)(?:\n|$)/i)
                         if (messageMatch && messageMatch[1]) {
                           revertMessage = `Transaction reverted: ${messageMatch[1].trim()}`
                         } else {
@@ -130,9 +131,9 @@ export function useWriteContractFunction(
                       }
                     }
                   } else if (callErr.message) {
-                    const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|\.|$)/i) ||
-                                        callErr.message.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
-                                        callErr.message.match(/Execution reverted with reason:\s*(.+?)(?:\n|\.|$)/i)
+                    const messageMatch = callErr.message.match(/revert\s+(.+?)(?:\n|$)/i) ||
+                                        callErr.message.match(/execution reverted:\s*(.+?)(?:\n|$)/i) ||
+                                        callErr.message.match(/Execution reverted with reason:\s*(.+?)(?:\n|$)/i)
                     if (messageMatch && messageMatch[1]) {
                       revertMessage = `Transaction reverted: ${messageMatch[1].trim()}`
                     } else if (callErr.message.includes("revert")) {
@@ -208,10 +209,10 @@ export function useWriteContractFunction(
       const errorString = String(receiptErrorData)
       
       // Try to extract revert reason from error message
-      const reasonMatch = errorString.match(/Execution reverted with reason:\s*(.+?)(?:\n|\.|$)/i) ||
-                         errorString.match(/Details:\s*execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
-                         errorString.match(/execution reverted:\s*(.+?)(?:\n|\.|$)/i) ||
-                         errorString.match(/revert\s+(.+?)(?:\n|\.|$)/i)
+      const reasonMatch = errorString.match(/Execution reverted with reason:\s*(.+?)(?:\n|$)/i) ||
+                         errorString.match(/Details:\s*execution reverted:\s*(.+?)(?:\n|$)/i) ||
+                         errorString.match(/execution reverted:\s*(.+?)(?:\n|$)/i) ||
+                         errorString.match(/revert\s+(.+?)(?:\n|$)/i)
       
       if (reasonMatch && reasonMatch[1]) {
         revertMessage = `Transaction reverted: ${reasonMatch[1].trim()}`
@@ -255,27 +256,77 @@ export function useWriteContractFunction(
   // Show toast only when hash is actually available (transaction successfully submitted)
   useEffect(() => {
     if (hash && !isPending) {
+      const chain = chains.find((c) => c.id === chainId)
+      const baseUrl = chain?.blockExplorers?.default?.url
+      const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+
       toast.success("Transaction submitted", {
-        description: `Hash: ${hash}`,
+        description: explorerTxUrl
+          ? React.createElement(
+              "a",
+              {
+                href: explorerTxUrl,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                style: { textDecoration: "underline" },
+              },
+              `Hash: ${hash}`
+            )
+          : `Hash: ${hash}`,
       })
     }
-  }, [hash, isPending])
+  }, [hash, isPending, chains, chainId])
 
   useEffect(() => {
     if (isConfirmed && hash && receipt?.status === "success") {
+      const chain = chains.find((c) => c.id === chainId)
+      const baseUrl = chain?.blockExplorers?.default?.url
+      const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+
       toast.success("Transaction confirmed", {
-        description: `Hash: ${hash}`,
+        description: explorerTxUrl
+          ? React.createElement(
+              "a",
+              {
+                href: explorerTxUrl,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                style: { textDecoration: "underline" },
+              },
+              `Hash: ${hash}`
+            )
+          : `Hash: ${hash}`,
       })
     }
-  }, [isConfirmed, hash, receipt])
+  }, [isConfirmed, hash, receipt, chains, chainId])
 
   useEffect(() => {
     if (revertError && hash) {
+      const chain = chains.find((c) => c.id === chainId)
+      const baseUrl = chain?.blockExplorers?.default?.url
+      const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+
       toast.error("Transaction reverted", {
-        description: revertError.message,
+        description: explorerTxUrl
+          ? React.createElement(
+              "div",
+              null,
+              React.createElement("div", null, revertError.message),
+              React.createElement(
+                "a",
+                {
+                  href: explorerTxUrl,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  style: { textDecoration: "underline", display: "block", marginTop: "4px" },
+                },
+                `Hash: ${hash}`
+              )
+            )
+          : revertError.message,
       })
     }
-  }, [revertError, hash])
+  }, [revertError, hash, chains, chainId])
 
   // Combine error and revertError - revertError takes precedence
   const finalError = revertError || error
