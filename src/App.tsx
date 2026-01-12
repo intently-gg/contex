@@ -28,16 +28,17 @@ function AppContent() {
           <main className="w-full flex-1 flex flex-col overflow-hidden min-h-0" >
             <ContractExplorer />
           </main>
-          <footer className="w-full flex items-center justify-between px-4 py-1 text-[11px] text-muted-foreground border-t border-border flex-none">
-            <span>Contex © {new Date().getFullYear()}</span>
-            <a
+          <footer className="bg-background w-full flex items-center justify-between px-4 py-1 text-[10px] text-muted-foreground border-t border-border flex-none">
+          <a
               href="https://intently.gg"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline"
+              className="underline flex items-center gap-1"
             >
-              Built by Intently
+              Built by  
+              <img src="/intently.png" alt="intently" style={{ height: "16px" }} className={`h-3 w-auto ${theme === "dark" ? "invert" : ""}`} />
             </a>
+            <span>contex © {new Date().getFullYear()}</span>
           </footer>
           <Toaster />
         </div>

@@ -1,4 +1,4 @@
-# Contex - Contract Explorer
+# contex - Contract Explorer
 
 A lightweight, single-page React admin dashboard for exploring and interacting with smart contracts. Built with Vite, Tailwind CSS, Shadcn/UI, Wagmi/Viem, and RainbowKit.
 

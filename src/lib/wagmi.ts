@@ -95,7 +95,7 @@ const chainsWithIcons = await Promise.all([
 ])
 
 export const config = getDefaultConfig({
-  appName: "Contex",
+  appName: "contex",
   projectId: "0518955ce1537db7cdcb490aab40b722",
   chains: chainsWithIcons,
   ssr: false,

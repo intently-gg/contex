@@ -46,9 +46,9 @@ export function AuthCheck({ children }: { children: React.ReactNode }) {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Contex Version Upgrade</AlertDialogTitle>
+              <AlertDialogTitle>contex Version Upgrade</AlertDialogTitle>
               <AlertDialogDescription>
-                Contex version has been upgraded and you must re-import and re-configure your contracts.
+                contex version has been upgraded and you must re-import and re-configure your contracts.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

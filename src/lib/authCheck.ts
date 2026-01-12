@@ -51,7 +51,7 @@ export function checkAuth(): AuthCheckResult {
   // Version mismatch and user has ABIs - requires user action
   return {
     requiresUserAction: true,
-    message: "Contex version has been upgraded. You must re-import and re-configure your contracts.",
+    message: "contex version has been upgraded. You must re-import and re-configure your contracts.",
   }
 }
 

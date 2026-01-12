@@ -44,7 +44,7 @@ export function Header() {
             />
             <circle cx="12.5" cy="12.5" r="1.5" fill="currentColor" />
           </svg>
-          <h1 className="text-xl font-bold">Contex</h1>
+          <h1 className="text-xl font-bold">contex</h1>
         </div>
         <div className="flex items-center gap-4">
           <DropdownMenu>
