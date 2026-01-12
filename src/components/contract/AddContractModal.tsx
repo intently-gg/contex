@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { addContract, saveContracts } from "@/lib/contractRegistry"
@@ -45,9 +45,11 @@ export function AddContractModal({
   const [chainIds, setChainIds] = useState<number[]>([])
   const [isDetecting, setIsDetecting] = useState(false)
   const [isAddABIOpen, setIsAddABIOpen] = useState(false)
+  const prevOpenRef = useRef(false)
 
   useEffect(() => {
-    if (open) {
+    if (open && !prevOpenRef.current) {
+      // Modal just opened - initialize state
       const abiKeys = Object.keys(abis)
       // If defaultAbiKey is provided and exists, use it and skip to contract-details
       if (defaultAbiKey && abiKeys.includes(defaultAbiKey)) {
@@ -62,6 +64,7 @@ export function AddContractModal({
       setAddressLabel("")
       setChainIds([])
     }
+    prevOpenRef.current = open
   }, [open, abis, defaultAbiKey])
 
   const availableChains = config.chains
@@ -450,6 +453,10 @@ export function AddContractModal({
       <AddABIModal
         open={isAddABIOpen}
         onOpenChange={setIsAddABIOpen}
+        onABIAdded={(newAbiKey) => {
+          setAbiKey(newAbiKey)
+          setStep("contract-details")
+        }}
       />
     </Dialog>
   )

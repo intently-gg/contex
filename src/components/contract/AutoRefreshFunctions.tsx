@@ -22,7 +22,10 @@ export function AutoRefreshFunctions({
   refreshKey,
 }: AutoRefreshFunctionsProps) {
   // Get all read functions with no parameters
-  const allFunctions = useMemo(() => parseABI(abi), [abi])
+  const allFunctions = useMemo(() => {
+    const parsed = parseABI(abi)
+    return parsed || []
+  }, [abi])
   const readFunctionsWithNoParams = useMemo(
     () => allFunctions.filter((f) => f.type === "read" && f.inputs.length === 0),
     [allFunctions]

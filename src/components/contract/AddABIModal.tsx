@@ -17,11 +17,13 @@ import { useThemeStore } from "@/stores/themeStore"
 interface AddABIModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onABIAdded?: (abiKey: string) => void
 }
 
 export function AddABIModal({
   open,
   onOpenChange,
+  onABIAdded,
 }: AddABIModalProps) {
   const { addABI, isLabelUnique } = useABIStore()
   const [newAbiLabel, setNewAbiLabel] = useState("")
@@ -89,9 +91,12 @@ export function AddABIModal({
 
     try {
       const parsedContent = JSON.parse(newAbiContent)
-      addABI(trimmedLabel, parsedContent)
+      const abiKey = addABI(trimmedLabel, parsedContent)
       toast.success("ABI added successfully")
       onOpenChange(false)
+      if (onABIAdded) {
+        onABIAdded(abiKey)
+      }
     } catch (error) {
       toast.error("Failed to add ABI", {
         description: error instanceof Error ? error.message : "Unknown error",

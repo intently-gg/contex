@@ -29,7 +29,8 @@ export function FunctionList({
   
   const allFunctions = useMemo(() => {
     if (!abi) return []
-    return parseABI(abi)
+    const parsed = parseABI(abi)
+    return parsed || []
   }, [abi])
 
   const readFunctions = useMemo(() => {

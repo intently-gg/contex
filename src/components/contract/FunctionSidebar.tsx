@@ -37,7 +37,15 @@ export function FunctionSidebar({
   const favoritesArray = useContractStore((state) => state.favorites[contractLabel])
   const favorites = useMemo(() => favoritesArray ?? EMPTY_FAVORITES_ARRAY, [favoritesArray])
 
-  const allFunctions = useMemo(() => parseABI(abi), [abi])
+  const parseError = useMemo(() => {
+    const parsed = parseABI(abi)
+    return parsed === null
+  }, [abi])
+  
+  const allFunctions = useMemo(() => {
+    const parsed = parseABI(abi)
+    return parsed || []
+  }, [abi])
 
   const filteredFunctions = useMemo(() => {
     if (!searchQuery) return allFunctions
@@ -201,7 +209,7 @@ export function FunctionSidebar({
           </div>
         )}
 
-        {filteredFunctions.length === 0 && (
+        {filteredFunctions.length === 0 && !parseError && (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No functions found
           </div>

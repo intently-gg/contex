@@ -44,7 +44,16 @@ export function SelectedFunctionView({
   const addressIndex = selectedAddresses[contractLabel] ?? 0
   const selectedAddress = contract.addresses[addressIndex]
 
-  const allFunctions = useMemo(() => parseABI(abi), [abi])
+  const allFunctions = useMemo(() => {
+    const parsed = parseABI(abi)
+    return parsed || []
+  }, [abi])
+  
+  const parseError = useMemo(() => {
+    const parsed = parseABI(abi)
+    return parsed === null
+  }, [abi])
+  
   const selectedFunc = useMemo(() => 
     allFunctions.find((f) => f.name === functionName),
     [allFunctions, functionName]
@@ -126,6 +135,16 @@ export function SelectedFunctionView({
             </div>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  if (parseError) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <span className="text-lg">Could not parse this ABI</span>
+        </div>
       </div>
     )
   }

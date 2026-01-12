@@ -324,6 +324,15 @@ export function InputControl({
                 variant="outline"
                 size="icon"
                 className="h-10 w-10 flex items-center justify-center"
+                style={{
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = ''
+                }}
                 onClick={() => {
                   if (needsValueParserHelper && onValueHelper) {
                     onValueHelper(fieldName)
