@@ -26,6 +26,7 @@ export function DisclaimerConnectButton() {
                 .then((success) => {
                   if (success) {
                     localStorage.removeItem(DISCLAIMER_AGREED_KEY)
+                    window.location.reload()
                   } else {
                     throw new Error("Failed to sign disclaimer")
                   }
@@ -94,6 +95,7 @@ export function DisclaimerConnectButton() {
       if (success) {
         setShowDisclaimer(false)
         setSigningError(null)
+        window.location.reload()
       } else {
         throw new Error("Failed to sign disclaimer")
       }

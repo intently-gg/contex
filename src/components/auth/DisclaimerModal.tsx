@@ -21,9 +21,9 @@ interface DisclaimerModalProps {
 export function DisclaimerModal({ open, onAgree, onDecline, walletAddress }: DisclaimerModalProps) {
   return (
     <AlertDialog 
-      open={open} 
-      onOpenChange={(open) => {
-        if (!open) {
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
           onDecline()
         }
       }}
