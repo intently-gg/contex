@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react"
-import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi"
+import { useAccount, useChainId, useChains, useSwitchChain, usePublicClient } from "wagmi"
 import { DisclaimerConnectButton } from "@/components/auth/DisclaimerConnectButton"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
@@ -34,12 +34,14 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const chainId = useChainId()
   const chains = useChains()
   const { switchChain } = useSwitchChain()
+  const publicClient = usePublicClient()
   const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [noCodeError, setNoCodeError] = useState(false)
   const prevAddressRef = useRef<string | null>(null)
   const prevChainIdRef = useRef<number | null>(null)
   const prevWalletAddressRef = useRef<string | null>(null)
@@ -82,11 +84,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
     )
   }, [selectedAddress, chains])
 
-  const hasError = abiParseError || chainError
+  const hasError = abiParseError || chainError || noCodeError
 
   // Auto-refresh read functions with no params when address/chain/wallet changes
   useEffect(() => {
-    if (!selectedAddress || !abi || !isConnected) return
+    if (!selectedAddress || !abi || !isConnected || !publicClient) return
 
     const currentAddress = selectedAddress.address
     const addressChanged = prevAddressRef.current !== currentAddress
@@ -94,34 +96,67 @@ export function ContractView({ contractLabel }: ContractViewProps) {
     const walletChanged = prevWalletAddressRef.current !== walletAddress
     const isInitialLoad = prevAddressRef.current === null
 
+    // STEP 1: Check if chain is enabled FIRST (before any async calls)
+    if (!selectedAddress.chainIds.includes(chainId)) {
+      // Chain not enabled, reset code error state and don't proceed with code check
+      if (addressChanged || chainChanged || walletChanged || isInitialLoad) {
+        setNoCodeError(false)
+        // Update refs to track current state
+        prevAddressRef.current = currentAddress
+        prevChainIdRef.current = chainId
+        prevWalletAddressRef.current = walletAddress || null
+      }
+      return
+    }
+
     if (addressChanged || chainChanged || walletChanged || isInitialLoad) {
-      // STEP 1: Clear ALL cached read results for this contract FIRST
-      // This erases any cached or currently displayed values
-      console.debug('[ContractView] Attempting to clear cache after repointing to new contract', {
-        contractLabel,
-        addressChanged,
-        chainChanged,
-        walletChanged,
-        isInitialLoad,
-        currentAddress,
-        prevAddress: prevAddressRef.current,
-        chainId,
-        prevChainId: prevChainIdRef.current,
-        walletAddress,
-        prevWalletAddress: prevWalletAddressRef.current,
-      })
-      clearReadResultsForContract(contractLabel)
+      // Reset error state when starting a new check
+      setNoCodeError(false)
       
-      // STEP 2: Trigger refresh for all read functions with no params
-      // The refreshKey change will cause those functions to auto-refresh
-      setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+      // STEP 2: Check if contract has deployed code (before any async calls)
+      const checkCode = async () => {
+        try {
+          const code = await publicClient.getBytecode({ address: currentAddress as Address })
+          if (!code || code === "0x") {
+            setNoCodeError(true)
+            return
+          }
+          setNoCodeError(false)
+          
+          // STEP 3: Clear ALL cached read results for this contract
+          // This erases any cached or currently displayed values
+          console.debug('[ContractView] Attempting to clear cache after repointing to new contract', {
+            contractLabel,
+            addressChanged,
+            chainChanged,
+            walletChanged,
+            isInitialLoad,
+            currentAddress,
+            prevAddress: prevAddressRef.current,
+            chainId,
+            prevChainId: prevChainIdRef.current,
+            walletAddress,
+            prevWalletAddress: prevWalletAddressRef.current,
+          })
+          clearReadResultsForContract(contractLabel)
+          
+          // STEP 4: Trigger refresh for all read functions with no params
+          // The refreshKey change will cause those functions to auto-refresh
+          setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+        } catch (error) {
+          console.error('[ContractView] Error checking contract code:', error)
+          setNoCodeError(true)
+        }
+      }
+      
+      checkCode()
       
       // Update refs to track current state
       prevAddressRef.current = currentAddress
       prevChainIdRef.current = chainId
       prevWalletAddressRef.current = walletAddress || null
     }
-  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi])
+  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi, publicClient, selectedAddress?.chainIds])
 
   const handleUpdateContractLabel = async (newLabel: string) => {
     try {
@@ -559,6 +594,16 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                       The ABI for this contract could not be parsed. Please select a different ABI or contract.
                     </CardDescription>
                   </>
+                ) : noCodeError ? (
+                  <>
+                    <CardTitle className="flex items-center gap-2" style={{ color: '#ec4899' }}>
+                      <AlertCircle className="h-5 w-5" />
+                      No Contract Code Deployed
+                    </CardTitle>
+                    <CardDescription>
+                      There does not appear to be any smart contract code deployed on this chain to this address. Please double-check your configuration.
+                    </CardDescription>
+                  </>
                 ) : chainError ? (
                   <>
                     <CardTitle>Switch to Enabled Chain</CardTitle>
@@ -569,7 +614,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                   </>
                 ) : null}
               </CardHeader>
-              {chainError && !abiParseError && enabledChains.length > 0 && (
+              {chainError && !abiParseError && !noCodeError && enabledChains.length > 0 && (
                 <CardContent>
                   <div className="flex flex-wrap justify-center gap-2">
                     {enabledChains.map((chain) => {
