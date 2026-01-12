@@ -20,18 +20,30 @@ A lightweight, single-page React admin dashboard for exploring and interacting w
 pnpm install
 ```
 
-2. Create a `.env` file (optional):
+2. Set up PostgreSQL database:
+   - Create a database named `contex`
+   - Run the initialization script:
+     ```bash
+     psql -U postgres -d contex -f database/initialize.sql
+     ```
+
+3. Create a `.env` file:
 ```env
 VITE_PORT=3000
 VITE_DEFAULT_CHAIN_ID=1
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=contex
 ```
 
-3. Add your WalletConnect project ID to `src/lib/wagmi.ts`:
+4. Add your WalletConnect project ID to `src/lib/wagmi.ts`:
 ```typescript
 projectId: "YOUR_PROJECT_ID", // Replace with your WalletConnect project ID
 ```
 
-4. Start the dev server:
+5. Start the dev server:
 ```bash
 pnpm dev
 ```
@@ -70,6 +82,7 @@ src/
   stores/            # Zustand state management
   types/             # TypeScript definitions
 abis/                # ABI JSON files folder
+database/            # Database initialization and migration scripts
 public/
   contracts.json     # Contract registry
 ```
@@ -77,6 +90,7 @@ public/
 ## Configuration
 
 - **Port**: Set `VITE_PORT` in `.env` (default: 3000)
+- **Database**: Configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` in `.env`
 - **Chains**: Modify `src/lib/wagmi.ts` to add/remove chains
 - **Theme**: Toggle in header (persists in localStorage)
 

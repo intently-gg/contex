@@ -206,7 +206,7 @@ export function WriteFunction({
                     <div 
                       className="flex items-center justify-center w-7 h-7 rounded-full"
                       style={{
-                        backgroundColor: 'hsl(var(--primary) / 0.2)',
+                        backgroundColor: 'hsl(var(--background))',
                         color: 'hsl(var(--primary-foreground))'
                       }}
                     >

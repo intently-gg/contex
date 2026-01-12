@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react"
 import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
+import { DisclaimerConnectButton } from "@/components/auth/DisclaimerConnectButton"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { updateContractLabel, updateContractABI, saveContracts } from "@/lib/contractRegistry"
@@ -220,7 +220,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ConnectButton />
+              <DisclaimerConnectButton />
             </CardContent>
           </Card>
         </div>

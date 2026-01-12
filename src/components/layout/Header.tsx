@@ -1,4 +1,4 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit"
+import { DisclaimerConnectButton } from "@/components/auth/DisclaimerConnectButton"
 import { Moon, Sun, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useThemeStore } from "@/stores/themeStore"
@@ -86,9 +86,7 @@ export function Header() {
               <Moon className="h-5 w-5" />
             )}
           </Button>
-          <div style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}>
-            <ConnectButton showBalance={false} chainStatus="icon" />
-          </div>
+          <DisclaimerConnectButton />
         </div>
       </div>
       <AddContractModal
