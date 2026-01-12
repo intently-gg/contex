@@ -27,7 +27,7 @@ interface ContractViewProps {
 }
 
 export function ContractView({ contractLabel }: ContractViewProps) {
-  const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract } = useContractStore()
+  const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract, setSelectedContract } = useContractStore()
   const { abis, abiLabels } = useABIStore()
   const { isConnected, address: walletAddress } = useAccount()
   const chainId = useChainId()
@@ -46,7 +46,15 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const contract = contracts[contractLabel]
   if (!contract) return null
 
-  const addressIndex = selectedAddresses[contractLabel] ?? 0
+  // Get addressIndex for current contract, ensuring it's valid
+  const addressIndex = useMemo(() => {
+    const savedIndex = selectedAddresses[contractLabel]
+    if (savedIndex !== undefined && savedIndex >= 0 && savedIndex < contract.addresses.length) {
+      return savedIndex
+    }
+    return 0
+  }, [contractLabel, contract.addresses.length, selectedAddresses])
+  
   const selectedAddress = contract.addresses[addressIndex]
   const selectedFunction = getSelectedFunction(contractLabel)
   
@@ -105,12 +113,54 @@ export function ContractView({ contractLabel }: ContractViewProps) {
 
   const handleUpdateContractABI = async (newAbiKey: string) => {
     try {
-      const updated = updateContractABI(contracts, contractLabel, newAbiKey)
-      await saveContracts(updated)
-      setContracts(updated)
-      clearReadResultsForContract(contractLabel)
-      setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
-      toast.success("Contract ABI updated")
+      // Find contracts that already use this ABI
+      const contractsWithNewABI = Object.entries(contracts).filter(
+        ([label, contract]) => contract.abi === newAbiKey && label !== contractLabel
+      )
+      
+      // If there are other contracts with this ABI, switch to the first one that has a saved selection
+      // Otherwise, switch to the first one found, or stay on current contract if none exist
+      let contractToSwitchTo: string | null = null
+      let addressIndexToRestore: number | null = null
+      
+      for (const [label, _] of contractsWithNewABI) {
+        if (selectedAddresses[label] !== undefined) {
+          contractToSwitchTo = label
+          addressIndexToRestore = selectedAddresses[label]
+          break
+        }
+      }
+      
+      // If no contract with saved selection found, use the first one with this ABI
+      if (!contractToSwitchTo && contractsWithNewABI.length > 0) {
+        contractToSwitchTo = contractsWithNewABI[0][0]
+        addressIndexToRestore = selectedAddresses[contractToSwitchTo] ?? 0
+      }
+      
+      // If we found a contract to switch to, switch to it
+      if (contractToSwitchTo) {
+        const targetContract = contracts[contractToSwitchTo]
+        // Ensure the address index is valid for the target contract
+        if (addressIndexToRestore !== null && targetContract) {
+          const validIndex = Math.max(0, Math.min(addressIndexToRestore, targetContract.addresses.length - 1))
+          setSelectedAddress(contractToSwitchTo, validIndex)
+        } else if (targetContract && targetContract.addresses.length > 0) {
+          // If no saved selection, use the first address
+          setSelectedAddress(contractToSwitchTo, 0)
+        }
+        setSelectedContract(contractToSwitchTo)
+        clearReadResultsForContract(contractToSwitchTo)
+        setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+        toast.success("Switched to contract with selected ABI")
+      } else {
+        // No other contract with this ABI exists, so update current contract's ABI
+        const updated = updateContractABI(contracts, contractLabel, newAbiKey)
+        await saveContracts(updated)
+        setContracts(updated)
+        clearReadResultsForContract(contractLabel)
+        setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+        toast.success("Contract ABI updated")
+      }
     } catch (error) {
       toast.error("Failed to update contract ABI")
     }
@@ -307,7 +357,8 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             </Select>
             <label className="text-sm font-medium pl-2">Contract:</label>
             <Select
-              value={String(addressIndex)}
+              key={`contract-select-${contractLabel}-${contract.abi}`}
+              value={contract.addresses.length > 0 ? String(addressIndex) : undefined}
               onValueChange={(value) =>
                 setSelectedAddress(contractLabel, Number(value))
               }
