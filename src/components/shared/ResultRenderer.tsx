@@ -43,14 +43,7 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
 
   const resultContent = formatResult(value, format)
 
-  // Calculate Monaco editor height (max 15 lines, min 65px)
-  const editorHeight = useMemo(() => {
-    const lines = resultContent.split("\n").length
-    const lineHeight = 19 // Monaco default line height
-    const maxLines = 15
-    const calculatedHeight = Math.min(lines, maxLines) * lineHeight
-    return `${Math.max(calculatedHeight, 65)}px`
-  }, [resultContent, wordWrap])
+  // Editor will fill available space via flex layout
 
   const handleCopy = async () => {
     const success = await copyToClipboard(resultContent)
@@ -66,8 +59,8 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
   const editorTheme = theme === "dark" ? "vs-dark" : "light"
 
   return (
-    <div className={className}>
-      <div className="flex items-center justify-between mb-2">
+    <div className={`${className || ""} h-full flex flex-col min-h-0`}>
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <RadioGroup
             value={format}
@@ -127,9 +120,9 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
           </Tooltip>
         </div>
       </div>
-      <div className="border rounded-md overflow-hidden" style={{ height: editorHeight }}>
+      <div className="border rounded-md overflow-hidden flex-1 min-h-0" style={{ minHeight: 0 }}>
         <Editor
-          height={editorHeight}
+          height="100%"
           language={format === "raw" ? "plaintext" : format}
           theme={editorTheme}
           value={resultContent}

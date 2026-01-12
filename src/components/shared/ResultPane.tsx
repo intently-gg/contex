@@ -224,7 +224,7 @@ export function ResultPane({
 
         {/* ResultRenderer - show below buttons for complex read results */}
         {shouldUseRenderer && (
-          <div className="w-full">
+          <div className="w-full flex-1 min-h-0 overflow-y-auto" style={{ width: "100%", minWidth: 0 }}>
             <ResultRenderer value={sanitizedResult} />
           </div>
         )}
