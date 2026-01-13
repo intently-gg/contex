@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { addContract, saveContracts } from "@/lib/contractRegistry"
@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, ChevronRight, ChevronLeft, Plus } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, Plus, Search } from "lucide-react"
 import type { Address } from "viem"
 import { isAddress, getAddress } from "viem"
 import { AddABIModal } from "./AddABIModal"
@@ -45,6 +45,7 @@ export function AddContractModal({
   const [chainIds, setChainIds] = useState<number[]>([])
   const [isDetecting, setIsDetecting] = useState(false)
   const [isAddABIOpen, setIsAddABIOpen] = useState(false)
+  const [chainSearchQuery, setChainSearchQuery] = useState("")
   const prevOpenRef = useRef(false)
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export function AddContractModal({
       setAddress("")
       setAddressLabel("")
       setChainIds([])
+      setChainSearchQuery("")
     }
     prevOpenRef.current = open
   }, [open, abis, defaultAbiKey])
@@ -79,6 +81,14 @@ export function AddContractModal({
   }, [step, abiKey, abis])
 
   const availableChains = config.chains
+
+  const filteredChains = useMemo(() => {
+    if (!chainSearchQuery.trim()) return availableChains
+    const query = chainSearchQuery.toLowerCase()
+    return availableChains.filter((chain) =>
+      chain.name.toLowerCase().includes(query)
+    )
+  }, [availableChains, chainSearchQuery])
 
   const handleABISelected = () => {
     if (!abiKey) {
@@ -177,12 +187,11 @@ export function AddContractModal({
     }
 
     setIsDetecting(true)
-    const detectedChains: number[] = []
     const failedChains: string[] = []
 
     const { createPublicClient, http } = await import("viem")
 
-    for (const chain of availableChains) {
+    const detectionPromises = availableChains.map(async (chain) => {
       try {
         const client = createPublicClient({
           chain,
@@ -190,13 +199,15 @@ export function AddContractModal({
         })
         
         const code = await client.getBytecode({ address: address as Address })
-        if (code && code !== "0x") {
-          detectedChains.push(chain.id)
-        }
+        return { chainId: chain.id, hasCode: code && code !== "0x" }
       } catch (error) {
         failedChains.push(chain.name)
+        return { chainId: chain.id, hasCode: false }
       }
-    }
+    })
+
+    const results = await Promise.all(detectionPromises)
+    const detectedChains = results.filter((r) => r.hasCode).map((r) => r.chainId)
 
     setIsDetecting(false)
     setChainIds(detectedChains)
@@ -304,6 +315,7 @@ export function AddContractModal({
       setAddress("")
       setAddressLabel("")
       setChainIds([])
+      setChainSearchQuery("")
     } catch (error) {
       toast.error("Failed to add contract", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -318,8 +330,6 @@ export function AddContractModal({
         : [...prev, chainId]
     )
   }
-
-  const selectedABILabel = abiKey ? getABILabel(abis, abiKey) : ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -432,7 +442,7 @@ export function AddContractModal({
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Supported Chains</Label>
+                <Label>Enabled Chains</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -468,8 +478,17 @@ export function AddContractModal({
                   </Button>
                 </div>
               </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search chains..."
+                  value={chainSearchQuery}
+                  onChange={(e) => setChainSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                {availableChains.map((chain) => (
+                {filteredChains.map((chain) => (
                   <label
                     key={chain.id}
                     className="flex items-center space-x-2 cursor-pointer p-2 hover:bg-accent rounded"
