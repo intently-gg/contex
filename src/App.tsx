@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AuthCheck } from "@/components/auth/AuthCheck"
 import { DisclaimerGuard } from "@/components/auth/DisclaimerGuard"
 import { DatabaseHealthCheck } from "@/components/auth/DatabaseHealthCheck"
+import { CONTEX_VERSION } from "@/lib/config"
 
 const queryClient = new QueryClient()
 
@@ -41,7 +42,10 @@ function AppContent() {
                 Built by  
                 <img src="/intently.png" alt="intently" style={{ height: "16px" }} className={`h-3 w-auto ${theme === "dark" ? "invert" : ""}`} />
               </a>
-              <span>contex © {new Date().getFullYear()}</span>
+              <span>
+                v{CONTEX_VERSION}
+                <span style={{ marginLeft: "10px" }}>•</span> contex © {new Date().getFullYear()}
+              </span>
             </footer>
             <Toaster duration={9000} />
           </div>

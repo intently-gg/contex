@@ -9,7 +9,6 @@ import { getABILabel } from "@/lib/abiLabels"
 import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
 import { truncateLabel } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import type { Address } from "viem"
 
 interface ContractSearchModalProps {
   open: boolean

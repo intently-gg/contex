@@ -21,7 +21,6 @@ interface ReadFunctionProps {
   abiKey: string
   address: Address
   abi: Abi
-  abiKey: string
   function: ParsedFunction
   supportedChainIds: number[]
   refreshKey?: number

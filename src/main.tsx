@@ -30,7 +30,7 @@ window.addEventListener("unhandledrejection", (event) => {
     return
   }
   if (originalUnhandledRejection) {
-    originalUnhandledRejection(event)
+    originalUnhandledRejection.call(window, event)
   }
 })
 
