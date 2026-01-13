@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react"
 import { useContractStore } from "@/stores/contractStore"
-import { useABIStore } from "@/stores/abiStore"
 import { ContractView } from "./ContractView"
 import { AddContractModal } from "./AddContractModal"
 import { ABIManagerModal } from "./ABIManagerModal"
@@ -9,7 +8,6 @@ import { Plus } from "lucide-react"
 
 export function ContractExplorer() {
   const { contracts, selectedAbiKey, setSelectedAbiKey } = useContractStore()
-  const { abis } = useABIStore()
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
 
@@ -19,69 +17,6 @@ export function ContractExplorer() {
     initializeFormState()
   }, [])
 
-  useEffect(() => {
-    // Debug helper: dump all relevant storage and in-memory mappings when they change
-    try {
-      // In-memory store state
-      const abiKeys = Object.keys(abis)
-      const contractKeys = Object.keys(contracts)
-      const contractEntries = contractKeys.map(
-        (abiKey) => ({ abiKey, addressCount: contracts[abiKey]?.length || 0 })
-      )
-
-      console.log("[ContractExplorer] Debug - ABI/Contract snapshot", {
-        abiKeys,
-        contractKeys,
-        contracts: contractEntries,
-        abis: Object.entries(abis).map(([key, entry]) => ({ abiKey: key, label: entry.label })),
-      })
-
-      // Raw storage contents
-      const rawAbiStorage = localStorage.getItem("abi-storage")
-      const rawContractStorage = localStorage.getItem("contract-explorer-storage")
-      const rawFormState = sessionStorage.getItem("contract-explorer-form-state")
-      const configVersion = localStorage.getItem("contexConfigVersion")
-
-      let parsedAbiStorage: unknown = null
-      let parsedContractStorage: unknown = null
-      let parsedFormState: unknown = null
-
-      try {
-        parsedAbiStorage = rawAbiStorage ? JSON.parse(rawAbiStorage) : null
-      } catch (e) {
-        parsedAbiStorage = { parseError: String(e) }
-      }
-
-      try {
-        parsedContractStorage = rawContractStorage
-          ? JSON.parse(rawContractStorage)
-          : null
-      } catch (e) {
-        parsedContractStorage = { parseError: String(e) }
-      }
-
-      try {
-        parsedFormState = rawFormState ? JSON.parse(rawFormState) : null
-      } catch (e) {
-        parsedFormState = { parseError: String(e) }
-      }
-
-      console.log("[ContractExplorer] Debug - Raw storage snapshot", {
-        rawAbiStorage,
-        rawContractStorage,
-        rawFormState,
-        configVersion,
-      })
-
-      console.log("[ContractExplorer] Debug - Parsed storage snapshot", {
-        abiStorage: parsedAbiStorage,
-        contractStorage: parsedContractStorage,
-        formState: parsedFormState,
-      })
-    } catch (e) {
-      console.warn("[ContractExplorer] Failed to log ABI/Contract snapshot", e)
-    }
-  }, [abis, contracts])
 
   const abiKeys = Object.keys(contracts).filter((key) => contracts[key].length > 0)
 

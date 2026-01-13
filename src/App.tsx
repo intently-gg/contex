@@ -43,7 +43,7 @@ function AppContent() {
               </a>
               <span>contex © {new Date().getFullYear()}</span>
             </footer>
-            <Toaster />
+            <Toaster duration={9000} />
           </div>
         </TooltipProvider>
       </DisclaimerGuard>

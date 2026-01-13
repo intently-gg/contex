@@ -60,16 +60,7 @@ export function ContractView({ abiKey }: ContractViewProps) {
   
   // Stabilize ABI reference to prevent infinite loops with large ABIs
   const abi = useMemo(() => {
-    const value = abis[abiKey]?.abi as Abi | undefined
-    try {
-      console.log("[ContractView] ABI resolution", {
-        abiKey,
-        hasAbi: !!value,
-      })
-    } catch (e) {
-      console.warn("[ContractView] Failed to log ABI resolution", e)
-    }
-    return value
+    return abis[abiKey]?.abi as Abi | undefined
   }, [abis, abiKey])
 
   // Check for ABI parse error
@@ -133,19 +124,6 @@ export function ContractView({ abiKey }: ContractViewProps) {
           
           // STEP 3: Clear ALL cached read results for this contract
           // This erases any cached or currently displayed values
-          console.debug('[ContractView] Attempting to clear cache after repointing to new contract', {
-            abiKey,
-            addressChanged,
-            chainChanged,
-            walletChanged,
-            isInitialLoad,
-            currentAddress,
-            prevAddress: prevAddressRef.current,
-            chainId,
-            prevChainId: prevChainIdRef.current,
-            walletAddress,
-            prevWalletAddress: prevWalletAddressRef.current,
-          })
           clearReadResultsForContract(abiKey)
           
           // STEP 4: Trigger refresh for all read functions with no params
@@ -360,6 +338,13 @@ export function ContractView({ abiKey }: ContractViewProps) {
                                 alt={chain.name}
                                 className="w-4 h-4 rounded-full"
                                 title={chain.name}
+                                onError={(e) => {
+                                  e.preventDefault()
+                                  const target = e.target as HTMLImageElement
+                                  if (target.src !== DEFAULT_CHAIN_ICON) {
+                                    target.src = DEFAULT_CHAIN_ICON
+                                  }
+                                }}
                                 style={{
                                   marginLeft: index > 0 ? '-8px' : '0',
                                   zIndex: chains.filter((c) => selectedAddress.chainIds.includes(c.id)).length - index,
@@ -407,6 +392,13 @@ export function ContractView({ abiKey }: ContractViewProps) {
                                 alt={chain.name}
                                 className="w-4 h-4 rounded-full"
                                 title={chain.name}
+                                onError={(e) => {
+                                  e.preventDefault()
+                                  const target = e.target as HTMLImageElement
+                                  if (target.src !== DEFAULT_CHAIN_ICON) {
+                                    target.src = DEFAULT_CHAIN_ICON
+                                  }
+                                }}
                                 style={{
                                   marginLeft: index > 0 ? '-8px' : '0',
                                   zIndex: addrChains.length - index,
@@ -603,6 +595,13 @@ export function ContractView({ abiKey }: ContractViewProps) {
                               src={iconUrl}
                               alt={chain.name}
                               className="w-5 h-5 rounded-full"
+                              onError={(e) => {
+                                e.preventDefault()
+                                const target = e.target as HTMLImageElement
+                                if (target.src !== DEFAULT_CHAIN_ICON) {
+                                  target.src = DEFAULT_CHAIN_ICON
+                                }
+                              }}
                             />
                           ) : (
                             <Network className="h-4 w-4" />

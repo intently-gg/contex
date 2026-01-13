@@ -78,13 +78,6 @@ export function ReadFunction({
     if (hasNoParams && refreshKey !== undefined && refreshKey > 0) {
       // Small delay to ensure cache is cleared first (happens synchronously in ContractView)
       const timer = setTimeout(() => {
-        console.debug('[ReadFunction] Attempting to auto-refresh value', {
-          abiKey,
-          functionName: func.name,
-          address,
-          refreshKey,
-          hasNoParams,
-        })
         refetch()
       }, 10)
       return () => clearTimeout(timer)

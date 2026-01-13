@@ -19,8 +19,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Loader2, ChevronRight, ChevronLeft, Plus, Search } from "lucide-react"
-import type { Address } from "viem"
+import type { Address, Abi } from "viem"
 import { isAddress, getAddress } from "viem"
+import { parseABI } from "@/lib/abiParser"
 import { AddABIModal } from "./AddABIModal"
 
 interface AddContractModalProps {
@@ -172,10 +173,6 @@ export function AddContractModal({
     }
   }
 
-  const handleSelectAll = () => {
-    setChainIds(availableChains.map((c) => c.id))
-  }
-
   const handleSelectNone = () => {
     setChainIds([])
   }
@@ -186,10 +183,39 @@ export function AddContractModal({
       return
     }
 
+    if (!abiKey) {
+      toast.error("Please select an ABI first")
+      return
+    }
+
     setIsDetecting(true)
     const failedChains: string[] = []
 
     const { createPublicClient, http } = await import("viem")
+
+    // Find the first read function with no input parameters (once, reuse for all chains)
+    const abi = abis[abiKey]?.abi as Abi | undefined
+    let readFunctionWithNoParams: { name: string; abiFunction: any } | null = null
+    
+    if (abi) {
+      const parsed = parseABI(abi)
+      if (parsed) {
+        const readFunc = parsed.find((f) => f.type === "read" && f.inputs.length === 0)
+        if (readFunc) {
+          readFunctionWithNoParams = {
+            name: readFunc.name,
+            abiFunction: readFunc.abiFunction,
+          }
+        }
+      }
+    }
+
+    // Helper function to create a 1-second timeout promise
+    const createTimeoutPromise = () => {
+      return new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout")), 1000)
+      })
+    }
 
     const detectionPromises = availableChains.map(async (chain) => {
       try {
@@ -198,20 +224,76 @@ export function AddContractModal({
           transport: http(),
         })
         
+        // Step 1: Check code first (synchronous step within async call)
         const code = await client.getBytecode({ address: address as Address })
-        return { chainId: chain.id, hasCode: code && code !== "0x" }
+        const hasCode = code && code !== "0x"
+        
+        if (!hasCode) {
+          return { chainId: chain.id, hasCode: false, functionCheckPassed: false }
+        }
+
+        // Step 2: If code exists and we have a read function, try to call it
+        if (readFunctionWithNoParams) {
+          try {
+            // Race the function call against a 1-second timeout
+            const functionCall = client.readContract({
+              address: address as Address,
+              abi: [readFunctionWithNoParams.abiFunction],
+              functionName: readFunctionWithNoParams.name,
+            })
+
+            await Promise.race([functionCall, createTimeoutPromise()])
+            // If we get here, the function call completed successfully within 1s
+            return { chainId: chain.id, hasCode: true, functionCheckPassed: true }
+          } catch (error) {
+            // Function call failed or timed out
+            return { chainId: chain.id, hasCode: true, functionCheckPassed: false }
+          }
+        } else {
+          // No read function with no params - fallback to code-only detection
+          return { chainId: chain.id, hasCode: true, functionCheckPassed: true }
+        }
       } catch (error) {
         failedChains.push(chain.name)
-        return { chainId: chain.id, hasCode: false }
+        return { chainId: chain.id, hasCode: false, functionCheckPassed: false }
       }
     })
 
     const results = await Promise.all(detectionPromises)
-    const detectedChains = results.filter((r) => r.hasCode).map((r) => r.chainId)
+    
+    // Separate chains by their check results
+    const chainsWithCode = results.filter((r) => r.hasCode)
+    const chainsWithFunctionCheck = results.filter((r) => r.functionCheckPassed)
+    
+    // If we found some that passed code check but NONE passed function check,
+    // assume those with code are OK (handles poor function choice)
+    let detectedChains: number[]
+    if (chainsWithCode.length > 0 && chainsWithFunctionCheck.length === 0 && readFunctionWithNoParams) {
+      // Fallback: use code-check results
+      detectedChains = chainsWithCode.map((r) => r.chainId)
+    } else {
+      // Normal case: use function check results (or code-only if no function available)
+      detectedChains = chainsWithFunctionCheck.map((r) => r.chainId)
+    }
 
     setIsDetecting(false)
     setChainIds(detectedChains)
 
+    // Always show a toast with the list of detected chains (if any)
+    if (detectedChains.length > 0) {
+      const detectedChainNames = detectedChains
+        .map((chainId) => {
+          const chain = availableChains.find((c) => c.id === chainId)
+          return chain?.name || `Chain ${chainId}`
+        })
+        .join(", ")
+      
+      toast.success("Chains detected and enabled", {
+        description: detectedChainNames,
+      })
+    }
+
+    // Show other toasts as well (they will all display)
     if (failedChains.length > 0) {
       toast.warning(
         `Could not detect contract on: ${failedChains.join(", ")}`,
@@ -219,10 +301,10 @@ export function AddContractModal({
           description: `Assuming not deployed on these chains`,
         }
       )
-    } else if (detectedChains.length === 0) {
+    }
+    
+    if (detectedChains.length === 0) {
       toast.info("No contract code found on any chain")
-    } else {
-      toast.success(`Detected contract on ${detectedChains.length} chain(s)`)
     }
   }
 
@@ -243,21 +325,6 @@ export function AddContractModal({
     if (!isAddress(address, { strict: false })) {
       toast.error("Invalid contract address")
       return
-    }
-
-    // Debug: log current ABI selection and contracts before validation/add
-    try {
-      console.log("[AddContractModal] handleAdd - state snapshot", {
-        abiKey,
-        abiLabel: getABILabel(abis, abiKey),
-        address,
-        addressLabel: trimmedLabel,
-        chainIds,
-        contracts,
-        abisKeys: Object.keys(abis),
-      })
-    } catch (e) {
-      console.warn("[AddContractModal] Failed to log debug snapshot", e)
     }
 
     // Check for duplicate address across all contracts
@@ -295,17 +362,6 @@ export function AddContractModal({
         trimmedLabel,
         chainIds
       )
-      try {
-        console.log("[AddContractModal] Contract added", {
-          abiKey,
-          abiLabel: getABILabel(abis, abiKey),
-          normalizedAddress,
-          chainIds,
-          newContracts,
-        })
-      } catch (e) {
-        console.warn("[AddContractModal] Failed to log post-add state", e)
-      }
       await saveContracts(newContracts)
       setContracts(newContracts)
       toast.success("Contract added successfully")
@@ -448,14 +504,6 @@ export function AddContractModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    ALL
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={handleSelectNone}
                   >
                     NONE
@@ -487,11 +535,11 @@ export function AddContractModal({
                   className="pl-10"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto border p-2 rounded-md">
                 {filteredChains.map((chain) => (
                   <label
                     key={chain.id}
-                    className="flex items-center space-x-2 cursor-pointer p-2 hover:bg-accent rounded"
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-accent rounded"
                   >
                     <input
                       type="checkbox"

@@ -128,26 +128,14 @@ export const useContractStore = create<ContractStore>()(
       },
 
       clearReadResultsForContract: (abiKey) => {
-        console.debug('[contractStore] Clearing cache for contract', {
-          abiKey,
-          totalResultsBefore: Object.keys(get().readResults).length,
-        })
         set((state) => {
           const newReadResults: Record<string, any> = {}
-          let clearedCount = 0
           for (const [key, value] of Object.entries(state.readResults)) {
             // Only keep results that don't match this abiKey
             if (!key.startsWith(`${abiKey}:`)) {
               newReadResults[key] = value
-            } else {
-              clearedCount++
             }
           }
-          console.debug('[contractStore] Cache cleared', {
-            abiKey,
-            clearedCount,
-            remainingResults: Object.keys(newReadResults).length,
-          })
           return { readResults: newReadResults }
         })
       },

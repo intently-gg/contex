@@ -24,6 +24,18 @@ import {
   hyperliquid,
   plasma,
   monad,
+  apeChain,
+  cronos,
+  gnosis,
+  fuse,
+  celo,
+  mantle,
+  berachain,
+  sei,
+  bob,
+  fraxtal,
+  ronin,
+  taiko
 } from "wagmi/chains"
 
 // Generic "hyperlink" icon SVG as default (three chain links connected diagonally)
@@ -33,16 +45,64 @@ export const DEFAULT_CHAIN_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w
 
 async function checkIconExists(url: string): Promise<boolean> {
   try {
-    const response = await fetch(url, { method: "HEAD" })
-    return response.ok
-  } catch {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
     try {
-      const response = await fetch(url, { method: "GET" })
-      return response.ok
-    } catch {
-      return false
+      const response = await fetch(url, { 
+        method: "HEAD",
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+      return response.ok && response.status !== 403
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+      if (err.name === "AbortError") return false
+      try {
+        const response = await fetch(url, { 
+          method: "GET",
+          signal: controller.signal,
+        })
+        return response.ok && response.status !== 403
+      } catch {
+        return false
+      }
     }
+  } catch {
+    return false
   }
+}
+
+async function getChainListApiIcon(chainId: number): Promise<string | null> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    try {
+      const response = await fetch(`https://chainlistapi.com/chains/${chainId}`, {
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.iconUrl && typeof data.iconUrl === 'string') {
+          // If chainlistapi returns ethereum.jpg for a non-ethereum chain, treat as not found
+          // (it apparently does this sometimes.. even for popular chains like OP.. weird)
+          if (data.iconUrl === "https://chainlistapi.com/icons/ethereum.jpg" && chainId !== 1) {
+            return null
+          }
+          const iconExists = await checkIconExists(data.iconUrl)
+          return iconExists ? data.iconUrl : null
+        }
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+      if (err.name !== "AbortError") {
+        // Silently fail
+      }
+    }
+  } catch {
+    // Silently fail
+  }
+  return null
 }
 
 async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T & { iconUrl: string; iconBackground: string }> {
@@ -57,6 +117,18 @@ async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T &
     }
   }
   
+  // Try chainlistapi.com first
+  const chainListIcon = await getChainListApiIcon(chain.id)
+  
+  if (chainListIcon) {
+    return {
+      ...chain,
+      iconUrl: chainListIcon,
+      iconBackground: '#d3d3d3', // Light gray background
+    }
+  }
+  
+  // Fallback to Amichain
   const cdnIconUrl = `https://cdn.jsdelivr.net/gh/Amichain/chain-icons/svg/${chain.id}.svg`
   const iconExists = await checkIconExists(cdnIconUrl)
   
@@ -69,29 +141,41 @@ async function getChainWithIcon<T extends { id: number }>(chain: T): Promise<T &
 
 const chainsWithIcons = await Promise.all([
   getChainWithIcon(mainnet),
-  getChainWithIcon(optimism),
+  getChainWithIcon(base),
   getChainWithIcon(arbitrum),
   getChainWithIcon(polygon),
-  getChainWithIcon(zksync),
-  getChainWithIcon(base),
+  getChainWithIcon(bsc),
+  getChainWithIcon(optimism),
+  getChainWithIcon(unichain),
   getChainWithIcon(linea),
-  getChainWithIcon(mode),
-  getChainWithIcon(lisk),
-  getChainWithIcon(blast),
   getChainWithIcon(scroll),
-  getChainWithIcon(redstone),
   getChainWithIcon(zora),
   getChainWithIcon(worldchain),
   getChainWithIcon(ink),
   getChainWithIcon(soneium),
-  getChainWithIcon(unichain),
-  getChainWithIcon(bsc),
-  getChainWithIcon(lens),
+  getChainWithIcon(zksync),
+  getChainWithIcon(monad),
   getChainWithIcon(avalanche),
-  getChainWithIcon(sonic),
   getChainWithIcon(hyperliquid),
   getChainWithIcon(plasma),
-  getChainWithIcon(monad),
+  getChainWithIcon(sonic),
+  getChainWithIcon(gnosis),
+  getChainWithIcon(celo),
+  getChainWithIcon(mode),
+  getChainWithIcon(lisk),
+  getChainWithIcon(berachain),
+  getChainWithIcon(apeChain),
+  getChainWithIcon(cronos),
+  getChainWithIcon(ronin),
+  getChainWithIcon(taiko),
+  getChainWithIcon(fuse),
+  getChainWithIcon(mantle),
+  getChainWithIcon(lens),
+  getChainWithIcon(sei),
+  getChainWithIcon(bob),
+  getChainWithIcon(redstone),
+  getChainWithIcon(blast),
+  getChainWithIcon(fraxtal),
 ])
 
 export const config = getDefaultConfig({

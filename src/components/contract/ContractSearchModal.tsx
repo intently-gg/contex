@@ -153,6 +153,13 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
                                     alt={chain.name}
                                     className="w-4 h-4 rounded-full"
                                     title={chain.name}
+                                    onError={(e) => {
+                                      e.preventDefault()
+                                      const target = e.target as HTMLImageElement
+                                      if (target.src !== DEFAULT_CHAIN_ICON) {
+                                        target.src = DEFAULT_CHAIN_ICON
+                                      }
+                                    }}
                                     style={{
                                       marginLeft: idx > 0 ? '-8px' : '0',
                                       zIndex: addrChains.length - idx,

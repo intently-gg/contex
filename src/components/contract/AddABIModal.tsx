@@ -210,7 +210,7 @@ export function AddABIModal({
             <Label htmlFor="abi-label">ABI Label</Label>
             <Input
               id="abi-label"
-              placeholder="My Contract"
+              placeholder="eg: ERC20, UniswapV3, etc."
               value={newAbiLabel}
               onChange={(e) => setNewAbiLabel(e.target.value)}
               maxLength={75}

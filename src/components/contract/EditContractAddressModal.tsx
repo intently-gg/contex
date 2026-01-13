@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useChainId, useChains } from "wagmi"
+import type { Address } from "viem"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
 import { updateAddressLabel, updateAddressChainIds, deleteAddress, saveContracts } from "@/lib/contractRegistry"
@@ -30,7 +31,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
-import { Trash2, Copy, ExternalLink, Check } from "lucide-react"
+import { Trash2, Copy, ExternalLink, Check, Search } from "lucide-react"
 
 interface EditContractAddressModalProps {
   open: boolean
@@ -51,6 +52,7 @@ export function EditContractAddressModal({
   const [chainIds, setChainIds] = useState<number[]>([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [chainSearchQuery, setChainSearchQuery] = useState("")
   const chainId = useChainId()
   const chains = useChains()
 
@@ -70,8 +72,17 @@ export function EditContractAddressModal({
     if (open && address) {
       setAddressLabel(address.label)
       setChainIds(address.chainIds)
+      setChainSearchQuery("")
     }
   }, [open, address])
+
+  const filteredChains = useMemo(() => {
+    if (!chainSearchQuery.trim()) return availableChains
+    const query = chainSearchQuery.toLowerCase()
+    return availableChains.filter((chain) =>
+      chain.name.toLowerCase().includes(query)
+    )
+  }, [availableChains, chainSearchQuery])
 
   const handleSave = async () => {
     const trimmedLabel = addressLabel.trim()
@@ -237,25 +248,18 @@ export function EditContractAddressModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Supported Chains</Label>
-              <div className="flex gap-2 mb-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setChainIds(availableChains.map((c) => c.id))}
-                >
-                  ALL
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setChainIds([])}
-                >
-                  NONE
-                </Button>
+              <Label>Enabled Chains</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search chains..."
+                  value={chainSearchQuery}
+                  onChange={(e) => setChainSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                {availableChains.map((chain) => (
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                {filteredChains.map((chain) => (
                   <div key={chain.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`chain-${chain.id}`}
@@ -264,7 +268,7 @@ export function EditContractAddressModal({
                     />
                     <Label
                       htmlFor={`chain-${chain.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="text-sm font-normal cursor-pointer flex-1"
                     >
                       {chain.name}
                     </Label>

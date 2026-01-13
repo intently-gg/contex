@@ -82,12 +82,6 @@ function AutoRefreshFunction({
     if (refreshKey !== undefined && refreshKey > 0) {
       // Small delay to ensure cache is cleared first
       const timer = setTimeout(() => {
-        console.debug('[AutoRefreshFunction] Attempting to auto-refresh value', {
-          abiKey,
-          functionName,
-          address,
-          refreshKey,
-        })
         refetch()
       }, 10)
       return () => clearTimeout(timer)
