@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { WrapText, Copy, Check } from "lucide-react"
 import Editor from "@monaco-editor/react"
+import type { editor } from "monaco-editor"
 import { stringify as yamlStringify } from "yaml"
 import { safeStringify, copyToClipboard } from "@/lib/utils"
 import { useThemeStore } from "@/stores/themeStore"
@@ -20,6 +21,7 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
   const [format, setFormat] = useState<"yaml" | "json" | "raw">("yaml")
   const [wordWrap, setWordWrap] = useState(false)
   const [copied, setCopied] = useState(false)
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
 
   const formatResult = (val: unknown, fmt: "yaml" | "json" | "raw"): string => {
     if (val === null || val === undefined) {
@@ -46,6 +48,38 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
   // Editor will fill available space via flex layout
 
   const handleCopy = async () => {
+    // Focus the editor, select all, copy, then unselect
+    if (editorRef.current) {
+      const editor = editorRef.current
+      const model = editor.getModel()
+      if (model) {
+        editor.focus()
+        const fullRange = model.getFullModelRange()
+        editor.setSelection(fullRange)
+        
+        // Small delay to ensure selection is set
+        await new Promise(resolve => setTimeout(resolve, 10))
+        
+        // Use Monaco's copy command which will copy the selected text
+        const copyAction = editor.getAction("editor.action.clipboardCopyAction")
+        if (copyAction) {
+          await copyAction.run()
+          // Clear selection after copy
+          editor.setSelection({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1,
+          })
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1000)
+          toast.success("Copied to clipboard")
+          return
+        }
+      }
+    }
+    
+    // Fallback to utility function if Monaco copy doesn't work
     const success = await copyToClipboard(resultContent)
     if (success) {
       setCopied(true)
@@ -86,6 +120,7 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
               </Label>
             </div>
           </RadioGroup>
+          <div style={{ width: 40 }} />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -126,6 +161,9 @@ export function ResultRenderer({ value, className }: ResultRendererProps) {
           language={format === "raw" ? "plaintext" : format}
           theme={editorTheme}
           value={resultContent}
+          onMount={(editor) => {
+            editorRef.current = editor
+          }}
           options={{
             readOnly: true,
             wordWrap: wordWrap ? "on" : "off",

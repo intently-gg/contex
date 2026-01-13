@@ -6,13 +6,8 @@ export interface ContractAddress {
   chainIds: number[]
 }
 
-export interface ContractEntry {
-  abi: string
-  addresses: ContractAddress[]
-}
-
 export interface ContractsRegistry {
-  [contractLabel: string]: ContractEntry
+  [abiKey: string]: ContractAddress[]
 }
 
 export async function saveContracts(
@@ -26,22 +21,18 @@ export async function saveContracts(
 
 export function addContract(
   contracts: ContractsRegistry,
-  contractLabel: string,
-  abi: string,
+  abiKey: string,
   address: Address,
   addressLabel: string,
   chainIds: number[]
 ): ContractsRegistry {
   const newContracts = { ...contracts }
 
-  if (!newContracts[contractLabel]) {
-    newContracts[contractLabel] = {
-      abi,
-      addresses: [],
-    }
+  if (!newContracts[abiKey]) {
+    newContracts[abiKey] = []
   }
 
-  newContracts[contractLabel].addresses.push({
+  newContracts[abiKey].push({
     address,
     label: addressLabel,
     chainIds,
@@ -50,60 +41,46 @@ export function addContract(
   return newContracts
 }
 
-export function updateContractLabel(
-  contracts: ContractsRegistry,
-  oldLabel: string,
-  newLabel: string
-): ContractsRegistry {
-  if (oldLabel === newLabel || !contracts[oldLabel]) {
-    return contracts
-  }
-
-  const newContracts = { ...contracts }
-  newContracts[newLabel] = newContracts[oldLabel]
-  delete newContracts[oldLabel]
-  return newContracts
-}
+// Removed: updateContractLabel - labels are now stored in ABI store, not contracts
 
 export function updateAddressLabel(
   contracts: ContractsRegistry,
-  contractLabel: string,
-  addressIndex: number,
+  abiKey: string,
+  address: Address,
   newLabel: string
 ): ContractsRegistry {
   const newContracts = { ...contracts }
-  if (newContracts[contractLabel]?.addresses[addressIndex]) {
-    newContracts[contractLabel] = {
-      ...newContracts[contractLabel],
-      addresses: newContracts[contractLabel].addresses.map((addr, idx) =>
-        idx === addressIndex ? { ...addr, label: newLabel } : addr
-      ),
-    }
+  if (newContracts[abiKey]) {
+    newContracts[abiKey] = newContracts[abiKey].map((addr) =>
+      addr.address.toLowerCase() === address.toLowerCase()
+        ? { ...addr, label: newLabel }
+        : addr
+    )
   }
   return newContracts
 }
 
 export function deleteContract(
   contracts: ContractsRegistry,
-  contractLabel: string
+  abiKey: string
 ): ContractsRegistry {
   const newContracts = { ...contracts }
-  delete newContracts[contractLabel]
+  delete newContracts[abiKey]
   return newContracts
 }
 
 export function deleteAddress(
   contracts: ContractsRegistry,
-  contractLabel: string,
-  addressIndex: number
+  abiKey: string,
+  address: Address
 ): ContractsRegistry {
   const newContracts = { ...contracts }
-  if (newContracts[contractLabel]) {
-    newContracts[contractLabel].addresses = newContracts[
-      contractLabel
-    ].addresses.filter((_, i) => i !== addressIndex)
-    if (newContracts[contractLabel].addresses.length === 0) {
-      delete newContracts[contractLabel]
+  if (newContracts[abiKey]) {
+    newContracts[abiKey] = newContracts[abiKey].filter(
+      (addr) => addr.address.toLowerCase() !== address.toLowerCase()
+    )
+    if (newContracts[abiKey].length === 0) {
+      delete newContracts[abiKey]
     }
   }
   return newContracts
@@ -111,34 +88,20 @@ export function deleteAddress(
 
 export function updateAddressChainIds(
   contracts: ContractsRegistry,
-  contractLabel: string,
-  addressIndex: number,
+  abiKey: string,
+  address: Address,
   chainIds: number[]
 ): ContractsRegistry {
   const newContracts = { ...contracts }
-  if (newContracts[contractLabel]?.addresses[addressIndex]) {
-    newContracts[contractLabel] = {
-      ...newContracts[contractLabel],
-      addresses: newContracts[contractLabel].addresses.map((addr, idx) =>
-        idx === addressIndex ? { ...addr, chainIds } : addr
-      ),
-    }
+  if (newContracts[abiKey]) {
+    newContracts[abiKey] = newContracts[abiKey].map((addr) =>
+      addr.address.toLowerCase() === address.toLowerCase()
+        ? { ...addr, chainIds }
+        : addr
+    )
   }
   return newContracts
 }
 
-export function updateContractABI(
-  contracts: ContractsRegistry,
-  contractLabel: string,
-  newAbiKey: string
-): ContractsRegistry {
-  const newContracts = { ...contracts }
-  if (newContracts[contractLabel]) {
-    newContracts[contractLabel] = {
-      ...newContracts[contractLabel],
-      abi: newAbiKey,
-    }
-  }
-  return newContracts
-}
+// Removed: updateContractABI - contracts are now keyed by abiKey directly
 

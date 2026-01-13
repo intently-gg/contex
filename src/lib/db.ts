@@ -72,7 +72,7 @@ export async function testConnection(): Promise<boolean> {
     await query("SELECT 1")
     return true
   } catch (error) {
-    console.error("Database connection test failed:", error)
+    console.error("Connection test failed:", error)
     return false
   }
 }

@@ -6,10 +6,9 @@ import { parseABI } from "@/lib/abiParser"
 import type { Address, Abi } from "viem"
 
 interface SelectedFunctionViewProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
-  abiKey: string
   functionName: string | null
   supportedChainIds: number[]
   refreshKey?: number
@@ -17,10 +16,9 @@ interface SelectedFunctionViewProps {
 }
 
 export function SelectedFunctionView({
-  contractLabel,
+  abiKey,
   address,
   abi,
-  abiKey,
   functionName,
   supportedChainIds,
   refreshKey,
@@ -53,20 +51,18 @@ export function SelectedFunctionView({
       <div className="flex-1 overflow-y-auto p-4">
         {selectedFunc.type === "read" ? (
           <ReadFunction
-            contractLabel={contractLabel}
+            abiKey={abiKey}
             address={address}
             abi={abi}
-            abiKey={abiKey}
             function={selectedFunc}
             supportedChainIds={supportedChainIds}
             refreshKey={refreshKey}
           />
         ) : (
           <WriteFunction
-            contractLabel={contractLabel}
+            abiKey={abiKey}
             address={address}
             abi={abi}
-            abiKey={abiKey}
             function={selectedFunc}
             supportedChainIds={supportedChainIds}
           />

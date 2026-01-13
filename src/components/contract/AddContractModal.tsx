@@ -37,7 +37,7 @@ export function AddContractModal({
   defaultAbiKey,
 }: AddContractModalProps) {
   const { contracts, setContracts } = useContractStore()
-  const { abis, abiLabels } = useABIStore()
+  const { abis } = useABIStore()
   const [step, setStep] = useState<Step>("select-abi")
   const [abiKey, setAbiKey] = useState("")
   const [address, setAddress] = useState("")
@@ -66,6 +66,17 @@ export function AddContractModal({
     }
     prevOpenRef.current = open
   }, [open, abis, defaultAbiKey])
+
+  // Ensure abiKey is always set when on contract-details step
+  useEffect(() => {
+    if (step === "contract-details" && !abiKey && Object.keys(abis).length > 0) {
+      // If somehow we're on contract-details without an abiKey, set the first available
+      const abiKeys = Object.keys(abis)
+      if (abiKeys.length > 0) {
+        setAbiKey(abiKeys[0])
+      }
+    }
+  }, [step, abiKey, abis])
 
   const availableChains = config.chains
 
@@ -98,7 +109,7 @@ export function AddContractModal({
     
     // Auto-populate address label if empty and address is valid
     if (!addressLabel && cleaned.length === 42 && isAddress(cleaned, { strict: false }) && abiKey) {
-      const abiLabel = getABILabel(abiLabels, abiKey)
+      const abiLabel = getABILabel(abis, abiKey)
       const addr = getAddress(cleaned)
       const label = `${abiLabel} ${addr.slice(0, 6)}...${addr.slice(-4)}`
       setAddressLabel(label)
@@ -223,13 +234,29 @@ export function AddContractModal({
       return
     }
 
+    // Debug: log current ABI selection and contracts before validation/add
+    try {
+      console.log("[AddContractModal] handleAdd - state snapshot", {
+        abiKey,
+        abiLabel: getABILabel(abis, abiKey),
+        address,
+        addressLabel: trimmedLabel,
+        chainIds,
+        contracts,
+        abisKeys: Object.keys(abis),
+      })
+    } catch (e) {
+      console.warn("[AddContractModal] Failed to log debug snapshot", e)
+    }
+
     // Check for duplicate address across all contracts
     const normalizedAddress = getAddress(address)
-    for (const [label, contract] of Object.entries(contracts)) {
-      for (const addr of contract.addresses) {
+    for (const [key, addresses] of Object.entries(contracts)) {
+      for (const addr of addresses) {
         if (getAddress(addr.address) === normalizedAddress) {
+          const abiLabel = getABILabel(abis, key)
           toast.error("Contract address already configured", {
-            description: `Contract address ${normalizedAddress} is already configured in ${label}`,
+            description: `Contract address ${normalizedAddress} is already configured in ${abiLabel}`,
           })
           return
         }
@@ -237,16 +264,14 @@ export function AddContractModal({
     }
 
     // Check for unique address label per ABI
-    const abiLabel = getABILabel(abiLabels, abiKey)
-    for (const [label, contract] of Object.entries(contracts)) {
-      if (contract.abi === abiKey) {
-        for (const addr of contract.addresses) {
-          if (addr.label === trimmedLabel) {
-            toast.error("Address label must be unique per ABI", {
-              description: `Address label "${trimmedLabel}" already exists for this ABI in ${label}`,
-            })
-            return
-          }
+    if (contracts[abiKey]) {
+      for (const addr of contracts[abiKey]) {
+        if (addr.label === trimmedLabel) {
+          const abiLabel = getABILabel(abis, abiKey)
+          toast.error("Address label must be unique per ABI", {
+            description: `Address label "${trimmedLabel}" already exists for this ABI in ${abiLabel}`,
+          })
+          return
         }
       }
     }
@@ -254,12 +279,22 @@ export function AddContractModal({
     try {
       const newContracts = addContract(
         contracts,
-        abiLabel,
         abiKey,
         normalizedAddress,
         trimmedLabel,
         chainIds
       )
+      try {
+        console.log("[AddContractModal] Contract added", {
+          abiKey,
+          abiLabel: getABILabel(abis, abiKey),
+          normalizedAddress,
+          chainIds,
+          newContracts,
+        })
+      } catch (e) {
+        console.warn("[AddContractModal] Failed to log post-add state", e)
+      }
       await saveContracts(newContracts)
       setContracts(newContracts)
       toast.success("Contract added successfully")
@@ -284,7 +319,7 @@ export function AddContractModal({
     )
   }
 
-  const selectedABILabel = abiKey ? getABILabel(abiLabels, abiKey) : ""
+  const selectedABILabel = abiKey ? getABILabel(abis, abiKey) : ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -296,7 +331,7 @@ export function AddContractModal({
           <DialogDescription>
             {step === "select-abi"
               ? "Choose an ABI file to register a contract"
-              : `Registering contract with ABI: ${selectedABILabel}`}
+              : "Enter the contract details below"}
           </DialogDescription>
         </DialogHeader>
 
@@ -320,7 +355,7 @@ export function AddContractModal({
                     </SelectTrigger>
                     <SelectContent className="z-[100] bg-popover">
                       {Object.keys(abis).map((key) => {
-                        const label = getABILabel(abiLabels, key)
+                        const label = getABILabel(abis, key)
                         const truncated = truncateLabel(label)
                         return (
                           <SelectItem key={key} value={key}>
@@ -345,6 +380,36 @@ export function AddContractModal({
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="abi-file">ABI</Label>
+              <div className="flex gap-2">
+                <Select value={abiKey} onValueChange={setAbiKey}>
+                  <SelectTrigger className="w-full z-10">
+                    <SelectValue placeholder="Select ABI" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[100] bg-popover">
+                    {Object.keys(abis).map((key) => {
+                      const label = getABILabel(abis, key)
+                      const truncated = truncateLabel(label)
+                      return (
+                        <SelectItem key={key} value={key}>
+                          {truncated.display}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsAddABIOpen(true)}
+                  title="Add ABI"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="address">Contract Address</Label>
               <Input

@@ -12,19 +12,17 @@ import type { ParsedFunction } from "@/lib/abiParser"
 const EMPTY_FAVORITES_ARRAY: string[] = []
 
 interface FunctionSidebarProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
-  abiKey: string
   selectedFunction: string | null
   onSelectFunction: (functionName: string) => void
 }
 
 export function FunctionSidebar({
-  contractLabel,
+  abiKey,
   address,
   abi,
-  abiKey: _abiKey,
   selectedFunction,
   onSelectFunction,
 }: FunctionSidebarProps) {
@@ -34,7 +32,7 @@ export function FunctionSidebar({
   
   // Subscribe to favorites to force re-render when they change
   // Selector returns the actual array (or undefined), then useMemo provides stable empty array
-  const favoritesArray = useContractStore((state) => state.favorites[contractLabel])
+  const favoritesArray = useContractStore((state) => state.favorites[abiKey])
   const favorites = useMemo(() => favoritesArray ?? EMPTY_FAVORITES_ARRAY, [favoritesArray])
 
   const parseError = useMemo(() => {
@@ -60,8 +58,8 @@ export function FunctionSidebar({
   }, [allFunctions, searchQuery])
 
   const pinnedFunctions = useMemo(() => 
-    filteredFunctions.filter((f) => isFavorite(contractLabel, f.name)),
-    [filteredFunctions, contractLabel, isFavorite, favorites]
+    filteredFunctions.filter((f) => isFavorite(abiKey, f.name)),
+    [filteredFunctions, abiKey, isFavorite, favorites]
   )
 
   const filteredReadFunctions = useMemo(() => 
@@ -79,7 +77,7 @@ export function FunctionSidebar({
     // Only show values for functions with NO input parameters
     if (func.inputs.length > 0) return null
     
-    const result = getReadResult(contractLabel, chainId, func.name, address)
+    const result = getReadResult(abiKey, chainId, func.name, address)
     if (!result || result.value === undefined) return null
     
     // Check if value is empty (only for navbar display)

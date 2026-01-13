@@ -20,15 +20,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
-import { Trash2, Plus, Pencil, Eye, Copy, Check } from "lucide-react"
+import { Trash2, Plus, Pencil, Eye } from "lucide-react"
 import { getABILabel } from "@/lib/abiLabels"
 import { useABIStore } from "@/stores/abiStore"
 import { useContractStore } from "@/stores/contractStore"
 import { EditLabelDialog } from "./EditLabelDialog"
 import { AddABIModal } from "./AddABIModal"
-import Editor from "@monaco-editor/react"
-import { useThemeStore } from "@/stores/themeStore"
-import { safeStringify, copyToClipboard, truncateLabel } from "@/lib/utils"
+import { truncateLabel } from "@/lib/utils"
+import { ResultRenderer } from "@/components/shared/ResultRenderer"
 
 interface ABIManagerModalProps {
   open: boolean
@@ -39,20 +38,18 @@ export function ABIManagerModal({
   open,
   onOpenChange,
 }: ABIManagerModalProps) {
-  const { abis, abiLabels, deleteABI, setABILabel, isLabelUnique } = useABIStore()
+  const { abis, deleteABI, setABILabel, isLabelUnique } = useABIStore()
   const { contracts } = useContractStore()
   const [isAddABIOpen, setIsAddABIOpen] = useState(false)
   const [editingAbiKey, setEditingAbiKey] = useState<string | null>(null)
   const [deleteConfirmAbiKey, setDeleteConfirmAbiKey] = useState<string | null>(null)
   const [viewingAbiKey, setViewingAbiKey] = useState<string | null>(null)
-  const [copiedAbi, setCopiedAbi] = useState(false)
-  const { theme } = useThemeStore()
 
   const contractsUsingABI = useMemo(() => {
     if (!deleteConfirmAbiKey) return []
-    return Object.entries(contracts).filter(
-      ([, contract]) => contract.abi === deleteConfirmAbiKey
-    ).map(([label]) => label)
+    return Object.entries(contracts)
+      .filter(([abiKey]) => abiKey === deleteConfirmAbiKey)
+      .flatMap(([, addresses]) => addresses.map(addr => addr.label))
   }, [contracts, deleteConfirmAbiKey])
 
   const handleUpdateLabel = (abiKey: string, newLabel: string) => {
@@ -98,11 +95,10 @@ export function ABIManagerModal({
       const updatedContracts = { ...currentContracts }
       let deletedCount = 0
       
-      for (const [contractLabel, contract] of Object.entries(currentContracts)) {
-        if (contract.abi === deleteConfirmAbiKey) {
-          delete updatedContracts[contractLabel]
-          deletedCount++
-        }
+      // Delete all addresses for this ABI
+      if (currentContracts[deleteConfirmAbiKey]) {
+        delete updatedContracts[deleteConfirmAbiKey]
+        deletedCount = currentContracts[deleteConfirmAbiKey].length
       }
       
       if (deletedCount > 0) {
@@ -127,16 +123,6 @@ export function ABIManagerModal({
     setViewingAbiKey(abiKey)
   }
 
-  const handleCopyAbi = async (abi: unknown) => {
-    const success = await copyToClipboard(safeStringify(abi))
-    if (success) {
-      setCopiedAbi(true)
-      setTimeout(() => setCopiedAbi(false), 1000)
-      toast.success("ABI copied to clipboard")
-    } else {
-      toast.error("Failed to copy ABI")
-    }
-  }
 
   return (
     <>
@@ -164,26 +150,14 @@ export function ABIManagerModal({
               </p>
             ) : (
               Object.keys(abis).map((abiKey) => {
-                const label = getABILabel(abiLabels, abiKey)
+                const label = getABILabel(abis, abiKey)
                 const truncated = truncateLabel(label)
                 return (
                   <div
                     key={abiKey}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between border rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="font-medium truncate">{truncated.display}</div>
-                          </TooltipTrigger>
-                          {truncated.display !== truncated.full ? (
-                            <TooltipContent>
-                              <p>{truncated.full}</p>
-                            </TooltipContent>
-                          ) : null}
-                        </Tooltip>
-                      </div>
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -200,6 +174,18 @@ export function ABIManagerModal({
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="font-medium truncate">{truncated.display}</div>
+                          </TooltipTrigger>
+                          {truncated.display !== truncated.full ? (
+                            <TooltipContent>
+                              <p>{truncated.full}</p>
+                            </TooltipContent>
+                          ) : null}
+                        </Tooltip>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -222,7 +208,7 @@ export function ABIManagerModal({
           <EditLabelDialog
             open={!!editingAbiKey}
             onOpenChange={(open) => !open && setEditingAbiKey(null)}
-            currentLabel={getABILabel(abiLabels, editingAbiKey)}
+            currentLabel={getABILabel(abis, editingAbiKey)}
             onSave={(newLabel) => handleUpdateLabel(editingAbiKey, newLabel)}
             title="Edit ABI Label"
             description="Update the display label for this ABI"
@@ -238,7 +224,7 @@ export function ABIManagerModal({
             <AlertDialogDescription>
               {deleteConfirmAbiKey && (
                 <>
-                  Are you sure you want to delete "{getABILabel(abiLabels, deleteConfirmAbiKey)}"?
+                  Are you sure you want to delete "{getABILabel(abis, deleteConfirmAbiKey)}"?
                   {contractsUsingABI.length > 0 && (
                     <>
                       <br /><br />
@@ -266,39 +252,14 @@ export function ABIManagerModal({
       </AlertDialog>
 
       <Dialog open={!!viewingAbiKey} onOpenChange={(open) => !open && setViewingAbiKey(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>View ABI: {viewingAbiKey && getABILabel(abiLabels, viewingAbiKey)}</DialogTitle>
+        <DialogContent className="max-w-4xl h-[80vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+            <DialogTitle>View ABI: {viewingAbiKey && getABILabel(abis, viewingAbiKey)}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="border rounded-md overflow-hidden" style={{ height: "500px" }}>
-              {viewingAbiKey && abis[viewingAbiKey] ? (
-                <Editor
-                  height="500px"
-                  defaultLanguage="json"
-                  value={safeStringify(abis[viewingAbiKey])}
-                  theme={theme === "dark" ? "vs-dark" : "light"}
-                  options={{
-                    readOnly: true,
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                  }}
-                />
-              ) : null}
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={() => viewingAbiKey && abis[viewingAbiKey] && handleCopyAbi(abis[viewingAbiKey])}
-              >
-                {copiedAbi ? (
-                  <Check className="mr-2 h-4 w-4" />
-                ) : (
-                  <Copy className="mr-2 h-4 w-4" />
-                )}
-                Copy ABI
-              </Button>
-            </div>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            {viewingAbiKey && abis[viewingAbiKey] ? (
+              <ResultRenderer value={abis[viewingAbiKey].abi} className="h-full" />
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

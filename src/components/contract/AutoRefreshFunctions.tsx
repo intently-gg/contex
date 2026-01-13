@@ -4,7 +4,7 @@ import { parseABI } from "@/lib/abiParser"
 import type { Address, Abi } from "viem"
 
 interface AutoRefreshFunctionsProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
   refreshKey?: number
@@ -16,7 +16,7 @@ interface AutoRefreshFunctionsProps {
  * These components are rendered but not displayed (hidden).
  */
 export function AutoRefreshFunctions({
-  contractLabel,
+  abiKey,
   address,
   abi,
   refreshKey,
@@ -37,7 +37,7 @@ export function AutoRefreshFunctions({
       {readFunctionsWithNoParams.map((func) => (
         <AutoRefreshFunction
           key={func.name}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           abi={abi}
           functionName={func.name}
@@ -49,7 +49,7 @@ export function AutoRefreshFunctions({
 }
 
 interface AutoRefreshFunctionProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
   functionName: string
@@ -57,7 +57,7 @@ interface AutoRefreshFunctionProps {
 }
 
 function AutoRefreshFunction({
-  contractLabel,
+  abiKey,
   address,
   abi,
   functionName,
@@ -72,7 +72,7 @@ function AutoRefreshFunction({
     abi,
     functionName,
     [], // No args for functions with no params
-    contractLabel,
+    abiKey,
     shouldAutoRefresh
   )
 
@@ -83,7 +83,7 @@ function AutoRefreshFunction({
       // Small delay to ensure cache is cleared first
       const timer = setTimeout(() => {
         console.debug('[AutoRefreshFunction] Attempting to auto-refresh value', {
-          contractLabel,
+          abiKey,
           functionName,
           address,
           refreshKey,

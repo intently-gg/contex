@@ -17,64 +17,40 @@ interface ContractSearchModalProps {
 }
 
 export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalProps) {
-  const { contracts, setSelectedContract, setSelectedAddress } = useContractStore()
-  const { abiLabels } = useABIStore()
+  const { contracts, setSelectedAbiKey, setSelectedAddress } = useContractStore()
+  const { abis } = useABIStore()
   const chains = useChains()
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Build a structure: ABI -> Contracts (addresses)
-  const abiContractMap = useMemo(() => {
-    const map: Record<string, Array<{ contractLabel: string; addressIndex: number; address: Address; label: string; chainIds: number[] }>> = {}
-    
-    for (const [contractLabel, contract] of Object.entries(contracts)) {
-      const abiKey = contract.abi
-      if (!map[abiKey]) {
-        map[abiKey] = []
-      }
-      
-      contract.addresses.forEach((addr, index) => {
-        map[abiKey].push({
-          contractLabel,
-          addressIndex: index,
-          address: addr.address,
-          label: addr.label,
-          chainIds: addr.chainIds,
-        })
-      })
-    }
-    
-    return map
-  }, [contracts])
-
   // Filter based on search query
-  const filteredAbiContractMap = useMemo(() => {
-    if (!searchQuery.trim()) return abiContractMap
+  const filteredContracts = useMemo(() => {
+    if (!searchQuery.trim()) return contracts
     
     const query = searchQuery.toLowerCase()
-    const filtered: typeof abiContractMap = {}
+    const filtered: typeof contracts = {}
     
-    for (const [abiKey, contractList] of Object.entries(abiContractMap)) {
-      const abiLabel = getABILabel(abiLabels, abiKey)
+    for (const [abiKey, addresses] of Object.entries(contracts)) {
+      const abiLabel = getABILabel(abis, abiKey)
       const abiMatches = abiLabel.toLowerCase().includes(query)
       
-      const filteredContracts = contractList.filter((contract) => {
-        const labelMatches = contract.contractLabel.toLowerCase().includes(query)
-        const addressMatches = contract.address.toLowerCase().includes(query)
+      const filteredAddresses = addresses.filter((addr) => {
+        const labelMatches = addr.label.toLowerCase().includes(query)
+        const addressMatches = addr.address.toLowerCase().includes(query)
         return labelMatches || addressMatches
       })
       
-      // Include ABI if it matches or has matching contracts
-      if (abiMatches || filteredContracts.length > 0) {
-        filtered[abiKey] = abiMatches ? contractList : filteredContracts
+      // Include ABI if it matches or has matching addresses
+      if (abiMatches || filteredAddresses.length > 0) {
+        filtered[abiKey] = abiMatches ? addresses : filteredAddresses
       }
     }
     
     return filtered
-  }, [abiContractMap, abiLabels, searchQuery])
+  }, [contracts, abis, searchQuery])
 
-  const handleSelectContract = (contractLabel: string, addressIndex: number) => {
-    setSelectedContract(contractLabel)
-    setSelectedAddress(contractLabel, addressIndex)
+  const handleSelectContract = (abiKey: string, addressIndex: number) => {
+    setSelectedAbiKey(abiKey)
+    setSelectedAddress(abiKey, addressIndex)
     onOpenChange(false)
     setSearchQuery("")
   }
@@ -98,14 +74,14 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
         </div>
 
         <div className="flex-1 overflow-y-auto border rounded-md p-4">
-          {Object.keys(filteredAbiContractMap).length === 0 ? (
+          {Object.keys(filteredContracts).length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {searchQuery ? "No contracts found matching your search" : "No contracts available"}
             </div>
           ) : (
             <div className="space-y-4">
-              {Object.entries(filteredAbiContractMap).map(([abiKey, contractList]) => {
-                const abiLabel = getABILabel(abiLabels, abiKey)
+              {Object.entries(filteredContracts).map(([abiKey, addresses]) => {
+                const abiLabel = getABILabel(abis, abiKey)
                 const truncatedAbiLabel = truncateLabel(abiLabel)
                 
                 return (
@@ -125,15 +101,15 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
                     </div>
                     
                     <div className="ml-4 space-y-1">
-                      {contractList.map((contract) => {
+                      {addresses.map((addr, index) => {
                         const addrChains = chains.filter((chain) => 
-                          contract.chainIds.includes(chain.id)
+                          addr.chainIds.includes(chain.id)
                         )
                         
                         return (
                           <div
-                            key={`${contract.contractLabel}-${contract.addressIndex}`}
-                            onClick={() => handleSelectContract(contract.contractLabel, contract.addressIndex)}
+                            key={`${abiKey}-${index}`}
+                            onClick={() => handleSelectContract(abiKey, index)}
                             className="flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent transition-colors"
                           >
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -143,31 +119,31 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
                                   <TooltipTrigger asChild>
                                     <div className="text-sm font-medium truncate">
                                       {(() => {
-                                        const truncated = truncateLabel(contract.label)
-                                        const labelText = `${contract.label} (${contract.address.slice(0, 6)}...${contract.address.slice(-4)})`
+                                        const truncated = truncateLabel(addr.label)
+                                        const labelText = `${addr.label} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`
                                         return truncated.display !== truncated.full
-                                          ? `${truncated.display} (${contract.address.slice(0, 6)}...${contract.address.slice(-4)})`
+                                          ? `${truncated.display} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`
                                           : labelText
                                       })()}
                                     </div>
                                   </TooltipTrigger>
                                   {(() => {
-                                    const truncated = truncateLabel(contract.label)
+                                    const truncated = truncateLabel(addr.label)
                                     return truncated.display !== truncated.full ? (
                                       <TooltipContent>
-                                        <p>{contract.label}</p>
+                                        <p>{addr.label}</p>
                                       </TooltipContent>
                                     ) : null
                                   })()}
                                 </Tooltip>
                                 <div className="text-xs text-muted-foreground truncate">
-                                  {contract.address}
+                                  {addr.address}
                                 </div>
                               </div>
                             </div>
                             
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              {addrChains.map((chain, index) => {
+                              {addrChains.map((chain, idx) => {
                                 const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
                                 const iconBackground = (chain as any).iconBackground || '#d3d3d3'
                                 return (
@@ -178,8 +154,8 @@ export function ContractSearchModal({ open, onOpenChange }: ContractSearchModalP
                                     className="w-4 h-4 rounded-full"
                                     title={chain.name}
                                     style={{
-                                      marginLeft: index > 0 ? '-8px' : '0',
-                                      zIndex: addrChains.length - index,
+                                      marginLeft: idx > 0 ? '-8px' : '0',
+                                      zIndex: addrChains.length - idx,
                                       backgroundColor: iconBackground,
                                     }}
                                   />

@@ -17,27 +17,27 @@ interface FormState {
 
 interface ContractStore {
   contracts: ContractsRegistry
-  selectedContract: string | null
-  selectedFunction: Record<string, string | null> // contractLabel -> functionName
-  selectedAddresses: Record<string, number>
+  selectedAbiKey: string | null
+  selectedFunction: Record<string, string | null> // abiKey -> functionName
+  selectedAddresses: Record<string, number> // abiKey -> addressIndex
   readResults: Record<string, ReadResult>
   formState: FormState
   initializeFormState: () => void
-  favorites: Record<string, string[]>
+  favorites: Record<string, string[]> // abiKey -> functionName[]
   setContracts: (contracts: ContractsRegistry) => void
-  setSelectedContract: (contractLabel: string | null) => void
-  setSelectedFunction: (contractLabel: string, functionName: string | null) => void
-  getSelectedFunction: (contractLabel: string) => string | null
-  setSelectedAddress: (contractLabel: string, addressIndex: number) => void
+  setSelectedAbiKey: (abiKey: string | null) => void
+  setSelectedFunction: (abiKey: string, functionName: string | null) => void
+  getSelectedFunction: (abiKey: string) => string | null
+  setSelectedAddress: (abiKey: string, addressIndex: number) => void
   setReadResult: (
-    contractLabel: string,
+    abiKey: string,
     chainId: number,
     functionName: string,
     address: Address,
     value: unknown
   ) => void
   getReadResult: (
-    contractLabel: string,
+    abiKey: string,
     chainId: number,
     functionName: string,
     address: Address
@@ -51,25 +51,25 @@ interface ContractStore {
     abiKey: string,
     functionName: string
   ) => Record<string, unknown> | undefined
-  toggleFavorite: (contractLabel: string, functionName: string) => void
-  isFavorite: (contractLabel: string, functionName: string) => boolean
-  clearReadResultsForContract: (contractLabel: string) => void
+  toggleFavorite: (abiKey: string, functionName: string) => void
+  isFavorite: (abiKey: string, functionName: string) => boolean
+  clearReadResultsForContract: (abiKey: string) => void
 }
 
 function getResultKey(
-  contractLabel: string,
+  abiKey: string,
   chainId: number,
   functionName: string,
   address: Address
 ): string {
-  return `${contractLabel}:${chainId}:${functionName}:${address}`
+  return `${abiKey}:${chainId}:${functionName}:${address}`
 }
 
 export const useContractStore = create<ContractStore>()(
   persist(
     (set, get) => ({
       contracts: {},
-      selectedContract: null,
+      selectedAbiKey: null,
       selectedFunction: {},
       selectedAddresses: {},
       readResults: {},
@@ -78,37 +78,37 @@ export const useContractStore = create<ContractStore>()(
 
       setContracts: (contracts) => set({ contracts }),
 
-      setSelectedContract: (contractLabel) =>
-        set({ selectedContract: contractLabel }),
+      setSelectedAbiKey: (abiKey) =>
+        set({ selectedAbiKey: abiKey }),
       
-      setSelectedFunction: (contractLabel, functionName) =>
+      setSelectedFunction: (abiKey, functionName) =>
         set((state) => ({
           selectedFunction: {
             ...state.selectedFunction,
-            [contractLabel]: functionName,
+            [abiKey]: functionName,
           },
         })),
       
-      getSelectedFunction: (contractLabel) => {
-        return get().selectedFunction[contractLabel] ?? null
+      getSelectedFunction: (abiKey) => {
+        return get().selectedFunction[abiKey] ?? null
       },
 
-      setSelectedAddress: (contractLabel, addressIndex) =>
+      setSelectedAddress: (abiKey, addressIndex) =>
         set((state) => ({
           selectedAddresses: {
             ...state.selectedAddresses,
-            [contractLabel]: addressIndex,
+            [abiKey]: addressIndex,
           },
         })),
 
       setReadResult: (
-        contractLabel,
+        abiKey,
         chainId,
         functionName,
         address,
         value
       ) => {
-        const key = getResultKey(contractLabel, chainId, functionName, address)
+        const key = getResultKey(abiKey, chainId, functionName, address)
         // Serialize value to handle BigInt
         const serializedValue = JSON.parse(JSON.stringify(value, bigintReplacer))
         set((state) => ({
@@ -122,29 +122,29 @@ export const useContractStore = create<ContractStore>()(
         }))
       },
 
-      getReadResult: (contractLabel, chainId, functionName, address) => {
-        const key = getResultKey(contractLabel, chainId, functionName, address)
+      getReadResult: (abiKey, chainId, functionName, address) => {
+        const key = getResultKey(abiKey, chainId, functionName, address)
         return get().readResults[key]
       },
 
-      clearReadResultsForContract: (contractLabel) => {
+      clearReadResultsForContract: (abiKey) => {
         console.debug('[contractStore] Clearing cache for contract', {
-          contractLabel,
+          abiKey,
           totalResultsBefore: Object.keys(get().readResults).length,
         })
         set((state) => {
           const newReadResults: Record<string, any> = {}
           let clearedCount = 0
           for (const [key, value] of Object.entries(state.readResults)) {
-            // Only keep results that don't match this contract label
-            if (!key.startsWith(`${contractLabel}:`)) {
+            // Only keep results that don't match this abiKey
+            if (!key.startsWith(`${abiKey}:`)) {
               newReadResults[key] = value
             } else {
               clearedCount++
             }
           }
           console.debug('[contractStore] Cache cleared', {
-            contractLabel,
+            abiKey,
             clearedCount,
             remainingResults: Object.keys(newReadResults).length,
           })
@@ -189,23 +189,23 @@ export const useContractStore = create<ContractStore>()(
         return get().formState[abiKey]?.[functionName]
       },
 
-      toggleFavorite: (contractLabel, functionName) =>
+      toggleFavorite: (abiKey, functionName) =>
         set((state) => {
-          const contractFavorites = state.favorites[contractLabel] || []
+          const contractFavorites = state.favorites[abiKey] || []
           const isFav = contractFavorites.includes(functionName)
           return {
             favorites: {
               ...state.favorites,
-              [contractLabel]: isFav
+              [abiKey]: isFav
                 ? contractFavorites.filter((f) => f !== functionName)
                 : [...contractFavorites, functionName],
             },
           }
         }),
 
-      isFavorite: (contractLabel, functionName) => {
+      isFavorite: (abiKey, functionName) => {
         return (
-          get().favorites[contractLabel]?.includes(functionName) ?? false
+          get().favorites[abiKey]?.includes(functionName) ?? false
         )
       },
 
@@ -225,7 +225,7 @@ export const useContractStore = create<ContractStore>()(
     {
       name: "contract-explorer-storage",
       partialize: (state) => ({
-        selectedContract: state.selectedContract,
+        selectedAbiKey: state.selectedAbiKey,
         selectedAddresses: state.selectedAddresses,
         selectedFunction: state.selectedFunction,
         readResults: state.readResults,

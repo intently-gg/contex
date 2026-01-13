@@ -23,7 +23,7 @@ interface ValueParserModalProps {
   fieldName: string
   fieldType: string
   currentValue?: string
-  contractLabel?: string
+  abiKey?: string
   address?: string
   functionName?: string
   disconnected?: boolean // If true, show Copy button instead of Apply
@@ -32,8 +32,8 @@ interface ValueParserModalProps {
 // In-memory storage for decimals per parameter
 const decimalsMemory: Record<string, string> = {}
 
-function getMemoryKey(contractLabel: string, address: string, functionName: string, fieldName: string): string {
-  return `${contractLabel}:${address}:${functionName}:${fieldName}`
+function getMemoryKey(abiKey: string, address: string, functionName: string, fieldName: string): string {
+  return `${abiKey}:${address}:${functionName}:${fieldName}`
 }
 
 export function ValueParserModal({
@@ -43,14 +43,14 @@ export function ValueParserModal({
   fieldName,
   fieldType,
   currentValue = "",
-  contractLabel = "",
+  abiKey = "",
   address = "",
   functionName = "",
   disconnected = false,
 }: ValueParserModalProps) {
   const isWei = fieldType.toLowerCase().includes("wei") || fieldName.toLowerCase().includes("wei")
-  const memoryKey = contractLabel && address && functionName 
-    ? getMemoryKey(contractLabel, address, functionName, fieldName)
+  const memoryKey = abiKey && address && functionName 
+    ? getMemoryKey(abiKey, address, functionName, fieldName)
     : null
   
   // Initialize decimals from memory or default

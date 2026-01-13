@@ -18,7 +18,7 @@ import type { ParsedFunction } from "@/lib/abiParser"
 import { needsValueParser } from "@/lib/formGenerator"
 
 interface ReadFunctionProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
   abiKey: string
@@ -28,10 +28,9 @@ interface ReadFunctionProps {
 }
 
 export function ReadFunction({
-  contractLabel,
+  abiKey,
   address,
   abi,
-  abiKey,
   function: func,
   supportedChainIds: _supportedChainIds,
   refreshKey,
@@ -69,7 +68,7 @@ export function ReadFunction({
     abi,
     func.name,
     args.filter((a) => a !== undefined) as unknown[],
-    contractLabel,
+    abiKey,
     shouldAutoRefresh
   )
 
@@ -80,7 +79,7 @@ export function ReadFunction({
       // Small delay to ensure cache is cleared first (happens synchronously in ContractView)
       const timer = setTimeout(() => {
         console.debug('[ReadFunction] Attempting to auto-refresh value', {
-          contractLabel,
+          abiKey,
           functionName: func.name,
           address,
           refreshKey,
@@ -97,7 +96,7 @@ export function ReadFunction({
   // For functions with params, never show cached data unless manually refreshed
   const { getReadResult } = useContractStore()
   const chainId = useChainId()
-  const cachedResult = getReadResult(contractLabel, chainId, func.name, address)
+  const cachedResult = getReadResult(abiKey, chainId, func.name, address)
   
   // Use fresh data if available, otherwise use cached (for no-param functions only)
   // When address changes, the component remounts (via key prop), so we don't need to check for address changes here
@@ -129,7 +128,7 @@ export function ReadFunction({
     }
   }, [isLoading])
 
-  const isFav = isFavorite(contractLabel, func.name)
+  const isFav = isFavorite(abiKey, func.name)
 
   const handleValueParserApply = useCallback((fieldName: string, value: string) => {
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
@@ -214,7 +213,7 @@ export function ReadFunction({
                         e.currentTarget.style.backgroundColor = ''
                         e.currentTarget.style.borderColor = 'hsl(var(--border))'
                       }}
-                      onClick={() => toggleFavorite(contractLabel, func.name)}
+                      onClick={() => toggleFavorite(abiKey, func.name)}
                     >
                       {isFav ? (
                         <Pin className="h-3.5 w-3.5 fill-current" />
@@ -283,7 +282,7 @@ export function ReadFunction({
               fieldName={field.name}
               fieldType={field.type}
               currentValue={String(inputs[field.name] || "")}
-              contractLabel={contractLabel}
+              abiKey={abiKey}
               address={address}
               functionName={func.name}
             />
@@ -302,7 +301,7 @@ export function ReadFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           functionName={func.name}
         />
@@ -318,7 +317,7 @@ export function ReadFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           functionName={func.name}
         />

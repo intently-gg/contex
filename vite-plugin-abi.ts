@@ -2,7 +2,10 @@ import { readdir, readFile, writeFile, mkdir, unlink } from "fs/promises"
 import { existsSync } from "fs"
 import { join, resolve } from "path"
 import type { Plugin } from "vite"
+import { config } from "dotenv"
 import { query, queryOne } from "./src/lib/db"
+
+config()
 
 const ABI_DIR = "abis"
 const VIRTUAL_MODULE_ID = "virtual:abis"
@@ -82,6 +85,9 @@ export function abiPlugin(): Plugin {
         }
         if (url.startsWith("/api/health")) {
           return handleHealthCheck(req, res)
+        }
+        if (url.startsWith("/api/fetch-abi")) {
+          return handleFetchABI(req, res)
         }
         next()
       })
@@ -212,6 +218,118 @@ export function abiPlugin(): Plugin {
               console.error("[DISCLAIMER SIGN] Error:", error)
               res.statusCode = 500
               res.end(JSON.stringify({ error: String(error) }))
+            }
+          })
+        }
+      }
+      
+      async function handleFetchABI(req: any, res: any) {
+        if (req.method === "POST") {
+          res.setHeader("Content-Type", "application/json")
+          let body = ""
+          req.on("data", (chunk: Buffer) => {
+            body += chunk.toString()
+          })
+          req.on("end", async () => {
+            try {
+              const { url, address, chainId } = JSON.parse(body)
+
+              let fetchUrl
+              if (url) {
+                fetchUrl = url
+              } else if (address && chainId) {
+                const apiKey = process.env.ETHERSCAN_API_KEY
+                if (!apiKey) {
+                  console.error("[FETCH ABI] ETHERSCAN_API_KEY is not set!")
+                  res.statusCode = 500
+                  res.end(JSON.stringify({ error: "ETHERSCAN_API_KEY is not configured on the server" }))
+                  return
+                }
+                fetchUrl = `https://api.etherscan.io/v2/api?apikey=${apiKey}&chainid=${chainId}&module=contract&action=getabi&address=${address}`
+                console.log(`[FETCH ABI] Fetching from Etherscan: https://api.etherscan.io/v2/api?apikey=***&chainid=${chainId}&module=contract&action=getabi&address=${address}`)
+              } else {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: "Either url or both address and chainId must be provided" }))
+                return
+              }
+
+              if (url) {
+                console.log(`[FETCH ABI] Fetching from custom URL: ${url}`)
+              }
+
+              const response = await fetch(fetchUrl)
+              const responseText = await response.text()
+              
+              if (!response.ok) {
+                let errorMessage = `HTTP error! status: ${response.status}`
+                
+                try {
+                  const errorData = JSON.parse(responseText)
+                  if (errorData.message) {
+                    errorMessage += `. Message: ${errorData.message}`
+                  }
+                  if (errorData.result) {
+                    errorMessage += `. Result: ${errorData.result}`
+                  }
+                } catch {
+                  if (responseText) {
+                    errorMessage += `. Response: ${responseText.substring(0, 200)}`
+                  }
+                }
+                
+                throw new Error(errorMessage)
+              }
+
+              let data
+              try {
+                data = JSON.parse(responseText)
+              } catch (parseError) {
+                throw new Error(`Failed to parse response as JSON. Response: ${responseText.substring(0, 200)}`)
+              }
+
+              let abi
+
+              if (data.status === "1" && data.message === "OK" && data.result) {
+                abi = data.result
+                if (typeof abi === "string") {
+                  try {
+                    abi = JSON.parse(abi)
+                  } catch (firstParseError) {
+                    try {
+                      const unescaped = abi.replace(/\\"/g, '"').replace(/\\\\/g, "\\")
+                      abi = JSON.parse(unescaped)
+                    } catch (secondParseError) {
+                      try {
+                        abi = JSON.parse(JSON.parse(JSON.stringify(abi)))
+                      } catch (thirdParseError) {
+                        throw new Error("Failed to parse ABI from response")
+                      }
+                    }
+                  }
+                }
+              } else if (Array.isArray(data)) {
+                abi = data
+              } else if (Array.isArray(data.result)) {
+                abi = data.result
+              } else {
+                throw new Error(data.message || "Failed to fetch ABI")
+              }
+
+              if (!Array.isArray(abi)) {
+                throw new Error("ABI must be an array")
+              }
+
+              res.end(JSON.stringify({ success: true, abi }))
+            } catch (error) {
+              console.error("[FETCH ABI] Error:", error)
+              let errorMessage = error instanceof Error ? error.message : "Failed to fetch ABI"
+              
+              if (errorMessage.includes("URL:")) {
+                errorMessage = errorMessage.split("URL:")[0].trim()
+              }
+              
+              res.statusCode = 500
+              res.end(JSON.stringify({ error: errorMessage }))
             }
           })
         }

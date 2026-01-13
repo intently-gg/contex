@@ -11,7 +11,7 @@ export function useReadContractFunction(
   abi: Abi,
   functionName: string,
   args: unknown[] = [],
-  contractLabel?: string,
+  abiKey?: string,
   enabled: boolean = true
 ) {
   const chainId = useChainId()
@@ -37,17 +37,17 @@ export function useReadContractFunction(
   })
 
   useEffect(() => {
-    if (result.data !== undefined && contractLabel) {
-      const cached = getReadResult(contractLabel, chainId, functionName, address)
+    if (result.data !== undefined && abiKey) {
+      const cached = getReadResult(abiKey, chainId, functionName, address)
       // Compare serialized values to avoid BigInt comparison issues
       const cachedStr = cached ? safeStringify(cached.value) : null
       const currentStr = safeStringify(result.data)
       if (!cached || cachedStr !== currentStr) {
-        setReadResult(contractLabel, chainId, functionName, address, result.data)
+        setReadResult(abiKey, chainId, functionName, address, result.data)
       }
 
     }
-  }, [result.data, contractLabel, chainId, functionName, address, getReadResult, setReadResult])
+  }, [result.data, abiKey, chainId, functionName, address, getReadResult, setReadResult])
 
   return result
 }

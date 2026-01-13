@@ -2,13 +2,16 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { bigintReplacer } from "@/lib/utils"
 
+export interface ABIEntry {
+  label: string
+  abi: unknown
+}
+
 interface ABIStore {
-  abis: Record<string, unknown> // key is GUID
-  abiLabels: Record<string, string> // key is GUID, value is label
-  setABIs: (abis: Record<string, unknown>) => void
+  abis: Record<string, ABIEntry> // key is GUID, value is { label, abi }
+  setABIs: (abis: Record<string, ABIEntry>) => void
   addABI: (label: string, content: unknown) => string // returns GUID
   deleteABI: (abiKey: string) => void
-  setABILabels: (labels: Record<string, string>) => void
   setABILabel: (abiKey: string, label: string) => void
   getABIKeyByLabel: (label: string) => string | undefined
   isLabelUnique: (label: string, excludeKey?: string) => boolean
@@ -33,7 +36,6 @@ export const useABIStore = create<ABIStore>()(
   persist(
     (set, get) => ({
       abis: {},
-      abiLabels: {},
 
       setABIs: (abis) => set({ abis }),
 
@@ -44,11 +46,10 @@ export const useABIStore = create<ABIStore>()(
         set((state) => ({
           abis: {
             ...state.abis,
-            [guid]: content,
-          },
-          abiLabels: {
-            ...state.abiLabels,
-            [guid]: label,
+            [guid]: {
+              label,
+              abi: content,
+            },
           },
         }))
         return guid
@@ -58,28 +59,31 @@ export const useABIStore = create<ABIStore>()(
         set((state) => {
           const newAbis = { ...state.abis }
           delete newAbis[abiKey]
-          const newLabels = { ...state.abiLabels }
-          delete newLabels[abiKey]
           return {
             abis: newAbis,
-            abiLabels: newLabels,
           }
         }),
 
-      setABILabels: (labels) => set({ abiLabels: labels }),
-
       setABILabel: (abiKey, label) =>
-        set((state) => ({
-          abiLabels: {
-            ...state.abiLabels,
-            [abiKey]: label,
-          },
-        })),
+        set((state) => {
+          if (!state.abis[abiKey]) {
+            return state
+          }
+          return {
+            abis: {
+              ...state.abis,
+              [abiKey]: {
+                ...state.abis[abiKey],
+                label,
+              },
+            },
+          }
+        }),
 
       getABIKeyByLabel: (label) => {
         const state = get()
-        for (const [key, value] of Object.entries(state.abiLabels)) {
-          if (value === label) {
+        for (const [key, entry] of Object.entries(state.abis)) {
+          if (entry.label === label) {
             return key
           }
         }
@@ -88,8 +92,8 @@ export const useABIStore = create<ABIStore>()(
 
       isLabelUnique: (label, excludeKey) => {
         const state = get()
-        for (const [key, value] of Object.entries(state.abiLabels)) {
-          if (value === label && key !== excludeKey) {
+        for (const [key, entry] of Object.entries(state.abis)) {
+          if (entry.label === label && key !== excludeKey) {
             return false
           }
         }
@@ -100,7 +104,6 @@ export const useABIStore = create<ABIStore>()(
       name: "abi-storage",
       partialize: (state) => ({
         abis: state.abis,
-        abiLabels: state.abiLabels,
       }),
       storage: {
         getItem: (name) => {

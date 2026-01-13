@@ -9,23 +9,21 @@ import { Search } from "lucide-react"
 import type { Address, Abi } from "viem"
 
 interface FunctionListProps {
-  contractLabel: string
-  address: Address
   abiKey: string
+  address: Address
   supportedChainIds: number[]
 }
 
 export function FunctionList({
-  contractLabel,
-  address,
   abiKey,
+  address,
   supportedChainIds,
 }: FunctionListProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const { isFavorite } = useContractStore()
   const { abis } = useABIStore()
 
-  const abi = abis[abiKey] as Abi | undefined
+  const abi = abis[abiKey]?.abi as Abi | undefined
   
   const allFunctions = useMemo(() => {
     if (!abi) return []
@@ -66,17 +64,17 @@ export function FunctionList({
   }, [writeFunctions, searchQuery])
 
   const favoriteReadFunctions = filteredReadFunctions.filter((f) =>
-    isFavorite(contractLabel, f.name)
+    isFavorite(abiKey, f.name)
   )
   const favoriteWriteFunctions = filteredWriteFunctions.filter((f) =>
-    isFavorite(contractLabel, f.name)
+    isFavorite(abiKey, f.name)
   )
 
   const regularReadFunctions = filteredReadFunctions.filter(
-    (f) => !isFavorite(contractLabel, f.name)
+    (f) => !isFavorite(abiKey, f.name)
   )
   const regularWriteFunctions = filteredWriteFunctions.filter(
-    (f) => !isFavorite(contractLabel, f.name)
+    (f) => !isFavorite(abiKey, f.name)
   )
 
   if (!abi) {
@@ -105,10 +103,9 @@ export function FunctionList({
                   {favoriteReadFunctions.map((func) => (
                     <ReadFunction
                       key={func.name}
-                      contractLabel={contractLabel}
+                      abiKey={abiKey}
                       address={address}
                       abi={abi}
-                      abiKey={abiKey}
                       function={func}
                       supportedChainIds={supportedChainIds}
                     />
@@ -119,10 +116,9 @@ export function FunctionList({
                 {regularReadFunctions.map((func) => (
                   <ReadFunction
                     key={func.name}
-                    contractLabel={contractLabel}
+                    abiKey={abiKey}
                     address={address}
                     abi={abi}
-                    abiKey={abiKey}
                     function={func}
                     supportedChainIds={supportedChainIds}
                   />
@@ -139,10 +135,9 @@ export function FunctionList({
                   {favoriteWriteFunctions.map((func) => (
                     <WriteFunction
                       key={func.name}
-                      contractLabel={contractLabel}
+                      abiKey={abiKey}
                       address={address}
                       abi={abi}
-                      abiKey={abiKey}
                       function={func}
                       supportedChainIds={supportedChainIds}
                     />
@@ -153,10 +148,9 @@ export function FunctionList({
                 {regularWriteFunctions.map((func) => (
                   <WriteFunction
                     key={func.name}
-                    contractLabel={contractLabel}
+                    abiKey={abiKey}
                     address={address}
                     abi={abi}
-                    abiKey={abiKey}
                     function={func}
                     supportedChainIds={supportedChainIds}
                   />

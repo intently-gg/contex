@@ -7,7 +7,6 @@ export interface ABIEntry {
 }
 
 export interface ContractConfig {
-  contractLabel: string
   abiKey: string
   address: Address
   addressLabel: string

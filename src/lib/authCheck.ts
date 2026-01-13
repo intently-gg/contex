@@ -72,11 +72,10 @@ export function purgeStorageAndStampVersion(): void {
   // Reset stores to initial state
   const abiStore = useABIStore.getState()
   abiStore.setABIs({})
-  abiStore.setABILabels({})
   
   const contractStore = useContractStore.getState()
   contractStore.setContracts({})
-  contractStore.setSelectedContract(null)
+  contractStore.setSelectedAbiKey(null)
   
   // Stamp current version
   localStorage.setItem(CONFIG_VERSION_KEY, CONTEX_CONFIG_VERSION)

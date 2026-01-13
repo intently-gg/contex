@@ -35,18 +35,18 @@ import { Trash2, Copy, ExternalLink, Check } from "lucide-react"
 interface EditContractAddressModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  contractLabel: string
-  addressIndex: number
+  abiKey: string
+  address: Address
 }
 
 export function EditContractAddressModal({
   open,
   onOpenChange,
-  contractLabel,
-  addressIndex,
+  abiKey,
+  address: addressProp,
 }: EditContractAddressModalProps) {
   const { contracts, setContracts } = useContractStore()
-  const { abiLabels } = useABIStore()
+  const { abis } = useABIStore()
   const [addressLabel, setAddressLabel] = useState("")
   const [chainIds, setChainIds] = useState<number[]>([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -55,8 +55,8 @@ export function EditContractAddressModal({
   const chains = useChains()
 
   const availableChains = config.chains
-  const contract = contracts[contractLabel]
-  const address = contract?.addresses[addressIndex]
+  const addresses = contracts[abiKey] || []
+  const address = addresses.find((addr) => addr.address.toLowerCase() === addressProp.toLowerCase())
 
   const scannerUrl = useMemo(() => {
     if (!address) return null
@@ -71,7 +71,7 @@ export function EditContractAddressModal({
       setAddressLabel(address.label)
       setChainIds(address.chainIds)
     }
-  }, [open, address, contract])
+  }, [open, address])
 
   const handleSave = async () => {
     const trimmedLabel = addressLabel.trim()
@@ -93,8 +93,8 @@ export function EditContractAddressModal({
     }
 
     try {
-      let updated = updateAddressLabel(contracts, contractLabel, addressIndex, trimmedLabel)
-      updated = updateAddressChainIds(updated, contractLabel, addressIndex, chainIds)
+      let updated = updateAddressLabel(contracts, abiKey, addressProp, trimmedLabel)
+      updated = updateAddressChainIds(updated, abiKey, addressProp, chainIds)
       await saveContracts(updated)
       setContracts(updated)
       toast.success("Contract address updated successfully")
@@ -108,8 +108,8 @@ export function EditContractAddressModal({
 
   const handleDelete = async () => {
     try {
-      const addressCount = contract.addresses.length
-      let updated = deleteAddress(contracts, contractLabel, addressIndex)
+      const addressCount = addresses.length
+      let updated = deleteAddress(contracts, abiKey, addressProp)
       
       // If this was the last address, the contract is deleted
       if (addressCount === 1) {
@@ -146,10 +146,10 @@ export function EditContractAddressModal({
     }
   }
 
-  if (!contract || !address) return null
+  if (!address) return null
 
-  const abiLabel = getABILabel(abiLabels, contract.abi)
-  const addressCount = contract.addresses.length
+  const abiLabel = getABILabel(abis, abiKey)
+  const addressCount = addresses.length
 
   return (
     <>
@@ -297,8 +297,8 @@ export function EditContractAddressModal({
             <AlertDialogTitle>Delete Contract Address</AlertDialogTitle>
             <AlertDialogDescription>
               {addressCount === 1
-                ? `You are about to delete ${contractLabel} and ${addressCount} underlying Contract Address. This action cannot be undone.`
-                : `You are about to delete this Contract Address from ${contractLabel}. This action cannot be undone.`}
+                ? `You are about to delete ${abiLabel} and ${addressCount} underlying Contract Address. This action cannot be undone.`
+                : `You are about to delete this Contract Address from ${abiLabel}. This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -16,7 +16,7 @@ export function DatabaseError() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Database connection failed. Please try again later.
+            ERR: 5300
           </p>
         </CardContent>
       </Card>

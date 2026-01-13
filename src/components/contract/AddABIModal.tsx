@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useABIStore } from "@/stores/abiStore"
-import Editor from "@monaco-editor/react"
+import Editor, { type Monaco } from "@monaco-editor/react"
+import type { editor } from "monaco-editor"
 import { useThemeStore } from "@/stores/themeStore"
+import { FetchABIModal } from "./FetchABIModal"
 
 interface AddABIModalProps {
   open: boolean
@@ -29,15 +31,34 @@ export function AddABIModal({
   const [newAbiLabel, setNewAbiLabel] = useState("")
   const [newAbiContent, setNewAbiContent] = useState("")
   const [jsonError, setJsonError] = useState<string | null>(null)
+  const [isFetchModalOpen, setIsFetchModalOpen] = useState(false)
   const { theme } = useThemeStore()
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
 
   useEffect(() => {
     if (open) {
       setNewAbiLabel("")
       setNewAbiContent("")
       setJsonError(null)
+      setIsFetchModalOpen(false)
     }
   }, [open])
+
+  const handleABIFetched = (abi: unknown[]) => {
+    try {
+      const formatted = JSON.stringify(abi, null, 2)
+      setNewAbiContent(formatted)
+      setJsonError(null)
+      
+      setTimeout(() => {
+        editorRef.current?.getAction("editor.action.formatDocument")?.run()
+      }, 0)
+    } catch (error) {
+      toast.error("Failed to format fetched ABI", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
 
   const validateJson = (content: string): string | null => {
     try {
@@ -53,6 +74,80 @@ export function AddABIModal({
     setNewAbiContent(content)
     const error = validateJson(content)
     setJsonError(error)
+  }
+
+  const handleEditorDidMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+    editorRef.current = editor
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const pastedText = e.clipboardData?.getData("text")
+      
+      if (!pastedText || pastedText.trim() === "") {
+        return
+      }
+
+      const hasLineBreaks = pastedText.includes("\n") || pastedText.includes("\r")
+      
+      if (!hasLineBreaks) {
+        try {
+          const parsed = JSON.parse(pastedText)
+          const formatted = JSON.stringify(parsed, null, 2)
+          
+          e.preventDefault()
+          
+          const selection = editor.getSelection()
+          if (selection) {
+            const range = new monaco.Range(
+              selection.startLineNumber,
+              selection.startColumn,
+              selection.endLineNumber,
+              selection.endColumn
+            )
+            
+            editor.executeEdits("auto-format-paste", [
+              {
+                range,
+                text: formatted,
+              },
+            ])
+            
+            setTimeout(() => {
+              editor.getAction("editor.action.formatDocument")?.run()
+            }, 0)
+          }
+        } catch {
+          // If parsing fails, let Monaco handle it normally
+        }
+      }
+    }
+
+    const editorDomNode = editor.getContainerDomNode()
+    editorDomNode.addEventListener("paste", handlePaste)
+
+    return () => {
+      editorDomNode.removeEventListener("paste", handlePaste)
+    }
+  }, [])
+
+  const handleFormat = () => {
+    if (!editorRef.current) {
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(newAbiContent)
+      const formatted = JSON.stringify(parsed, null, 2)
+      setNewAbiContent(formatted)
+      setJsonError(null)
+      
+      setTimeout(() => {
+        editorRef.current?.getAction("editor.action.formatDocument")?.run()
+      }, 0)
+    } catch (error) {
+      toast.error("Invalid JSON", {
+        description: error instanceof Error ? error.message : "Cannot format invalid JSON",
+      })
+    }
   }
 
   const handleAdd = async () => {
@@ -112,7 +207,7 @@ export function AddABIModal({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="abi-label">ABI Label *</Label>
+            <Label htmlFor="abi-label">ABI Label</Label>
             <Input
               id="abi-label"
               placeholder="My Contract"
@@ -123,13 +218,32 @@ export function AddABIModal({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="abi-content">ABI JSON Content <i>(Paste directly)</i></Label>
+            <Label htmlFor="abi-content">ABI JSON Content</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFetchModalOpen(true)}
+              >
+                Fetch from Etherscan
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleFormat}
+              >
+                Auto-Format
+              </Button>
+            </div>
             <div className="border rounded-md overflow-hidden" style={{ height: "400px" }}>
               <Editor
                 height="400px"
                 defaultLanguage="json"
                 value={newAbiContent}
                 onChange={handleAbiContentChange}
+                onMount={handleEditorDidMount}
                 theme={theme === "dark" ? "vs-dark" : "light"}
                 options={{
                   minimap: { enabled: false },
@@ -146,12 +260,19 @@ export function AddABIModal({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleAdd}>Save</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdd}>Save</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+      <FetchABIModal
+        open={isFetchModalOpen}
+        onOpenChange={setIsFetchModalOpen}
+        onABIFetched={handleABIFetched}
+      />
     </Dialog>
   )
 }

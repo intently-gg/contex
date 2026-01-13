@@ -3,7 +3,6 @@ import { useAccount, useChainId, useChains, useSwitchChain, usePublicClient } fr
 import { DisclaimerConnectButton } from "@/components/auth/DisclaimerConnectButton"
 import { useContractStore } from "@/stores/contractStore"
 import { useABIStore } from "@/stores/abiStore"
-import { updateContractLabel, updateContractABI, saveContracts } from "@/lib/contractRegistry"
 import { copyToClipboard, truncateLabel } from "@/lib/utils"
 import { getABILabel } from "@/lib/abiLabels"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,7 +12,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Pencil, Copy, ExternalLink, Check, Plus, Search, Network, AlertCircle } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
-import { EditLabelDialog } from "./EditLabelDialog"
 import { EditContractAddressModal } from "./EditContractAddressModal"
 import { AutoRefreshFunctions } from "./AutoRefreshFunctions"
 import { AddContractModal } from "./AddContractModal"
@@ -24,18 +22,17 @@ import { parseABI } from "@/lib/abiParser"
 import type { Address, Abi } from "viem"
 
 interface ContractViewProps {
-  contractLabel: string
+  abiKey: string
 }
 
-export function ContractView({ contractLabel }: ContractViewProps) {
-  const { contracts, selectedAddresses, setSelectedAddress, setContracts, setSelectedFunction, getSelectedFunction, clearReadResultsForContract, setSelectedContract } = useContractStore()
-  const { abis, abiLabels } = useABIStore()
+export function ContractView({ abiKey }: ContractViewProps) {
+  const { contracts, selectedAddresses, setSelectedAddress, setSelectedFunction, getSelectedFunction, clearReadResultsForContract, setSelectedAbiKey } = useContractStore()
+  const { abis } = useABIStore()
   const { isConnected, address: walletAddress } = useAccount()
   const chainId = useChainId()
   const chains = useChains()
   const { switchChain } = useSwitchChain()
   const publicClient = usePublicClient()
-  const [isEditContractLabelOpen, setIsEditContractLabelOpen] = useState(false)
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false)
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
@@ -46,23 +43,34 @@ export function ContractView({ contractLabel }: ContractViewProps) {
   const prevChainIdRef = useRef<number | null>(null)
   const prevWalletAddressRef = useRef<string | null>(null)
 
-  const contract = contracts[contractLabel]
-  if (!contract) return null
+  const addresses = contracts[abiKey] || []
+  if (addresses.length === 0) return null
 
   // Get addressIndex for current contract, ensuring it's valid
   const addressIndex = useMemo(() => {
-    const savedIndex = selectedAddresses[contractLabel]
-    if (savedIndex !== undefined && savedIndex >= 0 && savedIndex < contract.addresses.length) {
+    const savedIndex = selectedAddresses[abiKey]
+    if (savedIndex !== undefined && savedIndex >= 0 && savedIndex < addresses.length) {
       return savedIndex
     }
     return 0
-  }, [contractLabel, contract.addresses.length, selectedAddresses])
+  }, [abiKey, addresses.length, selectedAddresses])
   
-  const selectedAddress = contract.addresses[addressIndex]
-  const selectedFunction = getSelectedFunction(contractLabel)
+  const selectedAddress = addresses[addressIndex]
+  const selectedFunction = getSelectedFunction(abiKey)
   
   // Stabilize ABI reference to prevent infinite loops with large ABIs
-  const abi = useMemo(() => abis[contract.abi] as Abi | undefined, [abis, contract.abi])
+  const abi = useMemo(() => {
+    const value = abis[abiKey]?.abi as Abi | undefined
+    try {
+      console.log("[ContractView] ABI resolution", {
+        abiKey,
+        hasAbi: !!value,
+      })
+    } catch (e) {
+      console.warn("[ContractView] Failed to log ABI resolution", e)
+    }
+    return value
+  }, [abis, abiKey])
 
   // Check for ABI parse error
   const abiParseError = useMemo(() => {
@@ -126,7 +134,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           // STEP 3: Clear ALL cached read results for this contract
           // This erases any cached or currently displayed values
           console.debug('[ContractView] Attempting to clear cache after repointing to new contract', {
-            contractLabel,
+            abiKey,
             addressChanged,
             chainChanged,
             walletChanged,
@@ -138,7 +146,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             walletAddress,
             prevWalletAddress: prevWalletAddressRef.current,
           })
-          clearReadResultsForContract(contractLabel)
+          clearReadResultsForContract(abiKey)
           
           // STEP 4: Trigger refresh for all read functions with no params
           // The refreshKey change will cause those functions to auto-refresh
@@ -156,72 +164,29 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       prevChainIdRef.current = chainId
       prevWalletAddressRef.current = walletAddress || null
     }
-  }, [selectedAddress?.address, chainId, walletAddress, isConnected, contractLabel, abi, publicClient, selectedAddress?.chainIds])
-
-  const handleUpdateContractLabel = async (newLabel: string) => {
-    try {
-      const updated = updateContractLabel(contracts, contractLabel, newLabel)
-      await saveContracts(updated)
-      setContracts(updated)
-      toast.success("Contract label updated")
-    } catch (error) {
-      toast.error("Failed to update contract label")
-    }
-  }
+  }, [selectedAddress?.address, chainId, walletAddress, isConnected, abiKey, abi, publicClient, selectedAddress?.chainIds])
 
   const handleUpdateContractABI = async (newAbiKey: string) => {
-    try {
-      // Find contracts that already use this ABI
-      const contractsWithNewABI = Object.entries(contracts).filter(
-        ([label, contract]) => contract.abi === newAbiKey && label !== contractLabel
-      )
-      
-      // If there are other contracts with this ABI, switch to the first one that has a saved selection
-      // Otherwise, switch to the first one found, or stay on current contract if none exist
-      let contractToSwitchTo: string | null = null
-      let addressIndexToRestore: number | null = null
-      
-      for (const [label, _] of contractsWithNewABI) {
-        if (selectedAddresses[label] !== undefined) {
-          contractToSwitchTo = label
-          addressIndexToRestore = selectedAddresses[label]
-          break
-        }
-      }
-      
-      // If no contract with saved selection found, use the first one with this ABI
-      if (!contractToSwitchTo && contractsWithNewABI.length > 0) {
-        contractToSwitchTo = contractsWithNewABI[0][0]
-        addressIndexToRestore = selectedAddresses[contractToSwitchTo] ?? 0
-      }
-      
-      // If we found a contract to switch to, switch to it
-      if (contractToSwitchTo) {
-        const targetContract = contracts[contractToSwitchTo]
-        // Ensure the address index is valid for the target contract
-        if (addressIndexToRestore !== null && targetContract) {
-          const validIndex = Math.max(0, Math.min(addressIndexToRestore, targetContract.addresses.length - 1))
-          setSelectedAddress(contractToSwitchTo, validIndex)
-        } else if (targetContract && targetContract.addresses.length > 0) {
-          // If no saved selection, use the first address
-          setSelectedAddress(contractToSwitchTo, 0)
-        }
-        setSelectedContract(contractToSwitchTo)
-        clearReadResultsForContract(contractToSwitchTo)
-        setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
-        toast.success("Switched to contract with selected ABI")
-      } else {
-        // No other contract with this ABI exists, so update current contract's ABI
-        const updated = updateContractABI(contracts, contractLabel, newAbiKey)
-        await saveContracts(updated)
-        setContracts(updated)
-        clearReadResultsForContract(contractLabel)
-        setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
-        toast.success("Contract ABI updated")
-      }
-    } catch (error) {
-      toast.error("Failed to update contract ABI")
+    // Switching ABI means switching to a different tab (different abiKey)
+    if (newAbiKey === abiKey) return
+    
+    const targetAddresses = contracts[newAbiKey] || []
+    if (targetAddresses.length === 0) {
+      toast.error("No addresses configured for this ABI")
+      return
     }
+    
+    // Switch to the new ABI tab
+    const savedIndex = selectedAddresses[newAbiKey]
+    const validIndex = savedIndex !== undefined && savedIndex >= 0 && savedIndex < targetAddresses.length
+      ? savedIndex
+      : 0
+    
+    setSelectedAddress(newAbiKey, validIndex)
+    setSelectedAbiKey(newAbiKey)
+    clearReadResultsForContract(newAbiKey)
+    setRefreshKey((prev) => (prev === 0 ? 1 : prev + 1))
+    toast.success("Switched to ABI")
   }
 
 
@@ -282,8 +247,8 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       {/* Key includes address to force remount when address changes */}
       {selectedAddress && abi && !hasError && (
         <AutoRefreshFunctions
-          key={`${contractLabel}-${selectedAddress.address}-${chainId}`}
-          contractLabel={contractLabel}
+          key={`${abiKey}-${selectedAddress.address}-${chainId}`}
+          abiKey={abiKey}
           address={selectedAddress.address as Address}
           abi={abi}
           refreshKey={refreshKey}
@@ -291,12 +256,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
       )}
       {selectedAddress && !hasError && (
         <FunctionSidebar
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={selectedAddress.address as Address}
           abi={abi}
-          abiKey={contract.abi}
           selectedFunction={selectedFunction}
-          onSelectFunction={(functionName) => setSelectedFunction(contractLabel, functionName)}
+          onSelectFunction={(functionName) => setSelectedFunction(abiKey, functionName)}
         />
       )}
       <div className="flex-1 flex flex-col min-h-0">
@@ -304,7 +268,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           <div className="flex items-center gap-1 flex-1 min-w-0">
             <label className="text-sm font-medium">ABI:</label>
             <Select
-              value={contract.abi}
+              value={abiKey}
               onValueChange={handleUpdateContractABI}
             >
               <SelectTrigger style={{ width: '200px', maxWidth: '200px' }}>
@@ -312,11 +276,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="truncate block">
-                        {truncateLabel(getABILabel(abiLabels, contract.abi)).display}
+                        {truncateLabel(getABILabel(abis, abiKey)).display}
                       </span>
                     </TooltipTrigger>
                     {(() => {
-                      const abiLabel = getABILabel(abiLabels, contract.abi)
+                      const abiLabel = getABILabel(abis, abiKey)
                       const truncated = truncateLabel(abiLabel)
                       return truncated.display !== truncated.full ? (
                         <TooltipContent>
@@ -328,11 +292,11 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {Object.keys(abis).map((abiKey) => {
-                  const abiLabel = getABILabel(abiLabels, abiKey)
+                {Object.keys(abis).map((key) => {
+                  const abiLabel = getABILabel(abis, key)
                   const truncated = truncateLabel(abiLabel)
                   return (
-                    <SelectItem key={abiKey} value={abiKey}>
+                    <SelectItem key={key} value={key}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="truncate block">
@@ -352,10 +316,10 @@ export function ContractView({ contractLabel }: ContractViewProps) {
             </Select>
             <label className="text-sm font-medium pl-2">Contract:</label>
             <Select
-              key={`contract-select-${contractLabel}-${contract.abi}`}
-              value={contract.addresses.length > 0 ? String(addressIndex) : undefined}
+              key={`contract-select-${abiKey}`}
+              value={addresses.length > 0 ? String(addressIndex) : undefined}
               onValueChange={(value) =>
-                setSelectedAddress(contractLabel, Number(value))
+                setSelectedAddress(abiKey, Number(value))
               }
             >
               <SelectTrigger className="flex-1" style={{ maxWidth: '500px' }}>
@@ -412,7 +376,7 @@ export function ContractView({ contractLabel }: ContractViewProps) {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {contract.addresses.map((addr, idx) => {
+                {addresses.map((addr, idx) => {
                   const addrChains = chains.filter((chain) => addr.chainIds.includes(chain.id))
                   const truncated = truncateLabel(addr.label)
                   return (
@@ -654,11 +618,10 @@ export function ContractView({ contractLabel }: ContractViewProps) {
           </div>
         ) : selectedAddress ? (
           <SelectedFunctionView
-            key={`${contractLabel}-${selectedAddress.address}-${chainId}-${selectedFunction || 'none'}`}
-            contractLabel={contractLabel}
+            key={`${abiKey}-${selectedAddress.address}-${chainId}-${selectedFunction || 'none'}`}
+            abiKey={abiKey}
             address={selectedAddress.address as Address}
             abi={abi}
-            abiKey={contract.abi}
             functionName={selectedFunction}
             supportedChainIds={selectedAddress.chainIds}
             refreshKey={refreshKey}
@@ -666,26 +629,18 @@ export function ContractView({ contractLabel }: ContractViewProps) {
         ) : null}
       </div>
 
-      <EditLabelDialog
-        open={isEditContractLabelOpen}
-        onOpenChange={setIsEditContractLabelOpen}
-        currentLabel={contractLabel}
-        onSave={handleUpdateContractLabel}
-        title="Edit Contract Label"
-        description="Update the label for this contract"
-      />
       {selectedAddress && (
         <EditContractAddressModal
           open={isEditAddressOpen}
           onOpenChange={setIsEditAddressOpen}
-          contractLabel={contractLabel}
-          addressIndex={addressIndex}
+          abiKey={abiKey}
+          address={selectedAddress.address}
         />
       )}
       <AddContractModal
         open={isAddContractOpen}
         onOpenChange={setIsAddContractOpen}
-        defaultAbiKey={contract.abi}
+        defaultAbiKey={abiKey}
       />
       <ContractSearchModal
         open={isSearchModalOpen}

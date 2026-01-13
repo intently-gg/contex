@@ -27,7 +27,7 @@ interface ListHelperModalProps {
   onValueHelper?: (fieldName: string, fieldType: string, currentValue?: string) => void
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   onListHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
-  contractLabel?: string
+  abiKey?: string
   address?: string
   functionName?: string
 }
@@ -42,7 +42,7 @@ export function ListHelperModal({
   onValueHelper: _onValueHelper,
   onTupleHelper,
   onListHelper,
-  contractLabel,
+  abiKey,
   address,
   functionName,
 }: ListHelperModalProps) {
@@ -236,7 +236,7 @@ export function ListHelperModal({
               fieldName={itemName}
               fieldType={baseType}
               currentValue={String(listValues[index] || "")}
-              contractLabel={contractLabel}
+              abiKey={abiKey}
               address={address}
               functionName={functionName}
             />

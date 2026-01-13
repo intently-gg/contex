@@ -19,19 +19,17 @@ import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 
 interface WriteFunctionProps {
-  contractLabel: string
+  abiKey: string
   address: Address
   abi: Abi
-  abiKey: string
   function: ParsedFunction
   supportedChainIds: number[]
 }
 
 export function WriteFunction({
-  contractLabel,
+  abiKey,
   address,
   abi,
-  abiKey,
   function: func,
   supportedChainIds,
 }: WriteFunctionProps) {
@@ -56,7 +54,7 @@ export function WriteFunction({
     setFormState(abiKey, func.name, inputs)
   }, [inputs, abiKey, func.name, setFormState])
 
-  const isFav = isFavorite(contractLabel, func.name)
+  const isFav = isFavorite(abiKey, func.name)
   const isPayable = func.stateMutability === "payable"
 
   // Check if any data has been entered
@@ -233,7 +231,7 @@ export function WriteFunction({
                         e.currentTarget.style.backgroundColor = ''
                         e.currentTarget.style.borderColor = 'hsl(var(--border))'
                       }}
-                      onClick={() => toggleFavorite(contractLabel, func.name)}
+                      onClick={() => toggleFavorite(abiKey, func.name)}
                     >
                       {isFav ? (
                         <Pin className="h-3.5 w-3.5 fill-current" />
@@ -349,7 +347,7 @@ export function WriteFunction({
               fieldName={field.name}
               fieldType={field.type}
               currentValue={String(inputs[field.name] || "")}
-              contractLabel={contractLabel}
+              abiKey={abiKey}
               address={address}
               functionName={func.name}
             />
@@ -367,7 +365,7 @@ export function WriteFunction({
           fieldName="Value (wei)"
           fieldType="uint256"
           currentValue={value}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           functionName={func.name}
         />
@@ -383,7 +381,7 @@ export function WriteFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           functionName={func.name}
         />
@@ -399,7 +397,7 @@ export function WriteFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-          contractLabel={contractLabel}
+          abiKey={abiKey}
           address={address}
           functionName={func.name}
         />

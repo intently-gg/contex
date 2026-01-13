@@ -1,2 +1,2 @@
-export const CONTEX_CONFIG_VERSION = "0.12"
+export const CONTEX_CONFIG_VERSION = "0.13"
 
