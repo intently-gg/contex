@@ -14,11 +14,12 @@ import { toast } from "sonner"
 interface ResultRendererProps {
   value: unknown
   className?: string
+  defaultFormat?: "yaml" | "json" | "raw"
 }
 
-export function ResultRenderer({ value, className }: ResultRendererProps) {
+export function ResultRenderer({ value, className, defaultFormat = "yaml" }: ResultRendererProps) {
   const { theme } = useThemeStore()
-  const [format, setFormat] = useState<"yaml" | "json" | "raw">("yaml")
+  const [format, setFormat] = useState<"yaml" | "json" | "raw">(defaultFormat)
   const [wordWrap, setWordWrap] = useState(false)
   const [copied, setCopied] = useState(false)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)

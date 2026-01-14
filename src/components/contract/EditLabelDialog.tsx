@@ -62,6 +62,11 @@ export function EditLabelDialog({
             }}
           />
         </div>
+        {title === "Edit ABI Label" && (
+          <>
+            <div className="mt-4" />
+          </>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

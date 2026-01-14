@@ -258,7 +258,7 @@ export function ABIManagerModal({
           </DialogHeader>
           <div className="flex-1 min-h-0 px-6 pb-6">
             {viewingAbiKey && abis[viewingAbiKey] ? (
-              <ResultRenderer value={abis[viewingAbiKey].abi} className="h-full" />
+              <ResultRenderer value={abis[viewingAbiKey].abi} className="h-full" defaultFormat="json" />
             ) : null}
           </div>
         </DialogContent>

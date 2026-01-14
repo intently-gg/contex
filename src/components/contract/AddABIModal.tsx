@@ -15,6 +15,7 @@ import Editor, { type Monaco } from "@monaco-editor/react"
 import type { editor } from "monaco-editor"
 import { useThemeStore } from "@/stores/themeStore"
 import { FetchABIModal } from "./FetchABIModal"
+import { Abi } from "abitype/zod"
 
 interface AddABIModalProps {
   open: boolean
@@ -186,6 +187,27 @@ export function AddABIModal({
 
     try {
       const parsedContent = JSON.parse(newAbiContent)
+      
+      // Validate that it's a valid and parseable ABI using abitype's Zod schema
+      try {
+        Abi.parse(parsedContent)
+      } catch (abiError) {
+        // Log full error details to console for debugging
+        console.error("ABI validation error:", abiError)
+        toast.error("Invalid ABI", {
+          description: (
+            <>
+              ABI content is valid JSON, but could not be understood as a valid ABI schema/structure.
+              <br />
+              <br />
+              Please double check your supplied ABI for errors or extraneous content.
+            </>
+          ),
+          duration: 15000,
+        })
+        return
+      }
+
       const abiKey = addABI(trimmedLabel, parsedContent)
       toast.success("ABI added successfully")
       onOpenChange(false)
