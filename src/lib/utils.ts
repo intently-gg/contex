@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { getFunctionSelector, type AbiFunction } from "viem"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -166,4 +167,17 @@ export function truncateLabel(label: string, maxLength: number = 75): { display:
     return { display: full, full: full }
   }
   return { display: full.slice(0, maxLength) + "...", full }
+}
+
+/**
+ * Get function signature (4-byte selector) from a function ABI
+ */
+export function getFunctionSignature(abiFunction: AbiFunction): string {
+  try {
+    const inputTypes = abiFunction.inputs.map((input) => input.type).join(",")
+    const signature = `${abiFunction.name}(${inputTypes})`
+    return getFunctionSelector(signature)
+  } catch {
+    return ""
+  }
 }

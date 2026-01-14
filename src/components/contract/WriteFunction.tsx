@@ -14,7 +14,7 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
-import { sanitizeForSerialization } from "@/lib/utils"
+import { sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 
@@ -214,6 +214,14 @@ export function WriteFunction({
                   <TooltipContent>Write Function</TooltipContent>
                 </Tooltip>
                 <span className="text-base font-medium">{func.name}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      ({getFunctionSignature(func.abiFunction)})
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Function Signature</TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

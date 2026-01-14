@@ -3,9 +3,10 @@ import { useChainId } from "wagmi"
 import { useContractStore } from "@/stores/contractStore"
 import { parseABI } from "@/lib/abiParser"
 import { Input } from "@/components/ui/input"
-import { Search, Pin, Eye, Pencil } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Search, Pin, Eye, Pencil, Signature } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { safeStringify, formatValueForDisplay, isEmptyValue } from "@/lib/utils"
+import { safeStringify, formatValueForDisplay, isEmptyValue, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 
@@ -27,6 +28,7 @@ export function FunctionSidebar({
   onSelectFunction,
 }: FunctionSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [showSignaturesInNavbar, setShowSignaturesInNavbar] = useState(false)
   const { isFavorite, getReadResult } = useContractStore()
   const chainId = useChainId()
   
@@ -49,11 +51,15 @@ export function FunctionSidebar({
     if (!searchQuery) return allFunctions
     const query = searchQuery.toLowerCase()
     return allFunctions.filter(
-      (f) =>
-        f.name.toLowerCase().includes(query) ||
-        f.inputs.some((input) =>
+      (f) => {
+        const nameMatch = f.name.toLowerCase().includes(query)
+        const inputMatch = f.inputs.some((input) =>
           (input.name || "").toLowerCase().includes(query)
         )
+        const signature = getFunctionSignature(f.abiFunction)
+        const signatureMatch = signature.toLowerCase().includes(query)
+        return nameMatch || inputMatch || signatureMatch
+      }
     )
   }, [allFunctions, searchQuery])
 
@@ -96,6 +102,7 @@ export function FunctionSidebar({
   const renderFunctionItem = (func: ParsedFunction) => {
     const isSelected = selectedFunction === func.name
     const result = getFunctionResult(func)
+    const signature = getFunctionSignature(func.abiFunction)
 
     return (
       <Tooltip key={func.name}>
@@ -123,12 +130,20 @@ export function FunctionSidebar({
             <div className="flex items-center gap-2 flex-1 min-w-0" style={{ overflow: 'hidden' }}>
               {result ? (
                 <div className="text-xs font-medium flex-1 min-w-0" style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  {showSignaturesInNavbar && signature && (
+                    <span className="text-muted-foreground">{signature} </span>
+                  )}
                   <span>{func.name}</span>
                   <span style={{ color: 'hsl(var(--muted-foreground) / 0.8)' }}> → </span>
                   <span style={{ color: 'hsl(var(--muted-foreground) / 0.8)' }}>{result.display}</span>
                 </div>
               ) : (
-                <div className="text-xs font-medium flex-1 min-w-0" style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>{func.name}</div>
+                <div className="text-xs font-medium flex-1 min-w-0" style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  {showSignaturesInNavbar && signature && (
+                    <span className="text-muted-foreground">{signature} </span>
+                  )}
+                  {func.name}
+                </div>
               )}
             </div>
           </div>
@@ -147,14 +162,31 @@ export function FunctionSidebar({
   return (
     <div className="w-[415px] border-r bg-background flex flex-col h-full">
       <div className="p-4 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search functions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search functions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showSignaturesInNavbar ? "default" : "outline"}
+                size="icon"
+                onClick={() => setShowSignaturesInNavbar(!showSignaturesInNavbar)}
+                className="h-10 w-10"
+              >
+                <Signature className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showSignaturesInNavbar ? "Hide function signatures" : "Show function signatures"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
       
