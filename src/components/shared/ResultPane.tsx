@@ -99,6 +99,29 @@ export function ResultPane({
     return ""
   }
 
+  const getRawValueForCopy = (): string => {
+    if (sanitizedError) {
+      return (sanitizedError.message || "Transaction failed").replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+    }
+    if (result !== undefined) {
+      if (typeof result === "string") {
+        return result.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+      } else if (typeof result === "number" || typeof result === "bigint") {
+        return String(result)
+      } else if (typeof result === "boolean") {
+        return String(result)
+      } else {
+        try {
+          const str = safeStringify(result)
+          return str.replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+        } catch {
+          return String(result)
+        }
+      }
+    }
+    return ""
+  }
+
   // Determine if result is complex (array/object) - for read functions, use ResultRenderer
   const isComplexValue = useMemo(() => {
     if (sanitizedError || sanitizedResult === undefined) return false
@@ -114,7 +137,8 @@ export function ResultPane({
 
   const handleCopy = async () => {
     if (!hasResult) return
-    const success = await copyToClipboard(resultText)
+    const valueToCopy = getRawValueForCopy()
+    const success = await copyToClipboard(valueToCopy)
     if (success) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1000)
