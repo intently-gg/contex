@@ -37,7 +37,7 @@ export function AddContractModal({
   onOpenChange,
   defaultAbiKey,
 }: AddContractModalProps) {
-  const { contracts, setContracts } = useContractStore()
+  const { contracts, setContracts, setSelectedAbiKey, setSelectedAddress } = useContractStore()
   const { abis } = useABIStore()
   const [step, setStep] = useState<Step>("select-abi")
   const [abiKey, setAbiKey] = useState("")
@@ -364,6 +364,12 @@ export function AddContractModal({
       )
       await saveContracts(newContracts)
       setContracts(newContracts)
+      
+      // Switch to the newly added contract
+      setSelectedAbiKey(abiKey)
+      const newAddressIndex = newContracts[abiKey].length - 1
+      setSelectedAddress(abiKey, newAddressIndex)
+      
       toast.success("Contract added successfully")
       onOpenChange(false)
       setStep("select-abi")

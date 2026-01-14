@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useChainId, useChains } from "wagmi"
 import type { Address, Abi } from "viem"
 import { decodeErrorResult } from "viem"
 import { useContractStore } from "@/stores/contractStore"
 import { safeStringify } from "@/lib/utils"
 import { toast } from "sonner"
+import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
+import { CheckCircle2, XCircle } from "lucide-react"
 
 export function useReadContractFunction(
   address: Address,
@@ -73,6 +75,7 @@ export function useWriteContractFunction(
 
   const [revertError, setRevertError] = useState<Error | null>(null)
   const [isPollingReceipt, setIsPollingReceipt] = useState(false)
+  const submittedToastIdRef = useRef<string | number | null>(null)
 
   // Poll for receipt directly when we have a hash - don't wait for useWaitForTransactionReceipt
   useEffect(() => {
@@ -230,6 +233,7 @@ export function useWriteContractFunction(
     if (hash) {
       setRevertError(null)
       setIsPollingReceipt(false)
+      submittedToastIdRef.current = null
     }
   }, [hash])
 
@@ -259,21 +263,41 @@ export function useWriteContractFunction(
       const chain = chains.find((c) => c.id === chainId)
       const baseUrl = chain?.blockExplorers?.default?.url
       const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+      const iconUrl = (chain as any)?.iconUrl || ((chain as any)?.nativeCurrency as any)?.iconUrl || DEFAULT_CHAIN_ICON
 
-      toast.success("Transaction submitted", {
-        description: explorerTxUrl
-          ? React.createElement(
-              "a",
-              {
-                href: explorerTxUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                style: { textDecoration: "underline" },
-              },
-              `Hash: ${hash}`
-            )
-          : `Hash: ${hash}`,
-      })
+      submittedToastIdRef.current = toast.success(
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px" } },
+          "Transaction submitted to",
+          React.createElement("img", {
+            src: iconUrl,
+            alt: chain?.name || "Chain",
+            style: { width: "16px", height: "16px", borderRadius: "50%" },
+            onError: (e: any) => {
+              e.target.src = DEFAULT_CHAIN_ICON
+            },
+          })
+        ),
+        {
+          duration: 20000,
+          icon: React.createElement(CheckCircle2, { 
+            style: { color: "#60a5fa", width: "16px", height: "16px" } 
+          }),
+          description: explorerTxUrl
+            ? React.createElement(
+                "a",
+                {
+                  href: explorerTxUrl,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  style: { textDecoration: "underline" },
+                },
+                hash
+              )
+            : hash,
+        }
+      )
     }
   }, [hash, isPending, chains, chainId])
 
@@ -282,21 +306,42 @@ export function useWriteContractFunction(
       const chain = chains.find((c) => c.id === chainId)
       const baseUrl = chain?.blockExplorers?.default?.url
       const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+      const iconUrl = (chain as any)?.iconUrl || ((chain as any)?.nativeCurrency as any)?.iconUrl || DEFAULT_CHAIN_ICON
 
-      toast.success("Transaction confirmed", {
-        description: explorerTxUrl
-          ? React.createElement(
-              "a",
-              {
-                href: explorerTxUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                style: { textDecoration: "underline" },
-              },
-              `Hash: ${hash}`
-            )
-          : `Hash: ${hash}`,
-      })
+      toast.success(
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px" } },
+          "Transaction confirmed on",
+          React.createElement("img", {
+            src: iconUrl,
+            alt: chain?.name || "Chain",
+            style: { width: "16px", height: "16px", borderRadius: "50%" },
+            onError: (e: any) => {
+              e.target.src = DEFAULT_CHAIN_ICON
+            },
+          })
+        ),
+        {
+          duration: 20000,
+          id: submittedToastIdRef.current || undefined,
+          icon: React.createElement(CheckCircle2, { 
+            style: { color: "#4ade80", width: "16px", height: "16px" } 
+          }),
+          description: explorerTxUrl
+            ? React.createElement(
+                "a",
+                {
+                  href: explorerTxUrl,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  style: { textDecoration: "underline" },
+                },
+                hash
+              )
+            : hash,
+        }
+      )
     }
   }, [isConfirmed, hash, receipt, chains, chainId])
 
@@ -305,26 +350,53 @@ export function useWriteContractFunction(
       const chain = chains.find((c) => c.id === chainId)
       const baseUrl = chain?.blockExplorers?.default?.url
       const explorerTxUrl = baseUrl ? `${baseUrl}/tx/${hash}` : null
+      const iconUrl = (chain as any)?.iconUrl || ((chain as any)?.nativeCurrency as any)?.iconUrl || DEFAULT_CHAIN_ICON
+      
+      // Clean the error message - remove "Transaction reverted:" prefix if present
+      let cleanMessage = revertError.message
+      if (cleanMessage.startsWith("Transaction reverted:")) {
+        cleanMessage = cleanMessage.replace(/^Transaction reverted:\s*/i, "").trim()
+      }
 
-      toast.error("Transaction reverted", {
-        description: explorerTxUrl
-          ? React.createElement(
-              "div",
-              null,
-              React.createElement("div", null, revertError.message),
-              React.createElement(
-                "a",
-                {
-                  href: explorerTxUrl,
-                  target: "_blank",
-                  rel: "noopener noreferrer",
-                  style: { textDecoration: "underline", display: "block", marginTop: "4px" },
-                },
-                `Hash: ${hash}`
+      toast.error(
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px" } },
+          "Transaction reverted on",
+          React.createElement("img", {
+            src: iconUrl,
+            alt: chain?.name || "Chain",
+            style: { width: "16px", height: "16px", borderRadius: "50%" },
+            onError: (e: any) => {
+              e.target.src = DEFAULT_CHAIN_ICON
+            },
+          })
+        ),
+        {
+          duration: 20000,
+          id: submittedToastIdRef.current || undefined,
+          icon: React.createElement(XCircle, { 
+            style: { color: "#f87171", width: "16px", height: "16px" } 
+          }),
+          description: explorerTxUrl
+            ? React.createElement(
+                "div",
+                null,
+                React.createElement("div", null, `Message: ${cleanMessage}`),
+                React.createElement(
+                  "a",
+                  {
+                    href: explorerTxUrl,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    style: { textDecoration: "underline", display: "block", marginTop: "4px" },
+                  },
+                  hash
+                )
               )
-            )
-          : revertError.message,
-      })
+            : `Message: ${cleanMessage}`,
+        }
+      )
     }
   }, [revertError, hash, chains, chainId])
 

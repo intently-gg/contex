@@ -300,61 +300,30 @@ export function ContractView({ abiKey }: ContractViewProps) {
                 setSelectedAddress(abiKey, Number(value))
               }
             >
-              <SelectTrigger className="flex-1" style={{ maxWidth: '500px' }}>
+              <SelectTrigger className="flex-1" style={{ maxWidth: '250px' }}>
                 <SelectValue>
                   {selectedAddress ? (
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="flex-1 min-w-0 truncate">
-                            {(() => {
-                              const labelText = `${selectedAddress.label} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
-                              const truncated = truncateLabel(selectedAddress.label)
-                              return truncated.display !== truncated.full 
-                                ? `${truncated.display} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
-                                : labelText
-                            })()}
-                          </span>
-                        </TooltipTrigger>
-                        {(() => {
-                          const truncated = truncateLabel(selectedAddress.label)
-                          return truncated.display !== truncated.full ? (
-                            <TooltipContent>
-                              <p>{selectedAddress.label}</p>
-                            </TooltipContent>
-                          ) : null
-                        })()}
-                      </Tooltip>
-                      <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
-                        {chains
-                          .filter((chain) => selectedAddress.chainIds.includes(chain.id))
-                          .map((chain, index) => {
-                            const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
-                            const iconBackground = (chain as any).iconBackground || '#d3d3d3'
-                            return (
-                              <img
-                                key={chain.id}
-                                src={iconUrl || DEFAULT_CHAIN_ICON}
-                                alt={chain.name}
-                                className="w-4 h-4 rounded-full"
-                                title={chain.name}
-                                onError={(e) => {
-                                  e.preventDefault()
-                                  const target = e.target as HTMLImageElement
-                                  if (target.src !== DEFAULT_CHAIN_ICON) {
-                                    target.src = DEFAULT_CHAIN_ICON
-                                  }
-                                }}
-                                style={{
-                                  marginLeft: index > 0 ? '-8px' : '0',
-                                  zIndex: chains.filter((c) => selectedAddress.chainIds.includes(c.id)).length - index,
-                                  backgroundColor: iconBackground,
-                                }}
-                              />
-                            )
-                          })}
-                      </div>
-                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1 min-w-0 truncate">
+                          {(() => {
+                            const labelText = `${selectedAddress.label} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
+                            const truncated = truncateLabel(selectedAddress.label)
+                            return truncated.display !== truncated.full 
+                              ? `${truncated.display} (${selectedAddress.address.slice(0, 6)}...${selectedAddress.address.slice(-4)})`
+                              : labelText
+                          })()}
+                        </span>
+                      </TooltipTrigger>
+                      {(() => {
+                        const truncated = truncateLabel(selectedAddress.label)
+                        return truncated.display !== truncated.full ? (
+                          <TooltipContent>
+                            <p>{selectedAddress.label}</p>
+                          </TooltipContent>
+                        ) : null
+                      })()}
+                    </Tooltip>
                   ) : (
                     "Select address"
                   )}
@@ -362,58 +331,103 @@ export function ContractView({ abiKey }: ContractViewProps) {
               </SelectTrigger>
               <SelectContent>
                 {addresses.map((addr, idx) => {
-                  const addrChains = chains.filter((chain) => addr.chainIds.includes(chain.id))
                   const truncated = truncateLabel(addr.label)
                   return (
                     <SelectItem key={idx} value={String(idx)}>
-                      <div className="flex items-center justify-between w-full gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="flex-1 min-w-0 truncate">
-                              {truncated.display !== truncated.full
-                                ? `${truncated.display} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`
-                                : `${addr.label} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`}
-                            </span>
-                          </TooltipTrigger>
-                          {truncated.display !== truncated.full ? (
-                            <TooltipContent>
-                              <p>{addr.label}</p>
-                            </TooltipContent>
-                          ) : null}
-                        </Tooltip>
-                        <div className="flex items-center flex-shrink-0" style={{ marginLeft: '4px' }}>
-                          {addrChains.map((chain, index) => {
-                            const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
-                            const iconBackground = (chain as any).iconBackground || '#d3d3d3'
-                            return (
-                              <img
-                                key={chain.id}
-                                src={iconUrl || DEFAULT_CHAIN_ICON}
-                                alt={chain.name}
-                                className="w-4 h-4 rounded-full"
-                                title={chain.name}
-                                onError={(e) => {
-                                  e.preventDefault()
-                                  const target = e.target as HTMLImageElement
-                                  if (target.src !== DEFAULT_CHAIN_ICON) {
-                                    target.src = DEFAULT_CHAIN_ICON
-                                  }
-                                }}
-                                style={{
-                                  marginLeft: index > 0 ? '-8px' : '0',
-                                  zIndex: addrChains.length - index,
-                                  backgroundColor: iconBackground,
-                                }}
-                              />
-                            )
-                          })}
-                        </div>
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex-1 min-w-0 truncate">
+                            {truncated.display !== truncated.full
+                              ? `${truncated.display} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`
+                              : `${addr.label} (${addr.address.slice(0, 6)}...${addr.address.slice(-4)})`}
+                          </span>
+                        </TooltipTrigger>
+                        {truncated.display !== truncated.full ? (
+                          <TooltipContent>
+                            <p>{addr.label}</p>
+                          </TooltipContent>
+                        ) : null}
+                      </Tooltip>
                     </SelectItem>
                   )
                 })}
               </SelectContent>
             </Select>
+            {selectedAddress && (
+              <Select
+                value={chainError ? undefined : String(chainId)}
+                onValueChange={(value) => {
+                  try {
+                    switchChain({ chainId: Number(value) })
+                  } catch (error) {
+                    toast.error("Failed to switch chain", {
+                      description: error instanceof Error ? error.message : "Unknown error",
+                    })
+                  }
+                }}
+              >
+                <SelectTrigger className="w-auto" style={{ minWidth: '40px' }}>
+                  {chainError ? (
+                    <AlertCircle className="h-4 w-4" />
+                  ) : (
+                    <SelectValue>
+                      {(() => {
+                        const currentChain = chains.find((c) => c.id === chainId)
+                        if (!currentChain) return null
+                        const iconUrl = (currentChain as any).iconUrl || ((currentChain.nativeCurrency as any)?.iconUrl)
+                        const iconBackground = (currentChain as any).iconBackground || '#d3d3d3'
+                        return (
+                          <img
+                            src={iconUrl || DEFAULT_CHAIN_ICON}
+                            alt={currentChain.name}
+                            className="w-4 h-4 rounded-full"
+                            title={currentChain.name}
+                            onError={(e) => {
+                              e.preventDefault()
+                              const target = e.target as HTMLImageElement
+                              if (target.src !== DEFAULT_CHAIN_ICON) {
+                                target.src = DEFAULT_CHAIN_ICON
+                              }
+                            }}
+                            style={{
+                              backgroundColor: iconBackground,
+                            }}
+                          />
+                        )
+                      })()}
+                    </SelectValue>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {enabledChains.map((chain) => {
+                    const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
+                    const iconBackground = (chain as any).iconBackground || '#d3d3d3'
+                    return (
+                      <SelectItem key={chain.id} value={String(chain.id)}>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={iconUrl || DEFAULT_CHAIN_ICON}
+                            alt={chain.name}
+                            className="w-4 h-4 rounded-full flex-shrink-0"
+                            onError={(e) => {
+                              e.preventDefault()
+                              const target = e.target as HTMLImageElement
+                              if (target.src !== DEFAULT_CHAIN_ICON) {
+                                target.src = DEFAULT_CHAIN_ICON
+                              }
+                            }}
+                            style={{
+                              backgroundColor: iconBackground,
+                            }}
+                          />
+                          <span>{chain.name} (id: {chain.id})</span>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            )}
             {selectedAddress && (
               <div className="flex items-center" style={{ gap: '4px' }}>
                 <Button

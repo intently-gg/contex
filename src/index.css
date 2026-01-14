@@ -117,3 +117,8 @@
     border-color: hsl(var(--border) / 0.5);
   }
 }
+
+/* Sonner toast width customization */
+[data-sonner-toaster] {
+  --width: calc(356px + 35px);
+}

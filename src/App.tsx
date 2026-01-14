@@ -47,7 +47,7 @@ function AppContent() {
                 <span style={{ marginLeft: "10px" }}>•</span> contex © {new Date().getFullYear()}
               </span>
             </footer>
-            <Toaster duration={9000} />
+            <Toaster duration={5000} expand={true} visibleToasts={5} theme={theme === "dark" ? "dark" : "light"} />
           </div>
         </TooltipProvider>
       </DisclaimerGuard>

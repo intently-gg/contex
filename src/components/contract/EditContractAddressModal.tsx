@@ -108,10 +108,10 @@ export function EditContractAddressModal({
       updated = updateAddressChainIds(updated, abiKey, addressProp, chainIds)
       await saveContracts(updated)
       setContracts(updated)
-      toast.success("Contract address updated successfully")
+      toast.success("Contract updated successfully")
       onOpenChange(false)
     } catch (error) {
-      toast.error("Failed to update contract address", {
+      toast.error("Failed to update contract", {
         description: error instanceof Error ? error.message : "Unknown error",
       })
     }
