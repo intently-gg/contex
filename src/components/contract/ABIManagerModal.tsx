@@ -26,6 +26,7 @@ import { useABIStore } from "@/stores/abiStore"
 import { useContractStore } from "@/stores/contractStore"
 import { EditLabelDialog } from "./EditLabelDialog"
 import { AddABIModal } from "./AddABIModal"
+import { AddContractModal } from "./AddContractModal"
 import { truncateLabel } from "@/lib/utils"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 
@@ -41,6 +42,8 @@ export function ABIManagerModal({
   const { abis, deleteABI, setABILabel, isLabelUnique } = useABIStore()
   const { contracts } = useContractStore()
   const [isAddABIOpen, setIsAddABIOpen] = useState(false)
+  const [isAddContractOpen, setIsAddContractOpen] = useState(false)
+  const [addContractAbiKey, setAddContractAbiKey] = useState<string | undefined>(undefined)
   const [editingAbiKey, setEditingAbiKey] = useState<string | null>(null)
   const [deleteConfirmAbiKey, setDeleteConfirmAbiKey] = useState<string | null>(null)
   const [viewingAbiKey, setViewingAbiKey] = useState<string | null>(null)
@@ -123,6 +126,12 @@ export function ABIManagerModal({
     setViewingAbiKey(abiKey)
   }
 
+  const handleAddContract = (abiKey: string) => {
+    setAddContractAbiKey(abiKey)
+    setIsAddContractOpen(true)
+    onOpenChange(false)
+  }
+
 
   return (
     <>
@@ -173,6 +182,14 @@ export function ABIManagerModal({
                         title="Edit Label"
                       >
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleAddContract(abiKey)}
+                        title="Add Contract"
+                      >
+                        <Plus className="h-4 w-4" />
                       </Button>
                       <div>
                         <Tooltip>
@@ -267,6 +284,17 @@ export function ABIManagerModal({
       <AddABIModal
         open={isAddABIOpen}
         onOpenChange={setIsAddABIOpen}
+      />
+
+      <AddContractModal
+        open={isAddContractOpen}
+        onOpenChange={(open) => {
+          setIsAddContractOpen(open)
+          if (!open) {
+            setAddContractAbiKey(undefined)
+          }
+        }}
+        defaultAbiKey={addContractAbiKey}
       />
     </>
   )

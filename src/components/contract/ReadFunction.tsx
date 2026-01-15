@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
-import { Pin, PinOff, Eye, Braces } from "lucide-react"
+import { Pin, PinOff, Eye, Braces, Import } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
@@ -17,6 +17,7 @@ import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
 import { BytesHelperModal } from "./BytesHelperModal"
 import { EncodeDestinationModal } from "./EncodeDestinationModal"
+import { ImportCalldataModal } from "./ImportCalldataModal"
 import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
@@ -52,6 +53,7 @@ export function ReadFunction({
   const [encodeSuccess, setEncodeSuccess] = useState(false)
   const [encodeDestinationOpen, setEncodeDestinationOpen] = useState(false)
   const [encodedDataForDestination, setEncodedDataForDestination] = useState<string | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const formFields = generateFormFields([...func.inputs])
   const savedFormState = getFormState(abiKey, func.functionId) || {}
@@ -228,6 +230,10 @@ export function ReadFunction({
     setBytesHelperOpen(null)
   }, [])
 
+  const handleImportCalldata = useCallback((importedInputs: Record<string, unknown>) => {
+    setInputs((prev) => ({ ...prev, ...importedInputs }))
+  }, [])
+
   const handleInputChange = useCallback((fieldName: string, value: unknown) => {
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
   }, [])
@@ -340,6 +346,30 @@ export function ReadFunction({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Show Function JSON</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 transition-colors"
+                      style={{
+                        borderColor: 'hsl(var(--border))'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
+                        e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = ''
+                        e.currentTarget.style.borderColor = 'hsl(var(--border))'
+                      }}
+                      onClick={() => setImportModalOpen(true)}
+                    >
+                      <Import className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Import Calldata Bytes</TooltipContent>
                 </Tooltip>
               </div>
 
@@ -481,6 +511,15 @@ export function ReadFunction({
         sourceFunctionName={func.name}
         onComplete={handleEncodeDestinationComplete}
       />
+      {func.inputs.length > 0 && (
+        <ImportCalldataModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onImport={handleImportCalldata}
+          abi={abi}
+          functionName={func.name}
+        />
+      )}
     </Card>
   )
 }

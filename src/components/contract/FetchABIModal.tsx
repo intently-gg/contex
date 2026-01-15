@@ -10,10 +10,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { useChainId } from "wagmi"
+import { useChains, useChainId } from "wagmi"
 import { isAddress } from "viem"
 import { Loader2 } from "lucide-react"
+import { DEFAULT_CHAIN_ICON } from "@/lib/wagmi"
+import Editor from "@monaco-editor/react"
+import { useThemeStore } from "@/stores/themeStore"
 
 interface FetchABIModalProps {
   open: boolean
@@ -21,15 +25,23 @@ interface FetchABIModalProps {
   onABIFetched: (abi: unknown[]) => void
 }
 
+const EXAMPLE_RESPONSE = `{
+  "status": "1",
+  "message": "OK",
+  "result": "[{\"constant\":false,\"inputs\":[{\"name\":\"_c\",\"type\":\"string\"}],\"name\":\"enterValue\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+}`
+
 export function FetchABIModal({
   open,
   onOpenChange,
   onABIFetched,
 }: FetchABIModalProps) {
+  const chains = useChains()
   const chainId = useChainId()
+  const { theme } = useThemeStore()
   const [fetchMode, setFetchMode] = useState<"etherscan" | "custom">("etherscan")
   const [contractAddress, setContractAddress] = useState("")
-  const [selectedChainId, setSelectedChainId] = useState<string>("")
+  const [selectedChainId, setSelectedChainId] = useState<number | null>(null)
   const [customUrl, setCustomUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -38,7 +50,7 @@ export function FetchABIModal({
       setFetchMode("etherscan")
       setContractAddress("")
       setCustomUrl("")
-      setSelectedChainId(chainId ? String(chainId) : "1")
+      setSelectedChainId(chainId)
     }
   }, [open, chainId])
 
@@ -56,10 +68,8 @@ export function FetchABIModal({
       return false
     }
 
-    if (!selectedChainId || isNaN(Number(selectedChainId))) {
-      toast.error("Invalid chain ID", {
-        description: "Please enter a valid chain ID",
-      })
+    if (!selectedChainId) {
+      toast.error("Chain selection required")
       return false
     }
 
@@ -187,15 +197,44 @@ export function FetchABIModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="chain-id">Chain ID</Label>
-                  <Input
-                    id="chain-id"
-                    type="number"
-                    placeholder="1"
-                    value={selectedChainId}
-                    onChange={(e) => setSelectedChainId(e.target.value)}
+                  <Label htmlFor="chain-select">Chain</Label>
+                  <Select
+                    value={selectedChainId?.toString() || ""}
+                    onValueChange={(value) => setSelectedChainId(Number(value))}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger id="chain-select">
+                      <SelectValue placeholder="Select a chain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {chains.map((chain) => {
+                        const iconUrl = (chain as any).iconUrl || ((chain.nativeCurrency as any)?.iconUrl)
+                        const iconBackground = (chain as any).iconBackground || '#d3d3d3'
+                        return (
+                          <SelectItem key={chain.id} value={chain.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={iconUrl || DEFAULT_CHAIN_ICON}
+                                alt={chain.name}
+                                className="w-4 h-4 rounded-full flex-shrink-0"
+                                onError={(e) => {
+                                  e.preventDefault()
+                                  const target = e.target as HTMLImageElement
+                                  if (target.src !== DEFAULT_CHAIN_ICON) {
+                                    target.src = DEFAULT_CHAIN_ICON
+                                  }
+                                }}
+                                style={{
+                                  backgroundColor: iconBackground,
+                                }}
+                              />
+                              <span>{chain.name} (id: {chain.id})</span>
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
@@ -207,15 +246,44 @@ export function FetchABIModal({
               </Label>
             </div>
             {fetchMode === "custom" && (
-              <div className="ml-6 space-y-2">
-                <Label htmlFor="custom-url">URL *</Label>
-                <Input
-                  id="custom-url"
-                  placeholder="https://..."
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  disabled={isLoading}
-                />
+              <div className="ml-6 space-y-3">
+                <div className="text-sm text-muted-foreground">
+                  The response structure of your custom URL must match the example below:
+                </div>
+                <div className="border rounded-md overflow-hidden" style={{ height: "180px" }}>
+                  <Editor
+                    height="180px"
+                    language="json"
+                    theme={theme === "dark" ? "vs-dark" : "light"}
+                    value={EXAMPLE_RESPONSE}
+                    options={{
+                      readOnly: true,
+                      wordWrap: "off",
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      fontSize: 12,
+                      lineNumbers: "on",
+                      folding: false,
+                      automaticLayout: true,
+                      scrollbar: {
+                        vertical: "auto",
+                        horizontal: "auto",
+                      },
+                      overviewRulerLanes: 0,
+                      overviewRulerBorder: false,
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-url">URL *</Label>
+                  <Input
+                    id="custom-url"
+                    placeholder="https://..."
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             )}
           </RadioGroup>
@@ -228,7 +296,7 @@ export function FetchABIModal({
           >
             Cancel
           </Button>
-          <Button onClick={handleFetch} disabled={isLoading}>
+          <Button onClick={handleFetch} disabled={isLoading || (fetchMode === "etherscan" && (!contractAddress.trim() || !selectedChainId))}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             OK
           </Button>
