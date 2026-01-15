@@ -90,25 +90,33 @@ export function ValueParserModal({
   const preview = useMemo(() => {
     if (!units || !decimals) return null
     
+    // note: conversion to number is purely for validation purposes. 
+    // critical NOT to actually try to parseUnits with this value or we lose precision
     const decimalsNum = Number.parseInt(decimals, 10)
-    const unitsNum = Number.parseFloat(units)
 
-    if (Number.isNaN(decimalsNum) || Number.isNaN(unitsNum)) {
-      return null
+    if (Number.isNaN(decimalsNum)) {
+      return { type: 'error' as const, message: 'Invalid decimals value' }
     }
 
-    // Check if units exceed decimals
-    const unitsStr = unitsNum.toString()
-    const decimalPart = unitsStr.includes(".") ? unitsStr.split(".")[1] : ""
+    const trimmedUnits = units.trim()
+    
+    // Check if units exceed decimals by parsing the string directly
+    const decimalPart = trimmedUnits.includes(".") ? trimmedUnits.split(".")[1] : ""
     if (decimalPart.length > decimalsNum) {
-      return null // Invalid, don't show preview
+      return { 
+        type: 'error' as const, 
+        message: `Units have ${decimalPart.length} decimal places, but only ${decimalsNum} decimals are allowed` 
+      }
     }
 
     try {
-      const weiValue = parseUnits(unitsNum.toString(), decimalsNum)
-      return weiValue.toString()
-    } catch {
-      return null
+      const weiValue = parseUnits(trimmedUnits, decimalsNum)
+      return { type: 'value' as const, value: weiValue.toString() }
+    } catch (error) {
+      return { 
+        type: 'error' as const, 
+        message: error instanceof Error ? error.message : 'Failed to parse value' 
+      }
     }
   }, [units, decimals])
 
@@ -119,7 +127,7 @@ export function ValueParserModal({
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    if (!preview) {
+    if (!preview || preview.type !== 'value') {
       toast.error("No preview value to copy")
       return
     }
@@ -127,7 +135,7 @@ export function ValueParserModal({
     // Try modern clipboard API first
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(preview)
+        await navigator.clipboard.writeText(preview.value)
         setCopied(true)
         setTimeout(() => setCopied(false), 1000)
         toast.success("Copied to clipboard")
@@ -171,16 +179,16 @@ export function ValueParserModal({
     }
 
     const decimalsNum = Number.parseInt(decimals, 10)
-    const unitsNum = Number.parseFloat(units)
 
-    if (Number.isNaN(decimalsNum) || Number.isNaN(unitsNum)) {
-      toast.error("Invalid number format")
+    if (Number.isNaN(decimalsNum)) {
+      toast.error("Invalid decimals format")
       return
     }
 
-    // Check if units exceed decimals
-    const unitsStr = unitsNum.toString()
-    const decimalPart = unitsStr.includes(".") ? unitsStr.split(".")[1] : ""
+    const trimmedUnits = units.trim()
+    
+    // Check if units exceed decimals by parsing the string directly
+    const decimalPart = trimmedUnits.includes(".") ? trimmedUnits.split(".")[1] : ""
     if (decimalPart.length > decimalsNum) {
       toast.error(
         `Units have ${decimalPart.length} decimal places, but only ${decimalsNum} decimals are allowed`
@@ -189,7 +197,7 @@ export function ValueParserModal({
     }
 
     try {
-      const weiValue = parseUnits(unitsNum.toString(), decimalsNum)
+      const weiValue = parseUnits(trimmedUnits, decimalsNum)
       const result = weiValue.toString()
       
       // Save decimals to memory
@@ -286,41 +294,47 @@ export function ValueParserModal({
           <div className="space-y-2">
             <Label>Preview</Label>
             {preview ? (
-              <div className="flex items-center gap-2">
-                <div 
-                  ref={previewRef}
-                  className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono select-all cursor-text"
-                  onClick={(e) => {
-                    // Allow text selection on click
-                    const range = document.createRange()
-                    range.selectNodeContents(e.currentTarget)
-                    const selection = window.getSelection()
-                    if (selection) {
-                      selection.removeAllRanges()
-                      selection.addRange(range)
-                    }
-                  }}
-                >
-                  {preview}
+              preview.type === 'error' ? (
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive flex items-center min-h-[42px]">
+                  {preview.message}
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10"
-                      onClick={handleCopy}
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Copy to clipboard</TooltipContent>
-                </Tooltip>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div 
+                    ref={previewRef}
+                    className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono select-all cursor-text"
+                    onClick={(e) => {
+                      // Allow text selection on click
+                      const range = document.createRange()
+                      range.selectNodeContents(e.currentTarget)
+                      const selection = window.getSelection()
+                      if (selection) {
+                        selection.removeAllRanges()
+                        selection.addRange(range)
+                      }
+                    }}
+                  >
+                    {preview.value}
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={handleCopy}
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Copy to clipboard</TooltipContent>
+                  </Tooltip>
+                </div>
+              )
             ) : (
               <div className="rounded-md bg-muted p-3 text-sm border flex-1 font-mono min-h-[42px] flex items-center text-muted-foreground">
                 Enter values to see preview
