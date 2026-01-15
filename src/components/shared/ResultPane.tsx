@@ -22,7 +22,7 @@ interface ResultPaneProps {
   onRefresh?: () => void
   showCheckmark?: boolean
   disabled?: boolean
-  onEncodeToClipboard?: () => void
+  onEncodeToClipboard?: () => void | Promise<void>
   onEncodeToClipboardSync?: () => string | null // Returns encoded data synchronously
   onEncodeToFunction?: () => void
   encodeError?: Error | null
@@ -267,9 +267,12 @@ export function ResultPane({
                     
                     // Fallback to async handler
                     if (onEncodeToClipboard) {
-                      onEncodeToClipboard().catch((err) => {
-                        console.error("Clipboard operation failed:", err)
-                      })
+                      const result = onEncodeToClipboard()
+                      if (result instanceof Promise) {
+                        result.catch((err: unknown) => {
+                          console.error("Clipboard operation failed:", err)
+                        })
+                      }
                     }
                   }}
                 >

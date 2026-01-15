@@ -6,15 +6,13 @@ import { useContractStore } from "@/stores/contractStore"
 import { parseABI, type ParsedFunction } from "@/lib/abiParser"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { ScrollText, Search, Clock, ArrowUpCircle, ArrowDownCircle, CirclePlus, CircleMinus, FileCode, Scroll, SquareFunction, Check, Square } from "lucide-react"
+import { Search, Clock, ArrowUpCircle, ArrowDownCircle, CirclePlus, CircleMinus, FileCode, Scroll, SquareFunction, Check, Square } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { cn, truncateLabel, safeStringify } from "@/lib/utils"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
-import { copyToClipboard } from "@/lib/utils"
-import { toast } from "sonner"
 
 interface EncodeDestinationModalProps {
   open: boolean
@@ -49,7 +47,6 @@ export function EncodeDestinationModal({
   const { abis } = useABIStore()
   const {
     contracts,
-    selectedAddresses,
     setSelectedAbiKey,
     setSelectedAddress,
     setSelectedFunction,
@@ -348,8 +345,7 @@ export function EncodeDestinationModal({
   }, [filteredRecent])
 
   const renderTree = (
-    groups: typeof groupedByAbi,
-    showRecent: boolean = false
+    groups: typeof groupedByAbi
   ) => {
     return (
       <div className="space-y-2">
@@ -502,12 +498,12 @@ export function EncodeDestinationModal({
                       <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                       Recent
                     </div>
-                    {renderTree(groupedRecent, true)}
+                    {renderTree(groupedRecent)}
                   </div>
                 )}
                 {filteredTargets.length > 0 && (
                   <div className="space-y-1">
-                    {renderTree(groupedByAbi, false)}
+                    {renderTree(groupedByAbi)}
                   </div>
                 )}
               </div>
@@ -657,7 +653,7 @@ export function EncodeDestinationModal({
               disabled={!clearExistingFirst && selectedInsertIndex === null}
               onClick={async () => {
                 if (!encodedData || !listPromptTarget || !listPromptExisting) return
-                const { abiKey, func, paramIndex, contractIndex } = listPromptTarget
+                const { abiKey, func, paramIndex } = listPromptTarget
                 const param = func.inputs[paramIndex]
                 const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
                 const existingForm = getFormState(abiKey, func.functionId) || {}
@@ -766,7 +762,7 @@ export function EncodeDestinationModal({
               variant="default"
               onClick={async () => {
                 if (!encodedData || !bytesPromptTarget) return
-                const { abiKey, func, paramIndex, contractIndex } = bytesPromptTarget
+                const { abiKey, func, paramIndex } = bytesPromptTarget
                 const param = func.inputs[paramIndex]
                 const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
                 const existingForm = getFormState(abiKey, func.functionId) || {}

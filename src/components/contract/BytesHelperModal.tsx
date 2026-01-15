@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
-import { generateFormFields, parseInputValue, needsValueParser, isTupleType } from "@/lib/formGenerator"
+import { generateFormFields, parseInputValue, needsValueParser } from "@/lib/formGenerator"
 import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
 import { useABIStore } from "@/stores/abiStore"
 import { decodeFunctionData, encodeFunctionData } from "viem"
@@ -43,7 +43,7 @@ export function BytesHelperModal({
   onOpenChange,
   onApply,
   fieldName,
-  abiParam,
+  abiParam: _abiParam,
   currentValue = "",
   onValueHelper: _onValueHelper,
   onTupleHelper,
@@ -64,7 +64,7 @@ export function BytesHelperModal({
   const [matchedFunction, setMatchedFunction] = useState<{
     abiKey: string
     abiLabel: string
-    func: { name: string; inputs: AbiParameter[]; abiFunction: any }
+    func: { name: string; inputs: readonly AbiParameter[]; abiFunction: any }
     abi: Abi
   } | null>(null)
 

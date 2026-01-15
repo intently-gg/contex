@@ -40,7 +40,7 @@ export function WriteFunction({
   supportedChainIds,
 }: WriteFunctionProps) {
   const chainId = useChainId()
-  const { getFormState, setFormState, isFavorite, toggleFavorite, setSelectedFunction } =
+  const { getFormState, setFormState, isFavorite, toggleFavorite } =
     useContractStore()
 
   const formFields = generateFormFields([...func.inputs])
@@ -164,12 +164,11 @@ export function WriteFunction({
   // Synchronous encoding function for clipboard
   const handleEncodeToClipboardSync = (): string | null => {
     try {
-      const { filteredArgs, valueBigInt } = buildArgsAndValue()
+      const { filteredArgs } = buildArgsAndValue()
       const data = encodeFunctionData({
         abi,
         functionName: func.name,
         args: filteredArgs,
-        value: valueBigInt,
       })
       return data
     } catch (err) {
@@ -183,11 +182,12 @@ export function WriteFunction({
     setEncodeSuccess(false)
     
     try {
-      const data = handleEncodeToClipboardSync()
-      if (!data) {
-        setEncodeError(new Error("Failed to encode function data"))
-        return
-      }
+      const { filteredArgs } = buildArgsAndValue()
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+      })
 
       // Try clipboard API
       let success = false
@@ -213,7 +213,7 @@ export function WriteFunction({
       toast.success(`Encoded ${func.name} bytes to clipboard`)
       setEncodeSuccess(true)
     } catch (err) {
-      console.error("Clipboard operation error:", err)
+      console.error("Encode error:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
       setEncodeError(new Error(errorMessage))
     }
@@ -223,12 +223,11 @@ export function WriteFunction({
     setEncodeError(null)
     setEncodeSuccess(false)
     try {
-      const { filteredArgs, valueBigInt } = buildArgsAndValue()
+      const { filteredArgs } = buildArgsAndValue()
       const data = encodeFunctionData({
         abi,
         functionName: func.name,
         args: filteredArgs,
-        value: valueBigInt,
       })
 
       setEncodedDataForDestination(data)
@@ -420,7 +419,7 @@ export function WriteFunction({
                       onValueHelper={(name) => setValueParserOpen(name)}
                       onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
                       onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                      onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
+                      onBytesHelper={(name, param) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue: String(inputs[name] || "") })}
                     />
                   ))}
                 </div>

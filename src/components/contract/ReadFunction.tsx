@@ -40,7 +40,7 @@ export function ReadFunction({
   supportedChainIds: _supportedChainIds,
   refreshKey,
 }: ReadFunctionProps) {
-  const { getFormState, setFormState, isFavorite, toggleFavorite, setSelectedFunction } =
+  const { getFormState, setFormState, isFavorite, toggleFavorite } =
     useContractStore()
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
@@ -137,31 +137,16 @@ export function ReadFunction({
 
   const isFav = isFavorite(abiKey, func.functionId)
 
-  // Synchronous encoding function for clipboard
-  const handleEncodeToClipboardSync = (): string | null => {
+  const handleEncodeToClipboard = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    
     try {
       const data = encodeFunctionData({
         abi,
         functionName: func.name,
         args: filteredArgs,
       })
-      return data
-    } catch (err) {
-      console.error("Encode error:", err)
-      return null
-    }
-  }
-
-  const handleEncodeToClipboard = async () => {
-    setEncodeError(null)
-    setEncodeSuccess(false)
-    
-    try {
-      const data = handleEncodeToClipboardSync()
-      if (!data) {
-        setEncodeError(new Error("Failed to encode function data"))
-        return
-      }
 
       // Try clipboard API
       let success = false
@@ -187,7 +172,7 @@ export function ReadFunction({
       toast.success(`Encoded ${func.name} bytes to clipboard`)
       setEncodeSuccess(true)
     } catch (err) {
-      console.error("Clipboard operation error:", err)
+      console.error("Encode error:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
       setEncodeError(new Error(errorMessage))
     }
@@ -372,7 +357,7 @@ export function ReadFunction({
                       onValueHelper={(name) => setValueParserOpen(name)}
                       onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
                       onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                      onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
+                      onBytesHelper={(name, param) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue: String(inputs[name] || "") })}
                     />
                   ))}
                 </div>
