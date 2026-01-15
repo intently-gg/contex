@@ -263,32 +263,6 @@ export function BytesHelperModal({
                   Bytes Helper
                   {matchedFunction && ` - Decoded ${matchedFunction.abiLabel}.${matchedFunction.func.name}`}
                 </DialogTitle>
-              {matchedFunction && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7 transition-colors"
-                      style={{
-                        borderColor: 'hsl(var(--border))'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
-                        e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = ''
-                        e.currentTarget.style.borderColor = 'hsl(var(--border))'
-                      }}
-                      onClick={() => setShowJsonModal(true)}
-                    >
-                      <Braces className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Show Function JSON</TooltipContent>
-                </Tooltip>
-              )}
             </div>
             <DialogDescription>
               {matchedFunction 

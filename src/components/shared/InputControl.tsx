@@ -1,14 +1,19 @@
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Sparkles, ScanEye } from "lucide-react"
-import { needsValueParser, isTupleType, isListType } from "@/lib/formGenerator"
+import { Sparkles, ScanEye, Binary } from "lucide-react"
+import { needsValueParser, isTupleType, isListType, generateFormFields } from "@/lib/formGenerator"
 import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
 import { useABIStore } from "@/stores/abiStore"
+import { useThemeStore } from "@/stores/themeStore"
+import { decodeFunctionData } from "viem"
+import { stringify as yamlStringify } from "yaml"
+import Editor from "@monaco-editor/react"
+import { toast } from "sonner"
 import type { AbiParameter } from "viem"
 
 interface InputControlProps {
@@ -37,6 +42,8 @@ export function InputControl({
   className,
 }: InputControlProps) {
   const { abis } = useABIStore()
+  const { theme } = useThemeStore()
+  const [autoDecodeBytes, setAutoDecodeBytes] = useState(true)
   const isArray = isListType(fieldType)
   const isTuple = isTupleType(fieldType)
   const needsValueParserHelper = needsValueParser(fieldName, fieldType)
@@ -52,6 +59,114 @@ export function InputControl({
   }, [fieldType, value, abis, onBytesHelper])
   
   const needsBytesHelper = matchedFunction !== null && onBytesHelper
+  const showDecodedView = needsBytesHelper && autoDecodeBytes && matchedFunction && typeof value === "string" && value.length > 0
+
+  const recursivelyDecodeBytes = (val: unknown): unknown => {
+    if (val === null || val === undefined) {
+      return val
+    }
+    
+    if (typeof val === "string") {
+      if (val.startsWith("0x") && val.length >= 10) {
+        const selector = extractFunctionSelector(val)
+        if (!selector) return val
+        
+        const match = findFunctionBySignature(selector, abis)
+        if (!match) return val
+        
+        try {
+          const decoded = decodeFunctionData({
+            abi: match.abi,
+            data: val as `0x${string}`,
+          })
+          
+          const formFields = generateFormFields([...match.func.inputs])
+          const decodedParams: Record<string, unknown> = {}
+          
+          formFields.forEach((field, index) => {
+            if (decoded.args && decoded.args[index] !== undefined) {
+              decodedParams[field.name] = recursivelyDecodeBytes(decoded.args[index])
+            }
+          })
+          
+          return {
+            [match.func.name]: decodedParams
+          }
+        } catch {
+          return val
+        }
+      }
+      return val
+    }
+    
+    if (Array.isArray(val)) {
+      return val.map(item => recursivelyDecodeBytes(item))
+    }
+    
+    if (typeof val === "bigint") {
+      return val.toString()
+    }
+    
+    if (typeof val === "object") {
+      const result: Record<string, unknown> = {}
+      for (const [key, v] of Object.entries(val)) {
+        result[key] = recursivelyDecodeBytes(v)
+      }
+      return result
+    }
+    
+    return val
+  }
+
+  const decodeBytesField = (bytesValue: string): { decoded: unknown; success: boolean } => {
+    if (!matchedFunction) return { decoded: bytesValue, success: false }
+    
+    try {
+      const decoded = decodeFunctionData({
+        abi: matchedFunction.abi,
+        data: bytesValue as `0x${string}`,
+      })
+      
+      const formFields = generateFormFields([...matchedFunction.func.inputs])
+      const decodedParams: Record<string, unknown> = {}
+      
+      formFields.forEach((field, index) => {
+        if (decoded.args && decoded.args[index] !== undefined) {
+          decodedParams[field.name] = recursivelyDecodeBytes(decoded.args[index])
+        }
+      })
+      
+      return { decoded: decodedParams, success: true }
+    } catch {
+      return { decoded: bytesValue, success: false }
+    }
+  }
+
+  const canDecodeBytes = useMemo(() => {
+    if (!needsBytesHelper || !matchedFunction || typeof value !== "string" || value.length === 0) {
+      return true
+    }
+    const result = decodeBytesField(value)
+    return result.success
+  }, [needsBytesHelper, matchedFunction, value])
+
+  const decodedYaml = useMemo(() => {
+    if (!showDecodedView || typeof value !== "string") return ""
+    try {
+      const result = decodeBytesField(value)
+      return yamlStringify(result.decoded, { indent: 2 })
+    } catch {
+      return ""
+    }
+  }, [showDecodedView, value, matchedFunction, abis])
+
+  useEffect(() => {
+    if (needsBytesHelper && matchedFunction && typeof value === "string" && value.length > 0) {
+      if (!canDecodeBytes && autoDecodeBytes) {
+        setAutoDecodeBytes(false)
+      }
+    }
+  }, [needsBytesHelper, matchedFunction, value, canDecodeBytes, autoDecodeBytes])
 
   const renderInput = () => {
     if (fieldType === "bool") {
@@ -152,6 +267,35 @@ export function InputControl({
     }
 
     if (fieldType === "bytes") {
+      if (showDecodedView) {
+        const lineCount = decodedYaml.split('\n').length
+        const lineHeight = 18
+        const calculatedHeight = Math.max(80, Math.min(150, lineCount * lineHeight + 10))
+        return (
+          <div className="flex-1 border rounded-md overflow-hidden" style={{ maxHeight: "150px", minHeight: "80px" }}>
+            <Editor
+              height={`${calculatedHeight}px`}
+              language="yaml"
+              theme={theme === "dark" ? "vs-dark" : "light"}
+              value={decodedYaml}
+              options={{
+                readOnly: true,
+                wordWrap: "on",
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 12,
+                lineNumbers: "off",
+                folding: false,
+                automaticLayout: true,
+                scrollbar: {
+                  vertical: "auto",
+                  horizontal: "auto",
+                },
+              }}
+            />
+          </div>
+        )
+      }
       return (
         <Textarea
           id={fieldName}
@@ -313,13 +457,13 @@ export function InputControl({
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
         {fieldName} <span style={{ color: 'hsl(var(--muted-foreground))' }}>({fieldType})</span>
-        {needsBytesHelper && matchedFunction && (
-          <span className="inline-flex items-center gap-1 ml-5" style={{ color: '#22c55e', fontSize: '0.875rem' }}>
-            <ScanEye className="h-3.5 w-3.5" style={{ color: '#22c55e' }} />
-            <span style={{ color: '#22c55e' }}>encoded: {matchedFunction.func.name}</span>
-          </span>
-        )}
       </Label>
+      {needsBytesHelper && matchedFunction && (
+        <div className="flex items-center gap-1" style={{ color: '#22c55e', fontSize: '0.875rem' }}>
+          <ScanEye className="h-3.5 w-3.5" style={{ color: '#22c55e' }} />
+          <span style={{ color: '#22c55e' }}>Encoded Function: {matchedFunction.func.name}</span>
+        </div>
+      )}
       <div className="flex gap-0.5">
         {isTuple ? (
           <Textarea
@@ -340,43 +484,71 @@ export function InputControl({
           renderInput()
         )}
         {(needsValueParserHelper || needsTupleHelper || needsListHelper || needsBytesHelper) && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 flex items-center justify-center"
-                style={{
-                  transition: 'all 0.2s ease-in-out',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = ''
-                }}
-                onClick={() => {
-                  if (needsBytesHelper && onBytesHelper) {
-                    onBytesHelper(fieldName, abiParam)
-                  } else if (needsValueParserHelper && onValueHelper) {
-                    onValueHelper(fieldName)
-                  } else if (needsTupleHelper && onTupleHelper) {
-                    onTupleHelper(fieldName, abiParam)
-                  } else if (needsListHelper && onListHelper) {
-                    onListHelper(fieldName, abiParam)
-                  }
-                }}
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Value Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex flex-col gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 flex items-center justify-center"
+                  style={{
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = ''
+                  }}
+                  onClick={() => {
+                    if (needsBytesHelper && onBytesHelper) {
+                      onBytesHelper(fieldName, abiParam)
+                    } else if (needsValueParserHelper && onValueHelper) {
+                      onValueHelper(fieldName)
+                    } else if (needsTupleHelper && onTupleHelper) {
+                      onTupleHelper(fieldName, abiParam)
+                    } else if (needsListHelper && onListHelper) {
+                      onListHelper(fieldName, abiParam)
+                    }
+                  }}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Value Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
+              </TooltipContent>
+            </Tooltip>
+            {needsBytesHelper && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={autoDecodeBytes ? "default" : "outline"}
+                    size="icon"
+                    className="h-10 w-10 flex items-center justify-center"
+                    onClick={() => {
+                      if (!autoDecodeBytes && !canDecodeBytes && matchedFunction) {
+                        toast.error(
+                          `Could not decode.\n\nThe bytes appear to be for function ${matchedFunction.func.name}, but cannot be successfully decoded.\n\n\nPlease confirm accuracy of input data.`
+                        )
+                        return
+                      }
+                      setAutoDecodeBytes(!autoDecodeBytes)
+                    }}
+                  >
+                    <Binary className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {autoDecodeBytes ? "Disable auto-decode" : "Enable auto-decode"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
     </div>
   )
 }
+
 
