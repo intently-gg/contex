@@ -5,6 +5,14 @@ import { checkDisclaimerSignature, signDisclaimer } from "@/lib/disclaimer"
 import { DisclaimerDeclined } from "./DisclaimerDeclined"
 import { Button } from "@/components/ui/button"
 import { DISCLAIMER_TEXT } from "./DisclaimerModal"
+import { WhatsNewModal } from "./WhatsNewModal"
+import {
+  getLastShownVersion,
+  getReleaseNotesToShow,
+  hasReleaseNotesToShow,
+  setLastShownVersion,
+} from "@/lib/releaseNotes"
+import { CONTEX_VERSION } from "@/lib/config"
 
 interface DisclaimerGuardProps {
   children: React.ReactNode
@@ -17,6 +25,10 @@ export function DisclaimerGuard({ children }: DisclaimerGuardProps) {
   const [isSigned, setIsSigned] = useState(false)
   const [hasDeclined, setHasDeclined] = useState(false)
   const [isSigning, setIsSigning] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
+  const [releaseNotes, setReleaseNotes] = useState<
+    Record<string, { whatsnew: Record<string, string[]> }>
+  >({})
   const hasDeclinedRef = useRef(false)
 
   const closeWalletModals = () => {
@@ -86,6 +98,14 @@ export function DisclaimerGuard({ children }: DisclaimerGuardProps) {
           setIsSigned(true)
           setHasDeclined(false)
           hasDeclinedRef.current = false
+          
+          // Check for release notes after disclaimer is signed (even if signed on previous visit)
+          const lastShownVersion = getLastShownVersion()
+          if (hasReleaseNotesToShow(lastShownVersion, CONTEX_VERSION)) {
+            const notes = getReleaseNotesToShow(lastShownVersion, CONTEX_VERSION)
+            setReleaseNotes(notes)
+            setShowWhatsNew(true)
+          }
         } else {
           setIsSigned(false)
           if (!hasDeclinedRef.current && !hasDeclined) {
@@ -132,6 +152,32 @@ export function DisclaimerGuard({ children }: DisclaimerGuardProps) {
 
   const handleRetry = () => {
     setSigningError(null)
+  }
+
+  const handleWhatsNewClose = (open: boolean) => {
+    if (!open) {
+      // Update localStorage with the highest version shown
+      const versions = Object.keys(releaseNotes)
+      if (versions.length > 0) {
+        const sortedVersions = versions.sort((a, b) => {
+          const partsA = a.split(".").map(Number)
+          const partsB = b.split(".").map(Number)
+          const maxLength = Math.max(partsA.length, partsB.length)
+          
+          for (let i = 0; i < maxLength; i++) {
+            const partA = partsA[i] || 0
+            const partB = partsB[i] || 0
+            if (partB !== partA) {
+              return partB - partA
+            }
+          }
+          return 0
+        })
+        const highestVersion = sortedVersions[0]
+        setLastShownVersion(highestVersion)
+      }
+    }
+    setShowWhatsNew(open)
   }
 
   if (isChecking) {
@@ -195,6 +241,15 @@ export function DisclaimerGuard({ children }: DisclaimerGuardProps) {
     )
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <WhatsNewModal
+        open={showWhatsNew}
+        onOpenChange={handleWhatsNewClose}
+        releaseNotes={releaseNotes}
+      />
+    </>
+  )
 }
 

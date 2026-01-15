@@ -1,5 +1,5 @@
 import { DisclaimerConnectButton } from "@/components/auth/DisclaimerConnectButton"
-import { Moon, Sun, Menu } from "lucide-react"
+import { Moon, Sun, Menu, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useThemeStore } from "@/stores/themeStore"
 import {
@@ -9,16 +9,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { FileJson, Plus, Calculator } from "lucide-react"
-import { useState } from "react"
 import { AddContractModal } from "@/components/contract/AddContractModal"
 import { ABIManagerModal } from "@/components/contract/ABIManagerModal"
 import { ValueParserModal } from "@/components/contract/ValueParserModal"
+import { useEffect, useState } from "react"
+import { fetchAdminStatus } from "@/lib/admin"
+import { AdminModal } from "@/components/admin/AdminModal"
 
 export function Header() {
   const { theme, toggleTheme } = useThemeStore()
   const [isAddContractOpen, setIsAddContractOpen] = useState(false)
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
   const [isValueHelperOpen, setIsValueHelperOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
+
+  useEffect(() => {
+    const status = fetchAdminStatus()
+    if (status.isAdmin) {
+      setIsAdmin(true)
+    }
+  }, [])
 
   return (
     <header className="bg-background">
@@ -71,6 +82,12 @@ export function Header() {
                 <Calculator className="mr-2 h-4 w-4" />
                 Value Helper
               </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => setIsAdminModalOpen(true)}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -104,6 +121,7 @@ export function Header() {
         fieldType="uint256"
         disconnected={true}
       />
+      <AdminModal open={isAdminModalOpen} onOpenChange={setIsAdminModalOpen} />
     </header>
   )
 }
