@@ -26,6 +26,7 @@ interface TupleHelperModalProps {
   onValueHelper?: (fieldName: string, fieldType: string, currentValue?: string) => void
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   onListHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
+  onBytesHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   abiKey?: string
   address?: string
   functionName?: string
@@ -41,6 +42,7 @@ export function TupleHelperModal({
   onValueHelper: _onValueHelper,
   onTupleHelper,
   onListHelper,
+  onBytesHelper,
   abiKey,
   address,
   functionName,
@@ -186,6 +188,10 @@ export function TupleHelperModal({
                   onValueHelper={needsValueParser(compName, comp.type) ? () => handleValueHelper(compName) : undefined}
                   onTupleHelper={onTupleHelper ? (name, param) => handleTupleHelper(name, param) : undefined}
                   onListHelper={onListHelper ? (name, param) => handleListHelper(name, param) : undefined}
+                  onBytesHelper={onBytesHelper ? (name, param) => {
+                    const compName = name
+                    onBytesHelper(compName, param, String(tupleValues[compName] || ""))
+                  } : undefined}
                 />
               )
             })}

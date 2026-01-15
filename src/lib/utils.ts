@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { getFunctionSelector, type AbiFunction } from "viem"
+import { getFunctionSelector, type AbiFunction, type Abi } from "viem"
+import { parseABI, type ParsedFunction } from "./abiParser"
+import type { ABIEntry } from "@/stores/abiStore"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -180,4 +182,48 @@ export function getFunctionSignature(abiFunction: AbiFunction): string {
   } catch {
     return ""
   }
+}
+
+/**
+ * Extract function selector (first 4 bytes / 8 hex chars) from bytes value
+ */
+export function extractFunctionSelector(bytesValue: string | unknown): string | null {
+  if (typeof bytesValue !== "string") return null
+  const cleaned = bytesValue.trim()
+  if (!cleaned.startsWith("0x")) return null
+  if (cleaned.length < 10) return null // Need at least 0x + 8 hex chars
+  return cleaned.slice(0, 10).toLowerCase() // 0x + 8 hex chars
+}
+
+/**
+ * Find matching function by signature across all registered ABIs
+ * Returns first match found with abiKey, abiLabel, and function info
+ */
+export function findFunctionBySignature(
+  selector: string,
+  abis: Record<string, ABIEntry>
+): { abiKey: string; abiLabel: string; func: ParsedFunction; abi: Abi } | null {
+  if (!selector || selector.length !== 10 || !selector.startsWith("0x")) return null
+
+  for (const [abiKey, entry] of Object.entries(abis)) {
+    const abi = entry.abi as Abi | undefined
+    if (!abi) continue
+
+    const parsed = parseABI(abi)
+    if (!parsed) continue
+
+    for (const func of parsed) {
+      const funcSignature = getFunctionSignature(func.abiFunction)
+      if (funcSignature.toLowerCase() === selector.toLowerCase()) {
+        return {
+          abiKey,
+          abiLabel: entry.label,
+          func,
+          abi,
+        }
+      }
+    }
+  }
+
+  return null
 }

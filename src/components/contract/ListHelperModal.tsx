@@ -27,6 +27,7 @@ interface ListHelperModalProps {
   onValueHelper?: (fieldName: string, fieldType: string, currentValue?: string) => void
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   onListHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
+  onBytesHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   abiKey?: string
   address?: string
   functionName?: string
@@ -42,6 +43,7 @@ export function ListHelperModal({
   onValueHelper: _onValueHelper,
   onTupleHelper,
   onListHelper,
+  onBytesHelper,
   abiKey,
   address,
   functionName,
@@ -177,27 +179,31 @@ export function ListHelperModal({
               const itemName = `item_${index}`
               return (
                 <div key={index} className="border rounded-md p-2 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Item {index + 1}</span>
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <InputControl
+                        fieldName={itemName}
+                        fieldType={baseType}
+                        abiParam={itemParam}
+                        value={value}
+                        onChange={(val) => handleItemChange(index, val)}
+                        onValueHelper={needsValueParser(itemName, baseType) ? () => handleValueHelper(index) : undefined}
+                        onTupleHelper={onTupleHelper ? (_name, param) => handleTupleHelper(index, param) : undefined}
+                        onListHelper={onListHelper ? (_name, param) => handleListHelper(index, param) : undefined}
+                        onBytesHelper={onBytesHelper ? (_name, param) => {
+                          onBytesHelper(_name, param, String(listValues[index] || ""))
+                        } : undefined}
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-7 w-7 flex-shrink-0 mt-6"
                       onClick={() => handleRemoveItem(index)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <InputControl
-                    fieldName={itemName}
-                    fieldType={baseType}
-                    abiParam={itemParam}
-                    value={value}
-                    onChange={(val) => handleItemChange(index, val)}
-                    onValueHelper={needsValueParser(itemName, baseType) ? () => handleValueHelper(index) : undefined}
-                    onTupleHelper={onTupleHelper ? (_name, param) => handleTupleHelper(index, param) : undefined}
-                    onListHelper={onListHelper ? (_name, param) => handleListHelper(index, param) : undefined}
-                  />
                 </div>
               )
             })}

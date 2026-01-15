@@ -1,11 +1,14 @@
+import { useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Sparkles } from "lucide-react"
+import { Sparkles, ScanEye } from "lucide-react"
 import { needsValueParser, isTupleType, isListType } from "@/lib/formGenerator"
+import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
+import { useABIStore } from "@/stores/abiStore"
 import type { AbiParameter } from "viem"
 
 interface InputControlProps {
@@ -17,6 +20,7 @@ interface InputControlProps {
   onValueHelper?: (fieldName: string) => void
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter) => void
   onListHelper?: (fieldName: string, abiParam: AbiParameter) => void
+  onBytesHelper?: (fieldName: string, abiParam: AbiParameter) => void
   className?: string
 }
 
@@ -29,13 +33,25 @@ export function InputControl({
   onValueHelper,
   onTupleHelper,
   onListHelper,
+  onBytesHelper,
   className,
 }: InputControlProps) {
+  const { abis } = useABIStore()
   const isArray = isListType(fieldType)
   const isTuple = isTupleType(fieldType)
   const needsValueParserHelper = needsValueParser(fieldName, fieldType)
   const needsTupleHelper = isTuple && onTupleHelper
   const needsListHelper = isArray && onListHelper
+  
+  // Check if bytes field matches a function signature
+  const matchedFunction = useMemo(() => {
+    if (fieldType !== "bytes" || !onBytesHelper) return null
+    const selector = extractFunctionSelector(value)
+    if (!selector) return null
+    return findFunctionBySignature(selector, abis)
+  }, [fieldType, value, abis, onBytesHelper])
+  
+  const needsBytesHelper = matchedFunction !== null && onBytesHelper
 
   const renderInput = () => {
     if (fieldType === "bool") {
@@ -297,6 +313,12 @@ export function InputControl({
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
         {fieldName} <span style={{ color: 'hsl(var(--muted-foreground))' }}>({fieldType})</span>
+        {needsBytesHelper && matchedFunction && (
+          <span className="inline-flex items-center gap-1 ml-5" style={{ color: '#22c55e', fontSize: '0.875rem' }}>
+            <ScanEye className="h-3.5 w-3.5" style={{ color: '#22c55e' }} />
+            <span style={{ color: '#22c55e' }}>encoded: {matchedFunction.func.name}</span>
+          </span>
+        )}
       </Label>
       <div className="flex gap-0.5">
         {isTuple ? (
@@ -317,7 +339,7 @@ export function InputControl({
         ) : (
           renderInput()
         )}
-        {(needsValueParserHelper || needsTupleHelper || needsListHelper) && (
+        {(needsValueParserHelper || needsTupleHelper || needsListHelper || needsBytesHelper) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -334,7 +356,9 @@ export function InputControl({
                   e.currentTarget.style.backgroundColor = ''
                 }}
                 onClick={() => {
-                  if (needsValueParserHelper && onValueHelper) {
+                  if (needsBytesHelper && onBytesHelper) {
+                    onBytesHelper(fieldName, abiParam)
+                  } else if (needsValueParserHelper && onValueHelper) {
                     onValueHelper(fieldName)
                   } else if (needsTupleHelper && onTupleHelper) {
                     onTupleHelper(fieldName, abiParam)
@@ -347,7 +371,7 @@ export function InputControl({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {needsValueParserHelper ? "Value Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
+              {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Value Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
             </TooltipContent>
           </Tooltip>
         )}

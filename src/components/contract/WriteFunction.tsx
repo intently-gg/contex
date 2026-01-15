@@ -17,6 +17,7 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
+import { BytesHelperModal } from "./BytesHelperModal"
 import { EncodeDestinationModal } from "./EncodeDestinationModal"
 import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
@@ -51,6 +52,7 @@ export function WriteFunction({
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
+  const [bytesHelperOpen, setBytesHelperOpen] = useState<{ fieldName: string; abiParam: any; currentValue?: string } | null>(null)
   const [showJsonModal, setShowJsonModal] = useState(false)
   const [encodeError, setEncodeError] = useState<Error | null>(null)
   const [encodeSuccess, setEncodeSuccess] = useState(false)
@@ -274,6 +276,11 @@ export function WriteFunction({
     setListHelperOpen(null)
   }, [])
 
+  const handleBytesHelperApply = useCallback((fieldName: string, value: string) => {
+    setInputs((prev) => ({ ...prev, [fieldName]: value }))
+    setBytesHelperOpen(null)
+  }, [])
+
   const handleInputChange = useCallback((fieldName: string, value: unknown) => {
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
   }, [])
@@ -401,7 +408,7 @@ export function WriteFunction({
 
               {/* Input Fields */}
               {formFields.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-1 pr-[5px]">
                   {formFields.map((field) => (
                     <InputControl
                       key={field.name}
@@ -413,6 +420,7 @@ export function WriteFunction({
                       onValueHelper={(name) => setValueParserOpen(name)}
                       onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
                       onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+                      onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
                     />
                   ))}
                 </div>
@@ -525,6 +533,7 @@ export function WriteFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
           abiKey={abiKey}
           address={address}
           functionName={func.name}
@@ -541,6 +550,24 @@ export function WriteFunction({
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
+          abiKey={abiKey}
+          address={address}
+          functionName={func.name}
+        />
+      )}
+      {bytesHelperOpen && (
+        <BytesHelperModal
+          open={!!bytesHelperOpen}
+          onOpenChange={(open) => setBytesHelperOpen(open ? bytesHelperOpen : null)}
+          onApply={(value) => handleBytesHelperApply(bytesHelperOpen.fieldName, value)}
+          fieldName={bytesHelperOpen.fieldName}
+          abiParam={bytesHelperOpen.abiParam}
+          currentValue={bytesHelperOpen.currentValue !== undefined ? bytesHelperOpen.currentValue : String(inputs[bytesHelperOpen.fieldName] || "")}
+          onValueHelper={(name) => setValueParserOpen(name)}
+          onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
+          onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
           abiKey={abiKey}
           address={address}
           functionName={func.name}
