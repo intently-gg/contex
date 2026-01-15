@@ -201,7 +201,7 @@ export function TupleHelperModal({
               <h4 className="text-sm font-medium">Preview</h4>
             </div>
             {preview ? (
-              <ResultRenderer value={preview} />
+              <ResultRenderer value={preview} abiParam={abiParam} />
             ) : (
               <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
                 Configure tuple values to see preview

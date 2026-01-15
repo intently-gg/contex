@@ -11,16 +11,19 @@ import { safeStringify, copyToClipboard, extractFunctionSelector, findFunctionBy
 import { useThemeStore } from "@/stores/themeStore"
 import { useABIStore } from "@/stores/abiStore"
 import { decodeFunctionData } from "viem"
-import { generateFormFields } from "@/lib/formGenerator"
+import { generateFormFields, isTupleType, getBaseType } from "@/lib/formGenerator"
+import { arrayToTuple } from "@/lib/tupleParser"
 import { toast } from "sonner"
+import type { AbiParameter } from "viem"
 
 interface ResultRendererProps {
   value: unknown
   className?: string
   defaultFormat?: "yaml" | "json" | "raw"
+  abiParam?: AbiParameter
 }
 
-export function ResultRenderer({ value, className, defaultFormat = "yaml" }: ResultRendererProps) {
+export function ResultRenderer({ value, className, defaultFormat = "yaml", abiParam }: ResultRendererProps) {
   const { theme } = useThemeStore()
   const { abis } = useABIStore()
   const [format, setFormat] = useState<"yaml" | "json" | "raw">(defaultFormat)
@@ -28,6 +31,67 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
   const [autoDecodeBytes, setAutoDecodeBytes] = useState(true)
   const [copied, setCopied] = useState(false)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+
+  const processDecodedValue = (val: unknown, abiParam: AbiParameter): unknown => {
+    if (val === null || val === undefined) {
+      return val
+    }
+
+    if (typeof val === "bigint") {
+      return val.toString()
+    }
+
+    if (Array.isArray(val)) {
+      const paramType = abiParam.type
+      const components = (abiParam as any).components as readonly AbiParameter[] | undefined
+
+      if (isTupleType(paramType) && components && components.length > 0) {
+        const tupleObj = arrayToTuple(val, components)
+        const result: Record<string, unknown> = {}
+        components.forEach((component, index) => {
+          const name = component.name || `param_${index}`
+          const v = tupleObj[name]
+          if (v !== undefined) {
+            result[name] = processDecodedValue(v, component)
+          }
+        })
+        return result
+      }
+
+      if (paramType.includes("[]")) {
+        const baseType = getBaseType(paramType)
+        if (isTupleType(baseType) && components && components.length > 0) {
+          return val.map((item) => {
+            if (Array.isArray(item)) {
+              const tupleObj = arrayToTuple(item, components)
+              const result: Record<string, unknown> = {}
+              components.forEach((component, index) => {
+                const name = component.name || `param_${index}`
+                const v = tupleObj[name]
+                if (v !== undefined) {
+                  result[name] = processDecodedValue(v, component)
+                }
+              })
+              return result
+            }
+            return item
+          })
+        }
+      }
+
+      return val
+    }
+
+    if (val !== null && typeof val === "object") {
+      const result: Record<string, unknown> = {}
+      for (const [key, v] of Object.entries(val)) {
+        result[key] = v
+      }
+      return result
+    }
+
+    return val
+  }
 
   const decodeBytesField = (bytesValue: unknown): unknown => {
     if (typeof bytesValue !== "string") return bytesValue
@@ -50,15 +114,7 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
       formFields.forEach((field, index) => {
         if (decoded.args && decoded.args[index] !== undefined) {
           const val = decoded.args[index]
-          if (typeof val === "bigint") {
-            decodedParams[field.name] = val.toString()
-          } else if (Array.isArray(val)) {
-            decodedParams[field.name] = val
-          } else if (val !== null && typeof val === "object") {
-            decodedParams[field.name] = val
-          } else {
-            decodedParams[field.name] = val
-          }
+          decodedParams[field.name] = processDecodedValue(val, field.abiParam)
         }
       })
       
@@ -70,7 +126,7 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
     }
   }
 
-  const recursivelyDecodeBytes = (val: unknown): unknown => {
+  const recursivelyDecodeBytes = (val: unknown, contextAbiParam?: AbiParameter): unknown => {
     if (val === null || val === undefined) {
       return val
     }
@@ -83,6 +139,51 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
     }
     
     if (Array.isArray(val)) {
+      if (contextAbiParam) {
+        const processed = processDecodedValue(val, contextAbiParam)
+        if (processed !== val) {
+          if (typeof processed === "object" && !Array.isArray(processed)) {
+            const result: Record<string, unknown> = {}
+            const components = (contextAbiParam as any).components as readonly AbiParameter[] | undefined
+            if (components) {
+              for (const [key, v] of Object.entries(processed)) {
+                const component = components.find((c, idx) => (c.name || `param_${idx}`) === key)
+                if (component) {
+                  result[key] = recursivelyDecodeBytes(v, component)
+                } else {
+                  result[key] = recursivelyDecodeBytes(v)
+                }
+              }
+            } else {
+              for (const [key, v] of Object.entries(processed)) {
+                result[key] = recursivelyDecodeBytes(v)
+              }
+            }
+            return result
+          }
+          if (Array.isArray(processed)) {
+            const paramType = contextAbiParam.type
+            if (paramType.includes("[]")) {
+              const baseType = getBaseType(paramType)
+              const components = (contextAbiParam as any).components as readonly AbiParameter[] | undefined
+              if (isTupleType(baseType) && components) {
+                return processed.map((item) => {
+                  if (Array.isArray(item)) {
+                    const itemParam: AbiParameter = {
+                      name: "",
+                      type: baseType,
+                      components: components,
+                    }
+                    return recursivelyDecodeBytes(item, itemParam)
+                  }
+                  return recursivelyDecodeBytes(item)
+                })
+              }
+            }
+            return processed.map(item => recursivelyDecodeBytes(item))
+          }
+        }
+      }
       return val.map(item => recursivelyDecodeBytes(item))
     }
     
@@ -100,8 +201,8 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
   const processedValue = useMemo(() => {
     if (format === "raw") return value
     if (!autoDecodeBytes) return value
-    return recursivelyDecodeBytes(value)
-  }, [value, autoDecodeBytes, abis, format])
+    return recursivelyDecodeBytes(value, abiParam)
+  }, [value, autoDecodeBytes, abis, format, abiParam])
 
   const formatResult = (val: unknown, fmt: "yaml" | "json" | "raw"): string => {
     if (val === null || val === undefined) {

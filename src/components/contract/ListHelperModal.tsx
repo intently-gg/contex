@@ -254,7 +254,7 @@ export function ListHelperModal({
             <div className="sticky top-0 bg-background pb-2 z-10">
               <h4 className="text-sm font-medium">Preview</h4>
             </div>
-            <ResultRenderer value={preview} />
+            <ResultRenderer value={preview} abiParam={isTuple ? abiParam : undefined} />
           </div>
         </div>
         <DialogFooter>
