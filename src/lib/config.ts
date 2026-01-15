@@ -1,5 +1,5 @@
 export const CONTEX_CONFIG_VERSION = "0.14"
-export const CONTEX_VERSION = "0.26.0"
+export const CONTEX_VERSION = "0.26.1"
 
 export const RELEASE_NOTES = {
   "0.26": {
