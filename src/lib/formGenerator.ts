@@ -61,7 +61,7 @@ export function needsValueParser(fieldName: string, fieldType: string): boolean 
 }
 
 export function isTupleType(fieldType: string): boolean {
-  return fieldType.startsWith("tuple")
+  return fieldType.startsWith("tuple") && !fieldType.includes("[]")
 }
 
 export function isListType(fieldType: string): boolean {

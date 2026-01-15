@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
+import { TupleHelperModal } from "./TupleHelperModal"
 import { parseListValue, serializeListValue } from "@/lib/tupleParser"
 import { getBaseType, isTupleType, needsValueParser } from "@/lib/formGenerator"
 import { toast } from "sonner"
@@ -57,6 +58,7 @@ export function ListHelperModal({
   // Initialize list values
   const [listValues, setListValues] = useState<unknown[]>([])
   const [valueParserOpen, setValueParserOpen] = useState<{ index: number; fieldType: string; currentValue: string } | null>(null)
+  const [tupleHelperOpen, setTupleHelperOpen] = useState<{ index: number; abiParam: AbiParameter; currentValue: string } | null>(null)
 
   // Try to load from current value
   useEffect(() => {
@@ -96,6 +98,19 @@ export function ListHelperModal({
   const handleItemChange = (index: number, value: unknown) => {
     setListValues((prev) => {
       const newList = [...prev]
+      // For tuple types, if the value is a string that's a valid JSON array, parse it
+      // This ensures consistency whether the value comes from typing or from the tuple helper
+      if (isTuple && typeof value === "string" && value.trim() !== "") {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) {
+            newList[index] = parsed
+            return newList
+          }
+        } catch {
+          // Not valid JSON, store as string
+        }
+      }
       newList[index] = value
       return newList
     })
@@ -117,13 +132,32 @@ export function ListHelperModal({
   }
 
   const handleTupleHelper = (index: number, comp: AbiParameter) => {
-    if (onTupleHelper && tupleComponents) {
-      onTupleHelper(
-        `item_${index}`,
-        comp,
-        String(listValues[index] || "")
-      )
+    if (tupleComponents) {
+      const value = listValues[index]
+      const currentValue = value === undefined || value === null 
+        ? "" 
+        : typeof value === "string" 
+          ? value 
+          : JSON.stringify(value)
+      setTupleHelperOpen({
+        index,
+        abiParam: comp,
+        currentValue
+      })
     }
+  }
+
+  const handleTupleHelperApply = (index: number, value: string) => {
+    try {
+      // Parse the serialized tuple value (which is a JSON array string) into an array
+      // This ensures the final list serialization produces [[...], [...]] instead of ["[...]", "[...]"]
+      const parsed = JSON.parse(value)
+      handleItemChange(index, parsed)
+    } catch {
+      // If parsing fails, store as string (fallback)
+      handleItemChange(index, value)
+    }
+    setTupleHelperOpen(null)
   }
 
   const handleListHelper = (index: number, comp: AbiParameter) => {
@@ -188,7 +222,7 @@ export function ListHelperModal({
                         value={value}
                         onChange={(val) => handleItemChange(index, val)}
                         onValueHelper={needsValueParser(itemName, baseType) ? () => handleValueHelper(index) : undefined}
-                        onTupleHelper={onTupleHelper ? (_name, param) => handleTupleHelper(index, param) : undefined}
+                        onTupleHelper={isTuple ? (_name, param) => handleTupleHelper(index, param) : undefined}
                         onListHelper={onListHelper ? (_name, param) => handleListHelper(index, param) : undefined}
                         onBytesHelper={onBytesHelper ? (_name, param) => {
                           onBytesHelper(_name, param, String(listValues[index] || ""))
@@ -250,6 +284,29 @@ export function ListHelperModal({
         }
         return null
       })}
+      {tupleHelperOpen && (
+        <TupleHelperModal
+          open={!!tupleHelperOpen}
+          onOpenChange={(open) => setTupleHelperOpen(open ? tupleHelperOpen : null)}
+          onApply={(value) => handleTupleHelperApply(tupleHelperOpen.index, value)}
+          fieldName={`item_${tupleHelperOpen.index}`}
+          abiParam={tupleHelperOpen.abiParam}
+          currentValue={tupleHelperOpen.currentValue}
+          onValueHelper={undefined}
+          onTupleHelper={onTupleHelper ? (_name, param, val) => {
+            setTupleHelperOpen({ index: tupleHelperOpen.index, abiParam: param, currentValue: val || "" })
+          } : undefined}
+          onListHelper={onListHelper ? (_name, param, val) => {
+            onListHelper(_name, param, val)
+          } : undefined}
+          onBytesHelper={onBytesHelper ? (_name, param, currentValue) => {
+            onBytesHelper(_name, param, currentValue)
+          } : undefined}
+          abiKey={abiKey}
+          address={address}
+          functionName={functionName}
+        />
+      )}
     </Dialog>
   )
 }

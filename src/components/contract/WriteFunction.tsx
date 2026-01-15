@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { useChainId } from "wagmi"
 import { encodeFunctionData } from "viem"
 import { useWriteContractFunction } from "@/hooks/useContractFunctions"
-import { generateFormFields, parseInputValue, needsValueParser, isTupleType } from "@/lib/formGenerator"
+import { generateFormFields, parseInputValue, needsValueParser, isTupleType, getBaseType } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -108,7 +108,7 @@ export function WriteFunction({
       }
       
       // Special handling for tuple arrays - parse each tuple element according to component types
-      if (isTupleType(field.type) && field.type.includes("[]")) {
+      if (field.type.includes("[]") && isTupleType(getBaseType(field.type))) {
         const components = (field.abiParam as any).components || []
         try {
           const parsed = JSON.parse(String(val))

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Sparkles, ScanEye, Binary } from "lucide-react"
 import { needsValueParser, isTupleType, isListType, generateFormFields } from "@/lib/formGenerator"
-import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
+import { extractFunctionSelector, findFunctionBySignature, safeStringify } from "@/lib/utils"
 import { useABIStore } from "@/stores/abiStore"
 import { useThemeStore } from "@/stores/themeStore"
 import { decodeFunctionData } from "viem"
@@ -453,6 +453,23 @@ export function InputControl({
     return undefined
   }
 
+  // Serialize tuple value for display
+  const getTupleDisplayValue = (): string => {
+    if (value === null || value === undefined || value === "") {
+      return ""
+    }
+    // If it's already a string, use it as-is
+    if (typeof value === "string") {
+      return value
+    }
+    // If it's an array or object, serialize it
+    if (Array.isArray(value) || typeof value === "object") {
+      return safeStringify(value)
+    }
+    // For other types, convert to string
+    return String(value)
+  }
+
   return (
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
@@ -469,7 +486,7 @@ export function InputControl({
           <Textarea
             id={fieldName}
             placeholder={getTuplePlaceholder()}
-            value={String(value || "")}
+            value={getTupleDisplayValue()}
             onChange={(e) => {
               const val = e.target.value
               // Allow tuple characters: [ ] " , space and data type specific chars
