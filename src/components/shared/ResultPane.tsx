@@ -255,7 +255,8 @@ export function ResultPane({
                         // Use the same copyToClipboard utility that works everywhere else
                         const success = await copyToClipboard(encodedData)
                         if (success) {
-                          toast.success("Encoded bytes copied to clipboard")
+                          // this is redundant
+                          // toast.success("Encoded bytes copied to clipboard")
                           // Call async handler for state updates
                           onEncodeToClipboard?.()
                         } else {
