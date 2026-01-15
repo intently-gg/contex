@@ -59,7 +59,7 @@ export function ExpandResultModal({
           <DialogTitle>Result</DialogTitle>
           <DialogDescription>Full result content</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-[300px] flex flex-col">
           {error ? (
             <Alert variant="destructive" className="max-w-full">
               <AlertCircle className="h-4 w-4" />
@@ -132,7 +132,9 @@ export function ExpandResultModal({
                 </div>
               </div>
             ) : (
-              <ResultRenderer value={sanitizedResult} />
+              <div style={{ height: "400px", minHeight: "300px" }} className="w-full">
+                <ResultRenderer value={sanitizedResult} />
+              </div>
             )
           ) : null}
         </div>

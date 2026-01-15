@@ -347,30 +347,32 @@ export function ReadFunction({
                   </TooltipTrigger>
                   <TooltipContent>Show Function JSON</TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7 transition-colors"
-                      style={{
-                        borderColor: 'hsl(var(--border))'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
-                        e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = ''
-                        e.currentTarget.style.borderColor = 'hsl(var(--border))'
-                      }}
-                      onClick={() => setImportModalOpen(true)}
-                    >
-                      <Import className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Import Calldata Bytes</TooltipContent>
-                </Tooltip>
+                {func.inputs.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 transition-colors"
+                        style={{
+                          borderColor: 'hsl(var(--border))'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
+                          e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = ''
+                          e.currentTarget.style.borderColor = 'hsl(var(--border))'
+                        }}
+                        onClick={() => setImportModalOpen(true)}
+                      >
+                        <Import className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Import Calldata Bytes</TooltipContent>
+                  </Tooltip>
+                )}
               </div>
 
               {/* Input Fields */}

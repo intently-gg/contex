@@ -535,7 +535,7 @@ export function InputControl({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Value Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
+                {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Integer Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
               </TooltipContent>
             </Tooltip>
             {needsBytesHelper && (

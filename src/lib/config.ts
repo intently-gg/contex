@@ -1,7 +1,20 @@
 export const CONTEX_CONFIG_VERSION = "0.14"
-export const CONTEX_VERSION = "0.25.3"
+export const CONTEX_VERSION = "0.26.0"
 
 export const RELEASE_NOTES = {
+  "0.26": {
+    "whatsnew": {
+      "Import Calldata": [
+        "Raw calldata can be imported into any function's parameters",
+        "Transaction hashes can be supplied to clone any on-chain tx"
+      ],
+      "Integer Helper": [
+        "New tool available from the top-right Menu and on any integer input param",
+        "Parse uint/int values from decimals and units",
+        "Now Supports Unix Seconds, Chain Ids, Block Numbers, and Block Timestamps"
+      ],
+    },
+  },
   "0.25": {
     "whatsnew": {
       "Function Encoding": [

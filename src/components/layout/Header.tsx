@@ -82,7 +82,7 @@ export function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsValueHelperOpen(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
-                Value Helper
+                Integer Helper
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsHexConverterOpen(true)}>
                 <Hash className="mr-2 h-4 w-4" />

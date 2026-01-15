@@ -21,9 +21,10 @@ interface ResultRendererProps {
   className?: string
   defaultFormat?: "yaml" | "json" | "raw"
   abiParam?: AbiParameter
+  minHeight?: string | number
 }
 
-export function ResultRenderer({ value, className, defaultFormat = "yaml", abiParam }: ResultRendererProps) {
+export function ResultRenderer({ value, className, defaultFormat = "yaml", abiParam, minHeight }: ResultRendererProps) {
   const { theme } = useThemeStore()
   const { abis } = useABIStore()
   const [format, setFormat] = useState<"yaml" | "json" | "raw">(defaultFormat)
@@ -274,8 +275,11 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
 
   const editorTheme = theme === "dark" ? "vs-dark" : "light"
 
+  const minHeightClass = minHeight ? "" : "min-h-0"
+  const minHeightStyle = minHeight ? { minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight } : undefined
+  
   return (
-    <div className={`${className || ""} h-full flex flex-col min-h-0`}>
+    <div className={`${className || ""} h-full flex flex-col ${minHeightClass}`} style={minHeightStyle}>
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <RadioGroup
@@ -352,7 +356,7 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
           </Tooltip>
         </div>
       </div>
-      <div className="border rounded-md overflow-hidden flex-1 min-h-0" style={{ minHeight: 0 }}>
+      <div className="border rounded-md overflow-hidden flex-1" style={minHeight ? { minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight } : { minHeight: "200px" }}>
         <Editor
           height="100%"
           language={format === "raw" ? "plaintext" : format}
