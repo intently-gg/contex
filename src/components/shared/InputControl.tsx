@@ -472,11 +472,74 @@ export function InputControl({
     return String(value)
   }
 
+  // Get tuple info for display
+  const getTupleInfo = (): { internalType: string | null; components: string | null } | null => {
+    const isTupleType = fieldType === "tuple" || fieldType === "tuple[]" || fieldType.startsWith("tuple[")
+    if (!isTupleType) return null
+    
+    const hasInternalType = abiParam.internalType && typeof abiParam.internalType === "string"
+    const components = (abiParam as any).components as readonly AbiParameter[] | undefined
+    const hasComponents = components && Array.isArray(components) && components.length > 0
+    
+    if (!hasInternalType && !hasComponents) return null
+    
+    let internalType: string | null = null
+    if (hasInternalType && abiParam.internalType) {
+      internalType = abiParam.internalType.replace(/^struct\s+/i, "")
+    }
+    
+    let componentsStr: string | null = null
+    if (hasComponents && components) {
+      const componentStr = components
+        .map((comp: AbiParameter) => `${comp.name || "unnamed"}: ${comp.type}`)
+        .join(", ")
+      componentsStr = `(${componentStr})`
+    }
+    
+    return { internalType, components: componentsStr }
+  }
+
+  const tupleInfo = getTupleInfo()
+
   return (
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
         {fieldName} <span style={{ color: 'hsl(var(--muted-foreground))' }}>({fieldType})</span>
       </Label>
+      {tupleInfo && (
+        <div className="space-y-0.5">
+          {tupleInfo.internalType && (
+            <div 
+              className="text-xs truncate"
+              style={{ 
+                color: '#60a5fa',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={tupleInfo.internalType}
+            >
+              {tupleInfo.internalType}
+            </div>
+          )}
+          {tupleInfo.components && (
+            <div 
+              className="text-xs truncate"
+              style={{ 
+                color: '#7c8fa8',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={tupleInfo.components}
+            >
+              {tupleInfo.components}
+            </div>
+          )}
+        </div>
+      )}
       {needsBytesHelper && matchedFunction && (
         <div className="flex items-center gap-1" style={{ color: '#22c55e', fontSize: '0.875rem' }}>
           <ScanEye className="h-3.5 w-3.5" style={{ color: '#22c55e' }} />
