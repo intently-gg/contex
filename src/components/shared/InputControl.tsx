@@ -226,8 +226,8 @@ export function InputControl({
                 onChange(val)
               }
             }}
-            className="flex-1 font-mono text-sm"
-            rows={3}
+            className="flex-1 font-mono text-sm max-h-[150px]"
+            style={{ minHeight: '40px' }}
           />
         )
       }
@@ -324,7 +324,8 @@ export function InputControl({
               onChange(cleaned)
             }
           }}
-          className="flex-1 font-mono"
+          className="flex-1 font-mono max-h-[150px]"
+          style={{ minHeight: '40px' }}
         />
       )
     }
@@ -336,7 +337,8 @@ export function InputControl({
           placeholder=""
           value={String(value || "")}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1"
+          className="flex-1 max-h-[150px]"
+          style={{ minHeight: '40px' }}
         />
       )
     }
@@ -370,8 +372,8 @@ export function InputControl({
               onChange(val)
             }
           }}
-          className="flex-1 font-mono text-sm"
-          rows={5}
+          className="flex-1 font-mono text-sm max-h-[150px]"
+          style={{ minHeight: '40px' }}
         />
       )
     }
@@ -494,8 +496,8 @@ export function InputControl({
                 onChange(val)
               }
             }}
-            className="flex-1 font-mono text-sm"
-            rows={5}
+            className="flex-1 font-mono text-sm max-h-[150px]"
+            style={{ minHeight: '40px' }}
           />
         ) : (
           renderInput()
