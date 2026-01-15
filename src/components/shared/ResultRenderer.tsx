@@ -142,11 +142,12 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
       if (contextAbiParam) {
         const processed = processDecodedValue(val, contextAbiParam)
         if (processed !== val) {
-          if (typeof processed === "object" && !Array.isArray(processed)) {
+          if (typeof processed === "object" && processed !== null && !Array.isArray(processed)) {
+            const processedObj = processed as Record<string, unknown>
             const result: Record<string, unknown> = {}
             const components = (contextAbiParam as any).components as readonly AbiParameter[] | undefined
             if (components) {
-              for (const [key, v] of Object.entries(processed)) {
+              for (const [key, v] of Object.entries(processedObj)) {
                 const component = components.find((c, idx) => (c.name || `param_${idx}`) === key)
                 if (component) {
                   result[key] = recursivelyDecodeBytes(v, component)
@@ -155,7 +156,7 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
                 }
               }
             } else {
-              for (const [key, v] of Object.entries(processed)) {
+              for (const [key, v] of Object.entries(processedObj)) {
                 result[key] = recursivelyDecodeBytes(v)
               }
             }

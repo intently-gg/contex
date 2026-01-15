@@ -18,8 +18,7 @@ import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
 import { useABIStore } from "@/stores/abiStore"
 import { decodeFunctionData, encodeFunctionData } from "viem"
 import { toast } from "sonner"
-import { AlertTriangle, Braces } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { AlertTriangle } from "lucide-react"
 import type { AbiParameter, Abi } from "viem"
 
 interface BytesHelperModalProps {
