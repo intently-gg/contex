@@ -14,10 +14,12 @@ export function useReadContractFunction(
   functionName: string,
   args: unknown[] = [],
   abiKey?: string,
-  enabled: boolean = true
+  enabled: boolean = true,
+  functionId?: string
 ) {
   const chainId = useChainId()
   const { setReadResult, getReadResult } = useContractStore()
+  const storageKey = functionId || functionName
 
   // NEVER run query unless explicitly enabled
   // Disable all automatic refetching - we control it manually
@@ -40,16 +42,16 @@ export function useReadContractFunction(
 
   useEffect(() => {
     if (result.data !== undefined && abiKey) {
-      const cached = getReadResult(abiKey, chainId, functionName, address)
+      const cached = getReadResult(abiKey, chainId, storageKey, address)
       // Compare serialized values to avoid BigInt comparison issues
       const cachedStr = cached ? safeStringify(cached.value) : null
       const currentStr = safeStringify(result.data)
       if (!cached || cachedStr !== currentStr) {
-        setReadResult(abiKey, chainId, functionName, address, result.data)
+        setReadResult(abiKey, chainId, storageKey, address, result.data)
       }
 
     }
-  }, [result.data, abiKey, chainId, functionName, address, getReadResult, setReadResult])
+  }, [result.data, abiKey, chainId, storageKey, address, getReadResult, setReadResult])
 
   return result
 }

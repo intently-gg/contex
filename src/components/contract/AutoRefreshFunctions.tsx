@@ -36,7 +36,7 @@ export function AutoRefreshFunctions({
     <div style={{ display: "none" }}>
       {readFunctionsWithNoParams.map((func) => (
         <AutoRefreshFunction
-          key={func.name}
+          key={func.functionId}
           abiKey={abiKey}
           address={address}
           abi={abi}

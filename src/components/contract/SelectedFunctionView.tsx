@@ -31,7 +31,7 @@ export function SelectedFunctionView({
   }, [abi])
   
   const selectedFunc = useMemo(() => 
-    allFunctions.find((f) => f.name === functionName),
+    allFunctions.find((f) => f.functionId === functionName),
     [allFunctions, functionName]
   )
 

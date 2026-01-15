@@ -64,17 +64,17 @@ export function FunctionList({
   }, [writeFunctions, searchQuery])
 
   const favoriteReadFunctions = filteredReadFunctions.filter((f) =>
-    isFavorite(abiKey, f.name)
+    isFavorite(abiKey, f.functionId)
   )
   const favoriteWriteFunctions = filteredWriteFunctions.filter((f) =>
-    isFavorite(abiKey, f.name)
+    isFavorite(abiKey, f.functionId)
   )
 
   const regularReadFunctions = filteredReadFunctions.filter(
-    (f) => !isFavorite(abiKey, f.name)
+    (f) => !isFavorite(abiKey, f.functionId)
   )
   const regularWriteFunctions = filteredWriteFunctions.filter(
-    (f) => !isFavorite(abiKey, f.name)
+    (f) => !isFavorite(abiKey, f.functionId)
   )
 
   if (!abi) {
@@ -102,7 +102,7 @@ export function FunctionList({
                 <div className="space-y-2">
                   {favoriteReadFunctions.map((func) => (
                     <ReadFunction
-                      key={func.name}
+                      key={func.functionId}
                       abiKey={abiKey}
                       address={address}
                       abi={abi}
@@ -115,7 +115,7 @@ export function FunctionList({
               <div className="space-y-2">
                 {regularReadFunctions.map((func) => (
                   <ReadFunction
-                    key={func.name}
+                    key={func.functionId}
                     abiKey={abiKey}
                     address={address}
                     abi={abi}
@@ -134,7 +134,7 @@ export function FunctionList({
                 <div className="space-y-2">
                   {favoriteWriteFunctions.map((func) => (
                     <WriteFunction
-                      key={func.name}
+                      key={func.functionId}
                       abiKey={abiKey}
                       address={address}
                       abi={abi}
@@ -147,7 +147,7 @@ export function FunctionList({
               <div className="space-y-2">
                 {regularWriteFunctions.map((func) => (
                   <WriteFunction
-                    key={func.name}
+                    key={func.functionId}
                     abiKey={abiKey}
                     address={address}
                     abi={abi}

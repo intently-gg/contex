@@ -17,7 +17,7 @@ interface FunctionSidebarProps {
   address: Address
   abi: Abi
   selectedFunction: string | null
-  onSelectFunction: (functionName: string) => void
+  onSelectFunction: (functionId: string) => void
 }
 
 export function FunctionSidebar({
@@ -64,7 +64,7 @@ export function FunctionSidebar({
   }, [allFunctions, searchQuery])
 
   const pinnedFunctions = useMemo(() => 
-    filteredFunctions.filter((f) => isFavorite(abiKey, f.name)),
+    filteredFunctions.filter((f) => isFavorite(abiKey, f.functionId)),
     [filteredFunctions, abiKey, isFavorite, favorites]
   )
 
@@ -83,7 +83,7 @@ export function FunctionSidebar({
     // Only show values for functions with NO input parameters
     if (func.inputs.length > 0) return null
     
-    const result = getReadResult(abiKey, chainId, func.name, address)
+    const result = getReadResult(abiKey, chainId, func.functionId, address)
     if (!result || result.value === undefined) return null
     
     // Check if value is empty (only for navbar display)
@@ -100,12 +100,12 @@ export function FunctionSidebar({
   }
 
   const renderFunctionItem = (func: ParsedFunction) => {
-    const isSelected = selectedFunction === func.name
+    const isSelected = selectedFunction === func.functionId
     const result = getFunctionResult(func)
     const signature = getFunctionSignature(func.abiFunction)
 
     return (
-      <Tooltip key={func.name}>
+      <Tooltip key={func.functionId}>
         <TooltipTrigger asChild>
           <div
             style={{
@@ -125,7 +125,7 @@ export function FunctionSidebar({
                 e.currentTarget.style.backgroundColor = 'transparent'
               }
             }}
-            onClick={() => onSelectFunction(func.name)}
+            onClick={() => onSelectFunction(func.functionId)}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0" style={{ overflow: 'hidden' }}>
               {result ? (
@@ -133,7 +133,7 @@ export function FunctionSidebar({
                   {showSignaturesInNavbar && signature && (
                     <span className="text-muted-foreground">{signature} </span>
                   )}
-                  <span>{func.name}</span>
+                  <span>{func.displayName}</span>
                   <span style={{ color: 'hsl(var(--muted-foreground) / 0.8)' }}> → </span>
                   <span style={{ color: 'hsl(var(--muted-foreground) / 0.8)' }}>{result.display}</span>
                 </div>
@@ -142,7 +142,7 @@ export function FunctionSidebar({
                   {showSignaturesInNavbar && signature && (
                     <span className="text-muted-foreground">{signature} </span>
                   )}
-                  {func.name}
+                  {func.displayName}
                 </div>
               )}
             </div>

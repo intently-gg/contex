@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pin, PinOff, RotateCcw, Sparkles, Pencil } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ResultRenderer } from "@/components/shared/ResultRenderer"
+import { Pin, PinOff, RotateCcw, Sparkles, Pencil, Braces } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
@@ -38,7 +40,7 @@ export function WriteFunction({
     useContractStore()
 
   const formFields = generateFormFields([...func.inputs])
-  const savedFormState = getFormState(abiKey, func.name) || {}
+  const savedFormState = getFormState(abiKey, func.functionId) || {}
   const [inputs, setInputs] = useState<Record<string, unknown>>(
     savedFormState
   )
@@ -46,15 +48,16 @@ export function WriteFunction({
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
+  const [showJsonModal, setShowJsonModal] = useState(false)
 
   const { write, hash, error, isPending, isConfirming, isConfirmed, isReverted } =
     useWriteContractFunction(address, abi, func.name)
 
   useEffect(() => {
-    setFormState(abiKey, func.name, inputs)
-  }, [inputs, abiKey, func.name, setFormState])
+    setFormState(abiKey, func.functionId, inputs)
+  }, [inputs, abiKey, func.functionId, setFormState])
 
-  const isFav = isFavorite(abiKey, func.name)
+  const isFav = isFavorite(abiKey, func.functionId)
   const isPayable = func.stateMutability === "payable"
 
   // Check if any data has been entered
@@ -213,7 +216,7 @@ export function WriteFunction({
                   </TooltipTrigger>
                   <TooltipContent>Write Function</TooltipContent>
                 </Tooltip>
-                <span className="text-base font-medium">{func.name}</span>
+                <span className="text-base font-medium">{func.displayName}</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
@@ -239,7 +242,7 @@ export function WriteFunction({
                         e.currentTarget.style.backgroundColor = ''
                         e.currentTarget.style.borderColor = 'hsl(var(--border))'
                       }}
-                      onClick={() => toggleFavorite(abiKey, func.name)}
+                      onClick={() => toggleFavorite(abiKey, func.functionId)}
                     >
                       {isFav ? (
                         <Pin className="h-3.5 w-3.5 fill-current" />
@@ -251,6 +254,30 @@ export function WriteFunction({
                   <TooltipContent>
                     {isFav ? "Unpin from favorites" : "Pin to favorites"}
                   </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 transition-colors"
+                      style={{
+                        borderColor: 'hsl(var(--border))'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--muted) / 0.6)'
+                        e.currentTarget.style.borderColor = 'hsl(var(--accent) / 0.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = ''
+                        e.currentTarget.style.borderColor = 'hsl(var(--border))'
+                      }}
+                      onClick={() => setShowJsonModal(true)}
+                    >
+                      <Braces className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Show Function JSON</TooltipContent>
                 </Tooltip>
                 {hasData && (
                   <Tooltip>
@@ -410,6 +437,16 @@ export function WriteFunction({
           functionName={func.name}
         />
       )}
+      <Dialog open={showJsonModal} onOpenChange={setShowJsonModal}>
+        <DialogContent className="max-w-4xl h-[80vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+            <DialogTitle>Function JSON: {func.displayName}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            <ResultRenderer value={func.abiFunction} className="h-full" defaultFormat="json" />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
