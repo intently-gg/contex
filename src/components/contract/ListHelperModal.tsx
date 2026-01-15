@@ -165,7 +165,7 @@ export function ListHelperModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-7xl h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>List Helper</DialogTitle>
           <DialogDescription>

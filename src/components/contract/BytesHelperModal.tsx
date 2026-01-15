@@ -256,20 +256,13 @@ export function BytesHelperModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center gap-2">
                 <DialogTitle>
                   Bytes Helper
                   {matchedFunction && ` - Decoded ${matchedFunction.abiLabel}.${matchedFunction.func.name}`}
                 </DialogTitle>
-                <DialogDescription>
-                  {matchedFunction 
-                    ? `Decode and edit ${fieldName} function call bytes`
-                    : "No matching function signature found"}
-                </DialogDescription>
-              </div>
               {matchedFunction && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -297,6 +290,11 @@ export function BytesHelperModal({
                 </Tooltip>
               )}
             </div>
+            <DialogDescription>
+              {matchedFunction 
+                ? `Decode and edit ${fieldName} function call bytes`
+                : "No matching function signature found"}
+            </DialogDescription>
           </DialogHeader>
           
           {decodeError && hasSignatureMatch && (

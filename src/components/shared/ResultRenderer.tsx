@@ -1,14 +1,17 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { WrapText, Copy, Check } from "lucide-react"
+import { WrapText, Copy, Check, Binary } from "lucide-react"
 import Editor from "@monaco-editor/react"
 import type { editor } from "monaco-editor"
 import { stringify as yamlStringify } from "yaml"
-import { safeStringify, copyToClipboard } from "@/lib/utils"
+import { safeStringify, copyToClipboard, extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
 import { useThemeStore } from "@/stores/themeStore"
+import { useABIStore } from "@/stores/abiStore"
+import { decodeFunctionData } from "viem"
+import { generateFormFields } from "@/lib/formGenerator"
 import { toast } from "sonner"
 
 interface ResultRendererProps {
@@ -19,10 +22,86 @@ interface ResultRendererProps {
 
 export function ResultRenderer({ value, className, defaultFormat = "yaml" }: ResultRendererProps) {
   const { theme } = useThemeStore()
+  const { abis } = useABIStore()
   const [format, setFormat] = useState<"yaml" | "json" | "raw">(defaultFormat)
   const [wordWrap, setWordWrap] = useState(false)
+  const [autoDecodeBytes, setAutoDecodeBytes] = useState(true)
   const [copied, setCopied] = useState(false)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+
+  const decodeBytesField = (bytesValue: unknown): unknown => {
+    if (typeof bytesValue !== "string") return bytesValue
+    
+    const selector = extractFunctionSelector(bytesValue)
+    if (!selector) return bytesValue
+    
+    const match = findFunctionBySignature(selector, abis)
+    if (!match) return bytesValue
+    
+    try {
+      const decoded = decodeFunctionData({
+        abi: match.abi,
+        data: bytesValue as `0x${string}`,
+      })
+      
+      const formFields = generateFormFields([...match.func.inputs])
+      const decodedParams: Record<string, unknown> = {}
+      
+      formFields.forEach((field, index) => {
+        if (decoded.args && decoded.args[index] !== undefined) {
+          const val = decoded.args[index]
+          if (typeof val === "bigint") {
+            decodedParams[field.name] = val.toString()
+          } else if (Array.isArray(val)) {
+            decodedParams[field.name] = val
+          } else if (val !== null && typeof val === "object") {
+            decodedParams[field.name] = val
+          } else {
+            decodedParams[field.name] = val
+          }
+        }
+      })
+      
+      return {
+        [match.func.name]: decodedParams
+      }
+    } catch {
+      return bytesValue
+    }
+  }
+
+  const recursivelyDecodeBytes = (val: unknown): unknown => {
+    if (val === null || val === undefined) {
+      return val
+    }
+    
+    if (typeof val === "string") {
+      if (val.startsWith("0x") && val.length >= 10) {
+        return decodeBytesField(val)
+      }
+      return val
+    }
+    
+    if (Array.isArray(val)) {
+      return val.map(item => recursivelyDecodeBytes(item))
+    }
+    
+    if (typeof val === "object") {
+      const result: Record<string, unknown> = {}
+      for (const [key, v] of Object.entries(val)) {
+        result[key] = recursivelyDecodeBytes(v)
+      }
+      return result
+    }
+    
+    return val
+  }
+
+  const processedValue = useMemo(() => {
+    if (format === "raw") return value
+    if (!autoDecodeBytes) return value
+    return recursivelyDecodeBytes(value)
+  }, [value, autoDecodeBytes, abis, format])
 
   const formatResult = (val: unknown, fmt: "yaml" | "json" | "raw"): string => {
     if (val === null || val === undefined) {
@@ -44,7 +123,7 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
     }
   }
 
-  const resultContent = formatResult(value, format)
+  const resultContent = formatResult(processedValue, format)
 
   // Editor will fill available space via flex layout
 
@@ -122,6 +201,21 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml" }: Res
             </div>
           </RadioGroup>
           <div style={{ width: 40 }} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={autoDecodeBytes ? "default" : "outline"}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setAutoDecodeBytes(!autoDecodeBytes)}
+              >
+                <Binary className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {autoDecodeBytes ? "Disable auto-decode bytes" : "Enable auto-decode bytes"}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
