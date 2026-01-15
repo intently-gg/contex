@@ -1,0 +1,49 @@
+/* Force hover styles for buttons using direct CSS */
+button:not([class*="link"]):hover:not(:disabled) {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
+}
+
+/* Outline variant hover */
+button.bg-muted\/60:hover:not(:disabled),
+button[class*="bg-muted"][class*="60"]:hover:not(:disabled) {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border-color: hsl(var(--accent) / 0.8) !important;
+}
+
+/* Default variant hover */
+button.bg-primary:hover:not(:disabled),
+button[class*="bg-primary"]:not([class*="foreground"]):hover:not(:disabled) {
+  background-color: hsl(var(--primary) / 0.7) !important;
+  border-color: hsl(var(--primary) / 0.8) !important;
+}
+
+/* Ghost variant hover */
+button.bg-muted\/40:hover:not(:disabled),
+button[class*="bg-muted"][class*="40"]:hover:not(:disabled) {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border-color: hsl(var(--accent) / 0.6) !important;
+}
+
+/* Secondary variant hover */
+button.bg-secondary:hover:not(:disabled),
+button[class*="bg-secondary"]:not([class*="foreground"]):hover:not(:disabled) {
+  background-color: hsl(var(--secondary) / 0.6) !important;
+  border-color: hsl(var(--secondary) / 0.8) !important;
+}
+
+/* Destructive variant hover */
+button.bg-destructive:hover:not(:disabled),
+button[class*="bg-destructive"]:not([class*="foreground"]):hover:not(:disabled) {
+  background-color: hsl(var(--destructive) / 0.7) !important;
+  border-color: hsl(var(--destructive) / 0.8) !important;
+}
+
+/* Generic fallback for any button with border-input class (outline variant) */
+button[class*="border-input"]:hover:not(:disabled) {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border-color: hsl(var(--accent) / 0.8) !important;
+}
+

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useChainId } from "wagmi"
+import { encodeFunctionData } from "viem"
 import { useReadContractFunction } from "@/hooks/useContractFunctions"
 import { generateFormFields, parseInputValue } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
@@ -14,10 +15,12 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
-import { sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
+import { EncodeDestinationModal } from "./EncodeDestinationModal"
+import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
 import { needsValueParser } from "@/lib/formGenerator"
+import { toast } from "sonner"
 
 interface ReadFunctionProps {
   abiKey: string
@@ -36,13 +39,17 @@ export function ReadFunction({
   supportedChainIds: _supportedChainIds,
   refreshKey,
 }: ReadFunctionProps) {
-  const { getFormState, setFormState, isFavorite, toggleFavorite } =
+  const { getFormState, setFormState, isFavorite, toggleFavorite, setSelectedFunction } =
     useContractStore()
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [showCheckmark, setShowCheckmark] = useState(false)
   const [showJsonModal, setShowJsonModal] = useState(false)
+  const [encodeError, setEncodeError] = useState<Error | null>(null)
+  const [encodeSuccess, setEncodeSuccess] = useState(false)
+  const [encodeDestinationOpen, setEncodeDestinationOpen] = useState(false)
+  const [encodedDataForDestination, setEncodedDataForDestination] = useState<string | null>(null)
 
   const formFields = generateFormFields([...func.inputs])
   const savedFormState = getFormState(abiKey, func.functionId) || {}
@@ -58,6 +65,8 @@ export function ReadFunction({
     return parseInputValue(String(value), field.type)
   })
 
+  const filteredArgs = args.filter((a) => a !== undefined) as unknown[]
+
   // NEVER auto-refresh functions with input parameters
   // Only auto-refresh functions with NO params when refreshKey is set
   const hasNoParams = func.inputs.length === 0
@@ -69,7 +78,7 @@ export function ReadFunction({
     address,
     abi,
     func.name,
-    args.filter((a) => a !== undefined) as unknown[],
+    filteredArgs,
     abiKey,
     shouldAutoRefresh,
     func.functionId
@@ -125,6 +134,92 @@ export function ReadFunction({
   }, [isLoading])
 
   const isFav = isFavorite(abiKey, func.functionId)
+
+  // Synchronous encoding function for clipboard
+  const handleEncodeToClipboardSync = (): string | null => {
+    try {
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+      })
+      return data
+    } catch (err) {
+      console.error("Encode error:", err)
+      return null
+    }
+  }
+
+  const handleEncodeToClipboard = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    
+    try {
+      const data = handleEncodeToClipboardSync()
+      if (!data) {
+        setEncodeError(new Error("Failed to encode function data"))
+        return
+      }
+
+      // Try clipboard API
+      let success = false
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(data)
+          success = true
+        } catch (err) {
+          console.error("Navigator clipboard write failed:", err)
+        }
+      }
+      
+      // Fallback to copyToClipboard utility
+      if (!success) {
+        success = await copyToClipboard(data)
+      }
+
+      if (!success) {
+        setEncodeError(new Error("Failed to copy encoded bytes to clipboard"))
+        return
+      }
+
+      toast.success(`Encoded ${func.name} bytes to clipboard`)
+      setEncodeSuccess(true)
+    } catch (err) {
+      console.error("Clipboard operation error:", err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setEncodeError(new Error(errorMessage))
+    }
+  }
+
+  const handleEncodeToFunction = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    try {
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+      })
+
+      setEncodedDataForDestination(data)
+      setEncodeSuccess(true)
+      setEncodeDestinationOpen(true)
+    } catch (err) {
+      console.error("Encode error:", err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setEncodeError(new Error(errorMessage))
+    }
+  }
+
+  const handleEncodeSuccessAck = () => {
+    setEncodeSuccess(false)
+  }
+
+  const handleEncodeDestinationComplete = () => {
+    toast.success(`Encoded ${func.name} bytes sent to destination`, {
+      duration: 5000,
+    })
+  }
 
   const handleValueParserApply = useCallback((fieldName: string, value: string) => {
     setInputs((prev) => ({ ...prev, [fieldName]: value }))
@@ -295,6 +390,11 @@ export function ReadFunction({
               result={sanitizedResult}
               onRefresh={handleRefresh}
               showCheckmark={showCheckmark}
+              onEncodeToClipboard={handleEncodeToClipboard}
+              onEncodeToFunction={handleEncodeToFunction}
+              encodeError={encodeError}
+              encodeSuccess={encodeSuccess}
+              onEncodeSuccessAck={handleEncodeSuccessAck}
             />
           </div>
         </div>
@@ -360,6 +460,15 @@ export function ReadFunction({
           </div>
         </DialogContent>
       </Dialog>
+      <EncodeDestinationModal
+        open={encodeDestinationOpen}
+        onOpenChange={setEncodeDestinationOpen}
+        encodedData={encodedDataForDestination}
+        sourceAbiKey={abiKey}
+        sourceFunctionId={func.functionId}
+        sourceFunctionName={func.name}
+        onComplete={handleEncodeDestinationComplete}
+      />
     </Card>
   )
 }

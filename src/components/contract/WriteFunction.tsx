@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useChainId } from "wagmi"
+import { encodeFunctionData } from "viem"
 import { useWriteContractFunction } from "@/hooks/useContractFunctions"
 import { generateFormFields, parseInputValue, needsValueParser, isTupleType } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
@@ -16,9 +17,11 @@ import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
-import { sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
+import { EncodeDestinationModal } from "./EncodeDestinationModal"
+import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
+import { toast } from "sonner"
 
 interface WriteFunctionProps {
   abiKey: string
@@ -36,7 +39,7 @@ export function WriteFunction({
   supportedChainIds,
 }: WriteFunctionProps) {
   const chainId = useChainId()
-  const { getFormState, setFormState, isFavorite, toggleFavorite } =
+  const { getFormState, setFormState, isFavorite, toggleFavorite, setSelectedFunction } =
     useContractStore()
 
   const formFields = generateFormFields([...func.inputs])
@@ -49,6 +52,10 @@ export function WriteFunction({
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [showJsonModal, setShowJsonModal] = useState(false)
+  const [encodeError, setEncodeError] = useState<Error | null>(null)
+  const [encodeSuccess, setEncodeSuccess] = useState(false)
+  const [encodeDestinationOpen, setEncodeDestinationOpen] = useState(false)
+  const [encodedDataForDestination, setEncodedDataForDestination] = useState<string | null>(null)
 
   const { write, hash, error, isPending, isConfirming, isConfirmed, isReverted } =
     useWriteContractFunction(address, abi, func.name)
@@ -68,7 +75,7 @@ export function WriteFunction({
     )
   }, [inputs, value, isPayable])
 
-  const handleWrite = async () => {
+  const buildArgsAndValue = () => {
     const args = formFields.map((field) => {
       const val = inputs[field.name]
       if (val === undefined || val === "") {
@@ -139,11 +146,107 @@ export function WriteFunction({
     const filteredArgs = args.filter((a) => a !== undefined) as unknown[]
     const valueBigInt = value ? BigInt(value) : undefined
 
+    return { filteredArgs, valueBigInt }
+  }
+
+  const handleWrite = async () => {
+    const { filteredArgs, valueBigInt } = buildArgsAndValue()
+
     try {
       await write(filteredArgs, valueBigInt)
     } catch (err) {
       console.error("Write error:", err)
     }
+  }
+
+  // Synchronous encoding function for clipboard
+  const handleEncodeToClipboardSync = (): string | null => {
+    try {
+      const { filteredArgs, valueBigInt } = buildArgsAndValue()
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+        value: valueBigInt,
+      })
+      return data
+    } catch (err) {
+      console.error("Encode error:", err)
+      return null
+    }
+  }
+
+  const handleEncodeToClipboard = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    
+    try {
+      const data = handleEncodeToClipboardSync()
+      if (!data) {
+        setEncodeError(new Error("Failed to encode function data"))
+        return
+      }
+
+      // Try clipboard API
+      let success = false
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(data)
+          success = true
+        } catch (err) {
+          console.error("Navigator clipboard write failed:", err)
+        }
+      }
+      
+      // Fallback to copyToClipboard utility
+      if (!success) {
+        success = await copyToClipboard(data)
+      }
+
+      if (!success) {
+        setEncodeError(new Error("Failed to copy encoded bytes to clipboard"))
+        return
+      }
+
+      toast.success(`Encoded ${func.name} bytes to clipboard`)
+      setEncodeSuccess(true)
+    } catch (err) {
+      console.error("Clipboard operation error:", err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setEncodeError(new Error(errorMessage))
+    }
+  }
+
+  const handleEncodeToFunction = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    try {
+      const { filteredArgs, valueBigInt } = buildArgsAndValue()
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+        value: valueBigInt,
+      })
+
+      setEncodedDataForDestination(data)
+      setEncodeSuccess(true)
+      setEncodeDestinationOpen(true)
+    } catch (err) {
+      console.error("Encode error:", err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setEncodeError(new Error(errorMessage))
+    }
+  }
+
+  const handleEncodeSuccessAck = () => {
+    setEncodeSuccess(false)
+  }
+
+  const handleEncodeDestinationComplete = () => {
+    toast.success(`Encoded ${func.name} bytes sent to destination`, {
+      duration: 5000,
+    })
   }
 
   const handleReset = () => {
@@ -367,6 +470,12 @@ export function WriteFunction({
               isReverted={isReverted}
               onExecute={handleWrite}
               disabled={!supportedChainIds.includes(chainId)}
+              onEncodeToClipboard={handleEncodeToClipboard}
+              onEncodeToClipboardSync={handleEncodeToClipboardSync}
+              onEncodeToFunction={handleEncodeToFunction}
+              encodeError={encodeError}
+              encodeSuccess={encodeSuccess}
+              onEncodeSuccessAck={handleEncodeSuccessAck}
             />
           </div>
         </div>
@@ -447,6 +556,15 @@ export function WriteFunction({
           </div>
         </DialogContent>
       </Dialog>
+      <EncodeDestinationModal
+        open={encodeDestinationOpen}
+        onOpenChange={setEncodeDestinationOpen}
+        encodedData={encodedDataForDestination}
+        sourceAbiKey={abiKey}
+        sourceFunctionId={func.functionId}
+        sourceFunctionName={func.name}
+        onComplete={handleEncodeDestinationComplete}
+      />
     </Card>
   )
 }

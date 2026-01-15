@@ -4,9 +4,11 @@ export interface AdminStatus {
 
 export function fetchAdminStatus(): AdminStatus {
   const debugMode = localStorage.getItem('debugMode')
-  console.log("[ADMIN STATUS] debugMode value:", debugMode)
+  
   
   const isAdmin = debugMode === 'contexrox'
+
+  if (isAdmin) console.log("DEBUG MODE IS ENABLED", debugMode)
   
   return { isAdmin }
 }

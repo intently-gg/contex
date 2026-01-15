@@ -1,8 +1,9 @@
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { useChainId, useChains } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Copy, Check, Maximize2, Zap, RefreshCw, AlertCircle, CheckCircle2, Binary } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { copyToClipboard, safeStringify, sanitizeForSerialization } from "@/lib/utils"
 import { toast } from "sonner"
 import { ExpandResultModal } from "./ExpandResultModal"
@@ -21,6 +22,12 @@ interface ResultPaneProps {
   onRefresh?: () => void
   showCheckmark?: boolean
   disabled?: boolean
+  onEncodeToClipboard?: () => void
+  onEncodeToClipboardSync?: () => string | null // Returns encoded data synchronously
+  onEncodeToFunction?: () => void
+  encodeError?: Error | null
+  encodeSuccess?: boolean
+  onEncodeSuccessAck?: () => void
 }
 
 export function ResultPane({
@@ -36,9 +43,17 @@ export function ResultPane({
   onRefresh,
   showCheckmark = false,
   disabled = false,
+  onEncodeToClipboard,
+  onEncodeToClipboardSync,
+  onEncodeToFunction,
+  encodeError,
+  encodeSuccess = false,
+  onEncodeSuccessAck,
 }: ResultPaneProps) {
   const [copied, setCopied] = useState(false)
   const [expandOpen, setExpandOpen] = useState(false)
+  const [showEncodeCheckmark, setShowEncodeCheckmark] = useState(false)
+  const [encodeDropdownOpen, setEncodeDropdownOpen] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
 
   const chainId = useChainId()
@@ -51,9 +66,10 @@ export function ResultPane({
   }, [result])
 
   const sanitizedError = useMemo(() => {
-    if (!error) return null
+    if (!error && !encodeError) return null
+    const errorToSanitize = encodeError || error
     // Create a new error object with sanitized properties
-    const sanitized = sanitizeForSerialization(error)
+    const sanitized = sanitizeForSerialization(errorToSanitize)
     if (sanitized && typeof sanitized === "object" && "message" in sanitized) {
       const err = new Error(String(sanitized.message))
       if ("name" in sanitized) err.name = String(sanitized.name)
@@ -62,8 +78,8 @@ export function ResultPane({
       Object.assign(err, sanitized)
       return err
     }
-    return error
-  }, [error])
+    return errorToSanitize
+  }, [error, encodeError])
 
   const explorerTxUrl = useMemo(() => {
     if (!hash) return null
@@ -130,6 +146,18 @@ export function ResultPane({
 
   const shouldUseRenderer = type === "read" && isComplexValue && !sanitizedError && !hash
 
+  // Show encode checkmark briefly on success
+  useEffect(() => {
+    if (encodeSuccess) {
+      setShowEncodeCheckmark(true)
+      const timer = setTimeout(() => {
+        setShowEncodeCheckmark(false)
+        onEncodeSuccessAck?.()
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [encodeSuccess, onEncodeSuccessAck])
+
   const resultText = getResultText()
   const isError = !!sanitizedError
   const hasResult = sanitizedError || hash || result !== undefined
@@ -170,7 +198,7 @@ export function ResultPane({
               disabled={isLoading || isConfirming || disabled}
               size="sm"
               variant="default"
-              className="flex-shrink-0"
+              className="flex-shrink-0 transition-colors"
             >
               <Zap className={`mr-2 h-4 w-4 ${isLoading || isConfirming ? "animate-pulse" : ""}`} />
               Execute
@@ -181,7 +209,7 @@ export function ResultPane({
               disabled={isLoading}
               size="sm"
               variant="outline"
-              className="flex-shrink-0"
+              className="flex-shrink-0 transition-colors"
             >
               {isLoading ? (
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -193,6 +221,80 @@ export function ResultPane({
               Read
             </Button>
           ) : null}
+
+          {/* Encode Dropdown */}
+          {(onEncodeToClipboard || onEncodeToFunction) && (
+            <DropdownMenu open={encodeDropdownOpen} onOpenChange={setEncodeDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={disabled}
+                  size="sm"
+                  variant="outline"
+                  className="flex-shrink-0 transition-colors"
+                >
+                  {showEncodeCheckmark ? (
+                    <Check className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Binary className="mr-2 h-4 w-4" />
+                  )}
+                  Encode
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <DropdownMenuItem
+                  disabled={!onEncodeToClipboard && !onEncodeToClipboardSync}
+                  className="cursor-pointer"
+                  onSelect={async (e) => {
+                    e.preventDefault()
+                    setEncodeDropdownOpen(false)
+                    
+                    // Get encoded data synchronously
+                    if (onEncodeToClipboardSync) {
+                      const encodedData = onEncodeToClipboardSync()
+                      if (encodedData) {
+                        // Use the same copyToClipboard utility that works everywhere else
+                        const success = await copyToClipboard(encodedData)
+                        if (success) {
+                          toast.success("Encoded bytes copied to clipboard")
+                          // Call async handler for state updates
+                          onEncodeToClipboard?.()
+                        } else {
+                          toast.error("Failed to copy to clipboard")
+                        }
+                        return
+                      }
+                    }
+                    
+                    // Fallback to async handler
+                    if (onEncodeToClipboard) {
+                      onEncodeToClipboard().catch((err) => {
+                        console.error("Clipboard operation failed:", err)
+                      })
+                    }
+                  }}
+                >
+                  To Clipboard
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!onEncodeToFunction}
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setEncodeDropdownOpen(false)
+                    if (onEncodeToFunction) {
+                      onEncodeToFunction()
+                    }
+                  }}
+                  onSelect={(e) => {
+                    e.preventDefault()
+                  }}
+                >
+                  To Function
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Copy Button - only show if there's a result and not using ResultRenderer (which has its own copy button) */}
           {hasResult && !shouldUseRenderer && (

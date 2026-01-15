@@ -15,6 +15,13 @@ interface FormState {
   }
 }
 
+interface EncodeDestination {
+  abiKey: string
+  functionId: string
+  paramIndex: number
+  timestamp: number
+}
+
 interface ContractStore {
   contracts: ContractsRegistry
   selectedAbiKey: string | null
@@ -24,6 +31,7 @@ interface ContractStore {
   formState: FormState
   initializeFormState: () => void
   favorites: Record<string, string[]> // abiKey -> functionName[]
+  encodeDestinations: EncodeDestination[]
   setContracts: (contracts: ContractsRegistry) => void
   setSelectedAbiKey: (abiKey: string | null) => void
   setSelectedFunction: (abiKey: string, functionName: string | null) => void
@@ -54,6 +62,8 @@ interface ContractStore {
   toggleFavorite: (abiKey: string, functionName: string) => void
   isFavorite: (abiKey: string, functionName: string) => boolean
   clearReadResultsForContract: (abiKey: string) => void
+  addEncodeDestination: (destination: Omit<EncodeDestination, "timestamp">) => void
+  getRecentEncodeDestinations: () => EncodeDestination[]
 }
 
 function getResultKey(
@@ -75,6 +85,7 @@ export const useContractStore = create<ContractStore>()(
       readResults: {},
       formState: {},
       favorites: {},
+      encodeDestinations: [],
 
       setContracts: (contracts) => set({ contracts }),
 
@@ -209,6 +220,29 @@ export const useContractStore = create<ContractStore>()(
           console.warn("Failed to initialize form state from sessionStorage", e)
         }
       },
+
+      addEncodeDestination: (destination) => {
+        const now = Date.now()
+        set((state) => {
+          const newDestinations = [
+            { ...destination, timestamp: now },
+            ...state.encodeDestinations.filter(
+              (d) =>
+                d.abiKey !== destination.abiKey ||
+                d.functionId !== destination.functionId ||
+                d.paramIndex !== destination.paramIndex
+            ),
+          ]
+          return { encodeDestinations: newDestinations }
+        })
+      },
+
+      getRecentEncodeDestinations: () => {
+        const fiveDaysAgo = Date.now() - 5 * 24 * 60 * 60 * 1000
+        return get()
+          .encodeDestinations.filter((d) => d.timestamp >= fiveDaysAgo)
+          .sort((a, b) => b.timestamp - a.timestamp)
+      },
     }),
     {
       name: "contract-explorer-storage",
@@ -220,6 +254,7 @@ export const useContractStore = create<ContractStore>()(
         // Don't persist formState - it will use sessionStorage separately
         favorites: state.favorites,
         contracts: state.contracts,
+        encodeDestinations: state.encodeDestinations,
       }),
       storage: {
         getItem: (name) => {
