@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { getFunctionSelector, type AbiFunction, type Abi } from "viem"
+import { getFunctionSelector, type AbiFunction, type Abi, type AbiParameter } from "viem"
 import { parseABI, type ParsedFunction } from "./abiParser"
 import type { ABIEntry } from "@/stores/abiStore"
 
@@ -172,11 +172,40 @@ export function truncateLabel(label: string, maxLength: number = 75): { display:
 }
 
 /**
+ * Expand a type string, replacing tuple types with their component types
+ * This is needed for proper function signature calculation
+ */
+export function expandTypeForSignature(param: AbiParameter): string {
+  const type = param.type
+  
+  // Handle array types - extract base type and array suffix
+  const arrayMatch = type.match(/^(.*)(\[\d*\])$/)
+  const baseType = arrayMatch ? arrayMatch[1] : type
+  const arraySuffix = arrayMatch ? arrayMatch[2] : ""
+  
+  // If it's a tuple, expand it
+  if (baseType === "tuple" || baseType.startsWith("tuple")) {
+    const components = (param as any).components as readonly AbiParameter[] | undefined
+    if (components && components.length > 0) {
+      // Recursively expand each component
+      const expandedComponents = components.map(comp => expandTypeForSignature(comp)).join(",")
+      return `(${expandedComponents})${arraySuffix}`
+    }
+    // Fallback if no components (shouldn't happen, but be safe)
+    return `tuple${arraySuffix}`
+  }
+  
+  // Not a tuple, return as-is with array suffix
+  return type
+}
+
+/**
  * Get function signature (4-byte selector) from a function ABI
+ * Properly handles tuple types by expanding them into their component types
  */
 export function getFunctionSignature(abiFunction: AbiFunction): string {
   try {
-    const inputTypes = abiFunction.inputs.map((input) => input.type).join(",")
+    const inputTypes = abiFunction.inputs.map((input) => expandTypeForSignature(input)).join(",")
     const signature = `${abiFunction.name}(${inputTypes})`
     return getFunctionSelector(signature)
   } catch {

@@ -1,5 +1,6 @@
 import type { Abi, AbiFunction } from "viem"
 import { getFunctionSelector } from "viem"
+import { expandTypeForSignature } from "./utils"
 
 export interface ParsedFunction {
   name: string
@@ -14,11 +15,11 @@ export interface ParsedFunction {
 
 function getFunctionId(abiFunction: AbiFunction): string {
   try {
-    const inputTypes = abiFunction.inputs.map((input) => input.type).join(",")
+    const inputTypes = abiFunction.inputs.map((input) => expandTypeForSignature(input)).join(",")
     const signature = `${abiFunction.name}(${inputTypes})`
     return getFunctionSelector(signature)
   } catch {
-    const inputTypes = abiFunction.inputs.map((input) => input.type).join(",")
+    const inputTypes = abiFunction.inputs.map((input) => expandTypeForSignature(input)).join(",")
     return `${abiFunction.name}(${inputTypes})`
   }
 }
