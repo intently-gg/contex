@@ -466,7 +466,13 @@ export function WriteFunction({
                       type="text"
                       placeholder="0"
                       value={value}
-                      onChange={(e) => setValue(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        // Only allow digits 0-9 (same as uint256)
+                        if (val === "" || /^[0-9]*$/.test(val)) {
+                          setValue(val)
+                        }
+                      }}
                       className="flex-1"
                     />
                     <Tooltip>
