@@ -16,6 +16,7 @@ import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
 import { BytesHelperModal } from "./BytesHelperModal"
+import { AddressHelperModal } from "./AddressHelperModal"
 import { EncodeDestinationModal } from "./EncodeDestinationModal"
 import { ImportCalldataModal } from "./ImportCalldataModal"
 import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
@@ -47,6 +48,7 @@ export function ReadFunction({
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [bytesHelperOpen, setBytesHelperOpen] = useState<{ fieldName: string; abiParam: any; currentValue?: string } | null>(null)
+  const [addressHelperOpen, setAddressHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [showCheckmark, setShowCheckmark] = useState(false)
   const [showJsonModal, setShowJsonModal] = useState(false)
   const [encodeError, setEncodeError] = useState<Error | null>(null)
@@ -230,6 +232,11 @@ export function ReadFunction({
     setBytesHelperOpen(null)
   }, [])
 
+  const handleAddressHelperApply = useCallback((fieldName: string, value: string) => {
+    setInputs((prev) => ({ ...prev, [fieldName]: value }))
+    setAddressHelperOpen(null)
+  }, [])
+
   const handleImportCalldata = useCallback((importedInputs: Record<string, unknown>) => {
     setInputs((prev) => ({ ...prev, ...importedInputs }))
   }, [])
@@ -390,6 +397,7 @@ export function ReadFunction({
                       onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
                       onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
                       onBytesHelper={(name, param) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue: String(inputs[name] || "") })}
+                      onAddressHelper={(name, param) => setAddressHelperOpen({ fieldName: name, abiParam: param })}
                     />
                   ))}
                 </div>
@@ -492,6 +500,16 @@ export function ReadFunction({
           abiKey={abiKey}
           address={address}
           functionName={func.name}
+        />
+      )}
+      {addressHelperOpen && (
+        <AddressHelperModal
+          open={!!addressHelperOpen}
+          onOpenChange={(open) => setAddressHelperOpen(open ? addressHelperOpen : null)}
+          onApply={(value) => handleAddressHelperApply(addressHelperOpen.fieldName, value)}
+          fieldName={addressHelperOpen.fieldName}
+          fieldType={addressHelperOpen.abiParam.type === "bytes32" ? "bytes32" : "address"}
+          chainId={chainId}
         />
       )}
       <Dialog open={showJsonModal} onOpenChange={setShowJsonModal}>

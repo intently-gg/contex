@@ -26,6 +26,7 @@ interface InputControlProps {
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter) => void
   onListHelper?: (fieldName: string, abiParam: AbiParameter) => void
   onBytesHelper?: (fieldName: string, abiParam: AbiParameter) => void
+  onAddressHelper?: (fieldName: string, abiParam: AbiParameter) => void
   className?: string
 }
 
@@ -39,6 +40,7 @@ export function InputControl({
   onTupleHelper,
   onListHelper,
   onBytesHelper,
+  onAddressHelper,
   className,
 }: InputControlProps) {
   const { abis } = useABIStore()
@@ -49,6 +51,7 @@ export function InputControl({
   const needsValueParserHelper = needsValueParser(fieldName, fieldType)
   const needsTupleHelper = isTuple && onTupleHelper
   const needsListHelper = isArray && onListHelper
+  const needsAddressHelper = (fieldType === "address" || fieldType === "bytes32") && !!onAddressHelper
   
   // Check if bytes field matches a function signature
   const matchedFunction = useMemo(() => {
@@ -565,7 +568,7 @@ export function InputControl({
         ) : (
           renderInput()
         )}
-        {(needsValueParserHelper || needsTupleHelper || needsListHelper || needsBytesHelper) && (
+        {(needsValueParserHelper || needsTupleHelper || needsListHelper || needsBytesHelper || needsAddressHelper) && (
           <div className="flex flex-col gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -583,7 +586,9 @@ export function InputControl({
                     e.currentTarget.style.backgroundColor = ''
                   }}
                   onClick={() => {
-                    if (needsBytesHelper && onBytesHelper) {
+                    if (needsAddressHelper && onAddressHelper) {
+                      onAddressHelper(fieldName, abiParam)
+                    } else if (needsBytesHelper && onBytesHelper) {
                       onBytesHelper(fieldName, abiParam)
                     } else if (needsValueParserHelper && onValueHelper) {
                       onValueHelper(fieldName)
@@ -598,7 +603,7 @@ export function InputControl({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Integer Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
+                {needsAddressHelper ? "Address Helper" : needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Integer Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
               </TooltipContent>
             </Tooltip>
             {needsBytesHelper && (
