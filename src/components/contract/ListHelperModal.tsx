@@ -12,8 +12,10 @@ import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
+import { AddressHelperModal } from "./AddressHelperModal"
 import { parseListValue, serializeListValue } from "@/lib/tupleParser"
 import { getBaseType, isTupleType, needsValueParser } from "@/lib/formGenerator"
+import { useChainId } from "wagmi"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 import type { AbiParameter } from "viem"
@@ -56,9 +58,11 @@ export function ListHelperModal({
   const tupleComponents = isTuple && (abiParam as any).components ? (abiParam as any).components : null
   
   // Initialize list values
+  const chainId = useChainId()
   const [listValues, setListValues] = useState<unknown[]>([])
   const [valueParserOpen, setValueParserOpen] = useState<{ index: number; fieldType: string; currentValue: string } | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ index: number; abiParam: AbiParameter; currentValue: string } | null>(null)
+  const [addressHelperOpen, setAddressHelperOpen] = useState<{ index: number; abiParam: AbiParameter } | null>(null)
 
   // Try to load from current value
   useEffect(() => {
@@ -170,6 +174,17 @@ export function ListHelperModal({
     }
   }
 
+  const handleAddressHelper = (index: number, param: AbiParameter) => {
+    setAddressHelperOpen({ index, abiParam: param })
+  }
+
+  const handleAddressHelperApply = (value: string) => {
+    if (addressHelperOpen !== null) {
+      handleItemChange(addressHelperOpen.index, value)
+      setAddressHelperOpen(null)
+    }
+  }
+
   const handleApply = () => {
     try {
       const serialized = serializeListValue(listValues)
@@ -227,6 +242,7 @@ export function ListHelperModal({
                         onBytesHelper={onBytesHelper ? (_name, param) => {
                           onBytesHelper(_name, param, String(listValues[index] || ""))
                         } : undefined}
+                        onAddressHelper={(baseType === "address" || baseType === "bytes32") ? (_name, param) => handleAddressHelper(index, param) : undefined}
                       />
                     </div>
                     <Button
@@ -305,6 +321,16 @@ export function ListHelperModal({
           abiKey={abiKey}
           address={address}
           functionName={functionName}
+        />
+      )}
+      {addressHelperOpen && (
+        <AddressHelperModal
+          open={!!addressHelperOpen}
+          onOpenChange={(open) => setAddressHelperOpen(open ? addressHelperOpen : null)}
+          onApply={handleAddressHelperApply}
+          fieldName={`item_${addressHelperOpen.index}`}
+          fieldType={addressHelperOpen.abiParam.type === "bytes32" ? "bytes32" : "address"}
+          chainId={chainId}
         />
       )}
     </Dialog>

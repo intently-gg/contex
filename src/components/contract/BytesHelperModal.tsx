@@ -13,9 +13,11 @@ import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { ListHelperModal } from "./ListHelperModal"
+import { AddressHelperModal } from "./AddressHelperModal"
 import { generateFormFields, parseInputValue, needsValueParser } from "@/lib/formGenerator"
 import { extractFunctionSelector, findFunctionBySignature } from "@/lib/utils"
 import { useABIStore } from "@/stores/abiStore"
+import { useChainId } from "wagmi"
 import { decodeFunctionData, encodeFunctionData } from "viem"
 import { toast } from "sonner"
 import { AlertTriangle } from "lucide-react"
@@ -52,11 +54,13 @@ export function BytesHelperModal({
   address,
   functionName,
 }: BytesHelperModalProps) {
+  const chainId = useChainId()
   const { abis } = useABIStore()
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
   const [valueParserOpen, setValueParserOpen] = useState<{ fieldName: string; fieldType: string; currentValue: string } | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: AbiParameter; currentValue: string } | null>(null)
   const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: AbiParameter; currentValue: string } | null>(null)
+  const [addressHelperOpen, setAddressHelperOpen] = useState<{ fieldName: string; abiParam: AbiParameter } | null>(null)
   const [decodeError, setDecodeError] = useState<string | null>(null)
   const [hasSignatureMatch, setHasSignatureMatch] = useState(false)
   const [showJsonModal, setShowJsonModal] = useState(false)
@@ -231,6 +235,17 @@ export function BytesHelperModal({
     setListHelperOpen(null)
   }, [handleInputChange])
 
+  const handleAddressHelper = useCallback((compName: string, param: AbiParameter) => {
+    setAddressHelperOpen({ fieldName: compName, abiParam: param })
+  }, [])
+
+  const handleAddressHelperApply = useCallback((value: string) => {
+    if (addressHelperOpen !== null) {
+      handleInputChange(addressHelperOpen.fieldName, value)
+      setAddressHelperOpen(null)
+    }
+  }, [addressHelperOpen, handleInputChange])
+
   const handleApply = () => {
     const encoded = encodeFunctionDataFromInputs()
     if (!encoded) {
@@ -297,6 +312,7 @@ export function BytesHelperModal({
                   onTupleHelper={onTupleHelper ? (name, param) => handleTupleHelper(name, param) : undefined}
                   onListHelper={onListHelper ? (name, param) => handleListHelper(name, param) : undefined}
                   onBytesHelper={onBytesHelper ? (name, param) => handleBytesHelper(name, param) : undefined}
+                  onAddressHelper={(field.type === "address" || field.type === "bytes32") ? (name, param) => handleAddressHelper(name, param) : undefined}
                 />
               ))}
             </div>
@@ -376,6 +392,16 @@ export function BytesHelperModal({
           abiKey={abiKey}
           address={address}
           functionName={functionName}
+        />
+      )}
+      {addressHelperOpen && (
+        <AddressHelperModal
+          open={!!addressHelperOpen}
+          onOpenChange={(open) => setAddressHelperOpen(open ? addressHelperOpen : null)}
+          onApply={handleAddressHelperApply}
+          fieldName={addressHelperOpen.fieldName}
+          fieldType={addressHelperOpen.abiParam.type === "bytes32" ? "bytes32" : "address"}
+          chainId={chainId}
         />
       )}
       {matchedFunction && (

@@ -1,4 +1,4 @@
-export const CONTEX_VERSION = "0.26.2"
+export const CONTEX_VERSION = "0.27"
 
 export interface RegisteredAddress {
   label: string
@@ -12,11 +12,18 @@ export const ASSET_EXPECTED_SYMBOLS: Record<string, string[]> = {
   USDC: ["USDC", "USDC.e", "USDzC"],
   WETH: ["WETH", "ETH"],
   USDT: ["USDT", "USDT0", "USD₮0"],
+  WXPL: ["WXPL"],
+  WBNB: ["WBNB"],
+  WBTC: ["WBTC"],
+  WPOL: ["WPOL"],
+  WMON: ["WMON"],
+  WHYPE: ["WHYPE"],
+  WAVAX: ["WAVAX"],
 }
 
 /** Populate from script: pnpm run verify-assets. App will not start if hash does not match. */
 /* this hash proves that our current default registered assets have been confirmed on-chain.. to minimize risk of a configuration mistake */
-export const ASSETS_VERIFIED_HASH: string = "0x496ef114e8d3415afd73ccf50e617aa0c5c1692ff1c6d17169eae1e7051ad39a"
+export const ASSETS_VERIFIED_HASH: string = "0xb3a3bba01b1eff97b578a3303acf829e133c05d78c59fa80605d07cffe2d81ae"
 
 /** Salt used when hashing asset payload (must match scripts/verify-assets.ts). */
 export const ASSETS_VERIFICATION_SALT = "VERIFIED"
@@ -59,6 +66,7 @@ export const DEFAULT_REGISTERED_ADDRESSES: RegisteredAddress[] = [
   { label: "USDC", type: "Asset", address: "0xCccCCccc7021b32EBb4e8C08314bD62F7c653EC4", chainIds: [7777777] },
   { label: "USDC", type: "Asset", address: "0xb88339cb7199b77e23db6e890353e22632ba630f", chainIds: [999] },
   { label: "USDC", type: "Asset", address: "0x2D270e6886d130D724215A266106e6832161EAEd", chainIds: [57073] },
+  { label: "USDC", type: "Asset", address: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", chainIds: [43114] },
   // WETH
   { label: "WETH", type: "Asset", address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", chainIds: [1] },
   { label: "WETH", type: "Asset", address: "0x4200000000000000000000000000000000000006", chainIds: [10, 8453, 130, 480, 1868, 34443, 7777777, 57073] },
@@ -77,9 +85,40 @@ export const DEFAULT_REGISTERED_ADDRESSES: RegisteredAddress[] = [
   { label: "USDT", type: "Asset", address: "0x493257fD37EDB34451f62EDf8D2a0C418852bA4C", chainIds: [324] },
   { label: "USDT", type: "Asset", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", chainIds: [9745] },
   { label: "USDT", type: "Asset", address: "0x55d398326f99059ff775485246999027b3197955", chainIds: [56] },
+  { label: "USDT", type: "Asset", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", chainIds: [999] },
+  { label: "USDT", type: "Asset", address: "0xe7cd86e13AC4309349F30B3435a9d337750fC82D", chainIds: [143] },
+
+  // WRAPPED NATIVES
+  { label: "WXPL", type: "Asset", address: "0x6100e367285b01f48d07953803a2d8dca5d19873", chainIds: [9745] },
+  { label: "WBNB", type: "Asset", address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", chainIds: [56] },
+  { label: "WPOL", type: "Asset", address: "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270", chainIds: [137] },
+  { label: "WMON", type: "Asset", address: "0x3bd359c1119da7da1d913d1c4d2b7c461115433a", chainIds: [143] },
+  { label: "WHYPE", type: "Asset", address: "0x5555555555555555555555555555555555555555", chainIds: [999] },
+  { label: "WAVAX", type: "Asset", address: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7", chainIds: [43114] },
+
+  // WBTC
+  { label: "WBTC", type: "Asset", address: "0x0555e30da8f98308edb960aa94c0db47230d2b9c", chainIds: [56] },
+  { label: "WBTC", type: "Asset", address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", chainIds: [1] },
+  { label: "WBTC", type: "Asset", address: "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f", chainIds: [42161] },
+  { label: "WBTC", type: "Asset", address: "0x68f180fcCe6836688e9084f035309E29Bf0A2095", chainIds: [10] },
+  { label: "WBTC", type: "Asset", address: "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6", chainIds: [137] },
+  { label: "WBTC", type: "Asset", address: "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c", chainIds: [8453] },
+
+  // SYSTEM
+  { label: "0xEEEE", type: "System", address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", chainIds: 'ALL' },
+  { label: "0x0000", type: "System", address: "0x0000000000000000000000000000000000000000", chainIds: 'ALL' },
 ]
 
 export const RELEASE_NOTES = {
+  "0.27": {
+    "whatsnew": {
+      "Address Helper": [
+        "New helper tool lets you select from a list of registered addresses",
+        "Addresses can be chain-specific, for example WETH 0x4200...006 on OP Stacks",
+        "Works for bytes32 fields as well - automatically handling conversion"
+      ],
+    },
+  },
   "0.26": {
     "whatsnew": {
       "Import Calldata": [

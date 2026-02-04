@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/button"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
+import { AddressHelperModal } from "./AddressHelperModal"
 import { parseTupleValue, serializeTupleAsArray, tupleToArray } from "@/lib/tupleParser"
 import { needsValueParser } from "@/lib/formGenerator"
+import { useChainId } from "wagmi"
 import { toast } from "sonner"
 import type { AbiParameter } from "viem"
 
@@ -47,11 +49,13 @@ export function TupleHelperModal({
   address,
   functionName,
 }: TupleHelperModalProps) {
+  const chainId = useChainId()
   const components = (abiParam as any).components || []
   
   // Initialize tuple values
   const [tupleValues, setTupleValues] = useState<Record<string, unknown>>({})
   const [valueParserOpen, setValueParserOpen] = useState<{ fieldName: string; fieldType: string; currentValue: string } | null>(null)
+  const [addressHelperOpen, setAddressHelperOpen] = useState<{ fieldName: string; abiParam: AbiParameter } | null>(null)
 
   // Try to load from current value
   useEffect(() => {
@@ -152,6 +156,17 @@ export function TupleHelperModal({
     }
   }
 
+  const handleAddressHelper = (compName: string, param: AbiParameter) => {
+    setAddressHelperOpen({ fieldName: compName, abiParam: param })
+  }
+
+  const handleAddressHelperApply = (value: string) => {
+    if (addressHelperOpen !== null) {
+      handleFieldChange(addressHelperOpen.fieldName, value)
+      setAddressHelperOpen(null)
+    }
+  }
+
   const handleApply = () => {
     try {
       const serialized = serializeTupleAsArray(tupleValues, components)
@@ -192,6 +207,7 @@ export function TupleHelperModal({
                     const compName = name
                     onBytesHelper(compName, param, String(tupleValues[compName] || ""))
                   } : undefined}
+                  onAddressHelper={(comp.type === "address" || comp.type === "bytes32") ? (name, param) => handleAddressHelper(name, param) : undefined}
                 />
               )
             })}
@@ -236,6 +252,16 @@ export function TupleHelperModal({
         }
         return null
       })}
+      {addressHelperOpen && (
+        <AddressHelperModal
+          open={!!addressHelperOpen}
+          onOpenChange={(open) => setAddressHelperOpen(open ? addressHelperOpen : null)}
+          onApply={handleAddressHelperApply}
+          fieldName={addressHelperOpen.fieldName}
+          fieldType={addressHelperOpen.abiParam.type === "bytes32" ? "bytes32" : "address"}
+          chainId={chainId}
+        />
+      )}
     </Dialog>
   )
 }

@@ -147,6 +147,8 @@ export function AddressHelperModal({
           <DialogTitle>Address Helper</DialogTitle>
         </DialogHeader>
 
+        <p className="text-sm text-muted-foreground mb-2">Select an address to use from the list below</p>
+
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -159,85 +161,35 @@ export function AddressHelperModal({
           />
         </div>
 
-        {isBytes32 && (
-          <div className="mb-4 space-y-2">
-            <label className="text-sm font-medium">OR Input your own hex value</label>
-            <div className="flex gap-2 items-start">
-              <div className="flex-1 space-y-1">
-                <Input
-                  placeholder="0x... or hex without 0x"
-                  value={customHexInput}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === "") {
-                      setCustomHexInput("")
-                      return
-                    }
-                    const trimmed = val.trim()
-                    const has0x = trimmed.startsWith("0x") || trimmed.startsWith("0X")
-                    const hexPart = has0x ? trimmed.slice(2) : trimmed
-                    if (/^[0-9a-f]*$/i.test(hexPart) && hexPart.length <= 64) {
-                      setCustomHexInput(val)
-                    } else if (val.length < customHexInput.length) {
-                      setCustomHexInput(val)
-                    }
-                  }}
-                  className="font-mono"
-                />
-                {customHexInput && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      {customHexValidation.error ? (
-                        <div className="text-sm text-destructive">{customHexValidation.error}</div>
-                      ) : customHexValidation.preview ? (
-                        <div className="text-sm font-mono text-muted-foreground">
-                          Preview: {customHexValidation.preview}
-                        </div>
-                      ) : null}
-                    </div>
-                    <Button
-                      onClick={handleCustomHexApply}
-                      disabled={!customHexValidation.valid || !customHexValidation.preview}
-                      size="sm"
-                    >
-                      OK
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto border rounded-md p-4">
+        <div className="flex-1 overflow-y-auto border rounded-md p-2">
           {groupedAssets.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {searchQuery ? "No addresses found matching your search" : "No addresses available for this chain"}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {groupedAssets.map(({ type, assets }) => (
-                <div key={type} className="space-y-2">
-                  <div className="flex items-center gap-2 px-2 py-1.5 bg-muted rounded-md">
+                <div key={type} className="space-y-0.5">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded">
                     <span className="font-semibold text-sm">{type}</span>
                   </div>
 
-                  <div className="ml-4 space-y-1">
+                  <div className="ml-2 space-y-0.5">
                     {assets.map((asset, index) => (
-                      <div
+                      <Button
                         key={`${type}-${index}`}
+                        type="button"
+                        variant="outline"
                         onClick={() => handleSelectAddress(asset.address)}
-                        className="flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent transition-colors"
+                        className="w-full h-auto justify-start py-1.5 px-2 font-normal"
                       >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{asset.label}</div>
-                            <div className="text-xs text-muted-foreground truncate font-mono">
-                              {asset.address}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        <span className="w-[100px] shrink-0 text-sm font-medium text-right truncate">
+                          {asset.label}
+                        </span>
+                        <span className="flex-1 min-w-0 text-xs text-muted-foreground truncate font-mono text-left">
+                          {asset.address}
+                        </span>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -245,6 +197,59 @@ export function AddressHelperModal({
             </div>
           )}
         </div>
+
+        {isBytes32 && (
+          <>
+            <div className="border-t border-border my-2 shrink-0" />
+            <div className="space-y-2 shrink-0">
+              <label className="text-sm font-medium">OR Input your own hex value</label>
+              <div className="flex gap-2 items-start">
+                <div className="flex-1 space-y-1">
+                  <Input
+                    placeholder="0x... or hex without 0x"
+                    value={customHexInput}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        setCustomHexInput("")
+                        return
+                      }
+                      const trimmed = val.trim()
+                      const has0x = trimmed.startsWith("0x") || trimmed.startsWith("0X")
+                      const hexPart = has0x ? trimmed.slice(2) : trimmed
+                      if (/^[0-9a-f]*$/i.test(hexPart) && hexPart.length <= 64) {
+                        setCustomHexInput(val)
+                      } else if (val.length < customHexInput.length) {
+                        setCustomHexInput(val)
+                      }
+                    }}
+                    className="font-mono"
+                  />
+                  {customHexInput && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        {customHexValidation.error ? (
+                          <div className="text-sm text-destructive">{customHexValidation.error}</div>
+                        ) : customHexValidation.preview ? (
+                          <div className="text-sm font-mono text-muted-foreground">
+                            Preview: {customHexValidation.preview}
+                          </div>
+                        ) : null}
+                      </div>
+                      <Button
+                        onClick={handleCustomHexApply}
+                        disabled={!customHexValidation.valid || !customHexValidation.preview}
+                        size="sm"
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
