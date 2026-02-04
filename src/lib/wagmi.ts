@@ -1,5 +1,7 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
-import { 
+import { http } from "wagmi"
+import { RPC_URL_OVERRIDES } from "@/lib/config"
+import {
   mainnet,
   optimism,
   arbitrum,
@@ -178,10 +180,18 @@ const chainsWithIcons = await Promise.all([
   getChainWithIcon(fraxtal),
 ])
 
+const transports = Object.fromEntries(
+  chainsWithIcons.map((chain) => [
+    chain.id,
+    chain.id in RPC_URL_OVERRIDES ? http(RPC_URL_OVERRIDES[chain.id]!) : http(),
+  ])
+) as Record<(typeof chainsWithIcons)[number]["id"], ReturnType<typeof http>>
+
 export const config = getDefaultConfig({
   appName: "contex",
   projectId: "0518955ce1537db7cdcb490aab40b722",
   chains: chainsWithIcons,
+  transports,
   ssr: false,
 })
 
