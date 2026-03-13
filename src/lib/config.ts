@@ -3,7 +3,7 @@ export const CONTEX_VERSION = "0.27.11"
 /** Override RPC URLs by chain ID; chains not listed use wagmi defaults. */
 export const RPC_URL_OVERRIDES: Partial<Record<number, string>> = {
   1: "https://ethereum-rpc.publicnode.com",
-  137: "https://polygon-rpc.publicnode.com",
+  137: "https://polygon-bor-rpc.publicnode.com",
 }
 
 export interface RegisteredAddress {
