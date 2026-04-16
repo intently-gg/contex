@@ -1,9 +1,16 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Sparkles } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
@@ -11,7 +18,7 @@ import { ListHelperModal } from "./ListHelperModal"
 import { AddressHelperModal } from "./AddressHelperModal"
 import { BytesHelperModal } from "./BytesHelperModal"
 import { parseTupleValue, serializeTupleAsArray, tupleToArray } from "@/lib/tupleParser"
-import { isListType, needsValueParser } from "@/lib/formGenerator"
+import { isListType, isTupleType, needsValueParser } from "@/lib/formGenerator"
 import { useChainId } from "wagmi"
 import { toast } from "sonner"
 import type { AbiParameter } from "viem"
@@ -55,6 +62,134 @@ function loadTupleValuesFromCurrent(
     description: "The parameter's current value did not appear to be valid and could not be loaded into the helper.",
   })
   return {}
+}
+
+function defaultNestedPreviewArray(comp: AbiParameter): unknown[] {
+  const comps = (comp as { components?: readonly AbiParameter[] }).components || []
+  if (comps.length === 0) {
+    return []
+  }
+  const rec: Record<string, unknown> = {}
+  comps.forEach((c, idx) => {
+    const n = c.name || `param_${idx}`
+    rec[n] = ""
+  })
+  try {
+    return tupleToArray(rec, comps)
+  } catch {
+    return comps.map(() => "")
+  }
+}
+
+function nestedTupleValueToPreviewArray(
+  compName: string,
+  comp: AbiParameter,
+  raw: unknown
+): unknown[] | null {
+  if (raw === null || raw === undefined || raw === "") {
+    return null
+  }
+  if (Array.isArray(raw)) {
+    return raw
+  }
+  if (typeof raw === "object") {
+    const comps = (comp as { components?: readonly AbiParameter[] }).components || []
+    if (comps.length === 0) {
+      return null
+    }
+    try {
+      return comps.map((c, idx) => {
+        const n = c.name || `param_${idx}`
+        return (raw as Record<string, unknown>)[n]
+      })
+    } catch {
+      return null
+    }
+  }
+  if (typeof raw === "string") {
+    try {
+      return tupleToArray({ [compName]: raw }, [comp])
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+function NestedTupleFieldRow({
+  compName,
+  comp,
+  rawValue,
+  onOpenHelper,
+}: {
+  compName: string
+  comp: AbiParameter
+  rawValue: unknown
+  onOpenHelper: () => void
+}) {
+  const nestedPreview = useMemo(() => {
+    return nestedTupleValueToPreviewArray(compName, comp, rawValue) ?? defaultNestedPreviewArray(comp)
+  }, [compName, comp, rawValue])
+
+  const tupleStructLabel = useMemo(() => {
+    const fieldType = comp.type
+    const isTupleShape =
+      fieldType === "tuple" || fieldType === "tuple[]" || fieldType.startsWith("tuple[")
+    if (!isTupleShape || !comp.internalType || typeof comp.internalType !== "string") {
+      return null
+    }
+    return comp.internalType.replace(/^struct\s+/i, "")
+  }, [comp])
+
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-background/40 p-2">
+      <Label className="text-sm">
+        {compName}{" "}
+        <span style={{ color: "hsl(var(--muted-foreground))" }}>({comp.type})</span>
+      </Label>
+      {tupleStructLabel ? (
+        <div
+          className="truncate text-xs"
+          style={{ color: "#60a5fa", maxWidth: "100%" }}
+          title={`Struct: ${tupleStructLabel}`}
+        >
+          Struct: {tupleStructLabel}
+        </div>
+      ) : null}
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0 transition-colors hover:border-accent/60 hover:bg-accent"
+              onClick={onOpenHelper}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Tuple Helper</TooltipContent>
+        </Tooltip>
+        <div
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-sm"
+          style={{ color: "hsl(var(--muted-foreground))" }}
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+          <span className="min-w-0">Edit nested tuple</span>
+        </div>
+      </div>
+      <div className="min-h-0 min-w-0">
+        <ResultRenderer
+          value={nestedPreview}
+          abiParam={comp}
+          minHeight={160}
+          editorHeightPx={260}
+          defaultFormat="yaml"
+        />
+      </div>
+    </div>
+  )
 }
 
 export type TupleHelperVariant = "inline" | "modal"
@@ -121,6 +256,11 @@ export function TupleHelper({
     abiParam: AbiParameter
   } | null>(null)
   const [nestedListHelperOpen, setNestedListHelperOpen] = useState<{
+    fieldName: string
+    abiParam: AbiParameter
+    currentValue: string
+  } | null>(null)
+  const [nestedTupleHelperOpen, setNestedTupleHelperOpen] = useState<{
     fieldName: string
     abiParam: AbiParameter
     currentValue: string
@@ -201,9 +341,18 @@ export function TupleHelper({
   }
 
   const handleTupleHelper = (compName: string, comp: AbiParameter) => {
-    if (onTupleHelper) {
-      onTupleHelper(compName, comp, String(tupleValues[compName] || ""))
+    if (isTupleType(comp.type)) {
+      const value = tupleValues[compName]
+      const cv =
+        value === undefined || value === null
+          ? ""
+          : typeof value === "string"
+            ? value
+            : JSON.stringify(value)
+      setNestedTupleHelperOpen({ fieldName: compName, abiParam: comp, currentValue: cv })
+      return
     }
+    onTupleHelper?.(compName, comp, String(tupleValues[compName] || ""))
   }
 
   const handleListHelper = (compName: string, comp: AbiParameter) => {
@@ -256,15 +405,17 @@ export function TupleHelper({
     variant === "modal"
       ? "grid grid-cols-[calc(50%-0.5rem+75px)_minmax(0,1fr)] gap-4 flex-1 min-h-0 overflow-hidden"
       : showPreviewColumn
-        ? "grid grid-cols-1 md:grid-cols-[calc(50%-0.5rem+75px)_minmax(0,1fr)] gap-4"
-        : "grid grid-cols-1 gap-4"
+        ? "grid grid-cols-1 md:grid-cols-[calc(50%-0.5rem+75px)_minmax(0,1fr)] gap-4 min-h-0 items-start"
+        : "grid grid-cols-1 gap-4 min-h-0"
 
   const leftColClass =
     variant === "modal"
       ? "space-y-2 overflow-y-auto pr-2 min-h-0"
-      : "space-y-2 pr-2"
+      : "min-h-0 space-y-2 pr-2"
   const rightColClass =
-    variant === "modal" ? "space-y-2 overflow-y-auto min-h-0" : "space-y-2"
+    variant === "modal"
+      ? "min-h-0 space-y-2 overflow-y-auto"
+      : "max-h-[min(70vh,32rem)] min-h-0 space-y-2 overflow-y-auto"
 
   return (
     <div className={cn(variant === "inline" && "bg-tuple-helper-nest", className)}>
@@ -334,11 +485,30 @@ export function TupleHelper({
         </div>
       )}
 
-      <div className={variant === "modal" ? "flex flex-col flex-1 min-h-0 overflow-hidden" : ""}>
+      <div
+        className={
+          variant === "modal"
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+            : showPreviewColumn
+              ? "flex min-h-0 flex-col"
+              : ""
+        }
+      >
         <div className={gridClass}>
           <div className={leftColClass}>
             {components.map((comp: AbiParameter, index: number) => {
               const compName = comp.name || `param_${index}`
+              if (isTupleType(comp.type)) {
+                return (
+                  <NestedTupleFieldRow
+                    key={compName}
+                    compName={compName}
+                    comp={comp}
+                    rawValue={tupleValues[compName]}
+                    onOpenHelper={() => handleTupleHelper(compName, comp)}
+                  />
+                )
+              }
               return (
                 <InputControl
                   key={compName}
@@ -386,7 +556,12 @@ export function TupleHelper({
                 <h4 className="text-sm font-medium">Preview</h4>
               </div>
               {preview ? (
-                <ResultRenderer value={preview} abiParam={abiParam} minHeight={200} />
+                <ResultRenderer
+                  value={preview}
+                  abiParam={abiParam}
+                  minHeight={200}
+                  editorHeightPx={variant === "inline" ? 320 : undefined}
+                />
               ) : (
                 <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
                   Configure tuple values to see preview
@@ -477,6 +652,42 @@ export function TupleHelper({
           address={address}
           functionName={functionName}
         />
+      )}
+      {nestedTupleHelperOpen && (
+        <Dialog
+          open={!!nestedTupleHelperOpen}
+          onOpenChange={(open) => {
+            if (!open) setNestedTupleHelperOpen(null)
+          }}
+        >
+          <DialogContent className="flex max-h-[90vh] max-w-7xl flex-col overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Tuple Helper</DialogTitle>
+              <DialogDescription>
+                Configure {nestedTupleHelperOpen.fieldName} tuple values
+              </DialogDescription>
+            </DialogHeader>
+            <TupleHelper
+              fieldName={nestedTupleHelperOpen.fieldName}
+              abiParam={nestedTupleHelperOpen.abiParam}
+              currentValue={nestedTupleHelperOpen.currentValue}
+              active={!!nestedTupleHelperOpen}
+              variant="modal"
+              onApply={(serialized) => {
+                handleFieldChange(nestedTupleHelperOpen.fieldName, serialized)
+                setNestedTupleHelperOpen(null)
+              }}
+              onModalCancel={() => setNestedTupleHelperOpen(null)}
+              onTupleHelper={onTupleHelper}
+              onListHelper={onListHelper}
+              onBytesHelper={onBytesHelper}
+              abiKey={abiKey}
+              address={address}
+              functionName={functionName}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

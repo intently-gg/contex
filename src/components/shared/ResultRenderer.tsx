@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useId } from "react"
+import { useState, useRef, useMemo, useId, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -22,9 +22,21 @@ interface ResultRendererProps {
   defaultFormat?: "yaml" | "json" | "raw"
   abiParam?: AbiParameter
   minHeight?: string | number
+  /**
+   * Fixed editor height in px. Use in flex/grid layouts where `height: 100%` + Monaco
+   * `automaticLayout` would otherwise grow without bound.
+   */
+  editorHeightPx?: number
 }
 
-export function ResultRenderer({ value, className, defaultFormat = "yaml", abiParam, minHeight }: ResultRendererProps) {
+export function ResultRenderer({
+  value,
+  className,
+  defaultFormat = "yaml",
+  abiParam,
+  minHeight,
+  editorHeightPx,
+}: ResultRendererProps) {
   const formatGroupId = useId()
   const { theme } = useThemeStore()
   const { abis } = useABIStore()
@@ -229,7 +241,12 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
 
   const resultContent = formatResult(processedValue, format)
 
-  // Editor will fill available space via flex layout
+  useEffect(() => {
+    const ed = editorRef.current
+    if (!ed) return
+    const id = requestAnimationFrame(() => ed.layout())
+    return () => cancelAnimationFrame(id)
+  }, [resultContent, format, editorHeightPx, wordWrap])
 
   const handleCopy = async () => {
     // Focus the editor, select all, copy, then unselect
@@ -278,9 +295,11 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
 
   const minHeightClass = minHeight ? "" : "min-h-0"
   const minHeightStyle = minHeight ? { minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight } : undefined
-  
+  const rootClass =
+    `${className || ""} flex flex-col ${editorHeightPx == null ? `h-full ${minHeightClass}` : minHeightClass}`.trim()
+
   return (
-    <div className={`${className || ""} h-full flex flex-col ${minHeightClass}`} style={minHeightStyle}>
+    <div className={rootClass} style={minHeightStyle}>
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <RadioGroup
@@ -357,14 +376,24 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
           </Tooltip>
         </div>
       </div>
-      <div className="border rounded-md overflow-hidden flex-1" style={minHeight ? { minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight } : { minHeight: "200px" }}>
+      <div
+        className={`border rounded-md overflow-hidden ${editorHeightPx == null ? "flex-1" : "shrink-0"}`}
+        style={
+          editorHeightPx != null
+            ? { height: editorHeightPx }
+            : minHeight
+              ? { minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight }
+              : { minHeight: "200px" }
+        }
+      >
         <Editor
-          height="100%"
+          height={editorHeightPx != null ? `${editorHeightPx}px` : "100%"}
           language={format === "raw" ? "plaintext" : format}
           theme={editorTheme}
           value={resultContent}
           onMount={(editor) => {
             editorRef.current = editor
+            requestAnimationFrame(() => editor.layout())
           }}
           options={{
             readOnly: true,
