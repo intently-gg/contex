@@ -778,6 +778,7 @@ export function WriteFunction({
         onOpenChange={setEncodeDestinationOpen}
         encodedData={encodedDataForDestination}
         sourceAbiKey={abiKey}
+        sourceAddress={address}
         sourceFunctionId={func.functionId}
         sourceFunctionName={func.name}
         onComplete={handleEncodeDestinationComplete}

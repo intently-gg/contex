@@ -78,8 +78,8 @@ export function ListHelper({
   const baseType = getBaseType(abiParam.type)
   const isTuple = isTupleType(baseType)
   const tupleComponents =
-    isTuple && (abiParam as { components?: AbiParameter[] }).components
-      ? (abiParam as { components: AbiParameter[] }).components
+    isTuple && (abiParam as { components?: readonly AbiParameter[] }).components
+      ? (abiParam as { components: readonly AbiParameter[] }).components
       : null
 
   const lastEmittedSerializedRef = useRef<string | null>(null)

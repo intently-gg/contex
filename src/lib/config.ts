@@ -1,4 +1,4 @@
-export const CONTEX_VERSION = "0.27.11"
+export const CONTEX_VERSION = "0.28.0"
 
 /** Override RPC URLs by chain ID; chains not listed use wagmi defaults. */
 export const RPC_URL_OVERRIDES: Partial<Record<number, string>> = {
@@ -83,7 +83,7 @@ export const ASSET_EXPECTED_SYMBOLS: Record<string, string[]> = {
 
 /** Populate from script: pnpm run verify-assets. App will not start if hash does not match. */
 /* this hash proves that our current default registered assets have been confirmed on-chain.. to minimize risk of a configuration mistake */
-export const ASSETS_VERIFIED_HASH: string = "0xb3a3bba01b1eff97b578a3303acf829e133c05d78c59fa80605d07cffe2d81ae"
+export const ASSETS_VERIFIED_HASH: string = "0x34fe631222f5474f8ffe4ac018c9abc808b1308daa40a25cd2d34030315fdf8a"
 
 /** Salt used when hashing asset payload (must match scripts/verify-assets.ts). */
 export const ASSETS_VERIFICATION_SALT = "VERIFIED"
@@ -138,7 +138,7 @@ export const DEFAULT_REGISTERED_ADDRESSES: RegisteredAddress[] = [
   { label: "WETH", type: "Asset", address: "0x5300000000000000000000000000000000000004", chainIds: [534352] },
   // USDT
   { label: "USDT", type: "Asset", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", chainIds: [1] },
-  { label: "USDT", type: "Asset", address: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", chainIds: [10] },
+  { label: "USDT", type: "Asset", address: "0x01bff41798a0bcf287b996046ca68b395dbc1071", chainIds: [10] },
   { label: "USDT", type: "Asset", address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", chainIds: [42161] },
   { label: "USDT", type: "Asset", address: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2", chainIds: [8453] },
   { label: "USDT", type: "Asset", address: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", chainIds: [137] },
@@ -170,6 +170,19 @@ export const DEFAULT_REGISTERED_ADDRESSES: RegisteredAddress[] = [
 ]
 
 export const RELEASE_NOTES = {
+  "0.28": {
+    "whatsnew": {
+      "Encode-to-Function Improved": [
+        "Flow now focuses on rapidly constructing multicalls",
+        "Searching for a bytes[] param to encode to is now simpler",
+        "Added 'To Last Function' encode target"
+      ],
+      "Inline & Nested Helpers": [
+        "List & Tuple helpers now work inline in function parameters",
+        "Nested helpers are supported for complex data types",
+      ],
+    },
+  },
   "0.27": {
     "whatsnew": {
       "Address Helper": [

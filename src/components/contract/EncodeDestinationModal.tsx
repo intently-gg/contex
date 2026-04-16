@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   useCallback,
 } from "react"
-import type { Abi } from "viem"
+import type { Abi, Address } from "viem"
 import { useChainId } from "wagmi"
 import { useABIStore } from "@/stores/abiStore"
 import { useContractStore } from "@/stores/contractStore"
@@ -45,6 +45,7 @@ interface EncodeDestinationModalProps {
   onOpenChange: (open: boolean) => void
   encodedData: string | null
   sourceAbiKey: string
+  sourceAddress: Address
   sourceFunctionId: string
   sourceFunctionName: string
   onComplete?: () => void
@@ -74,6 +75,7 @@ export const EncodeDestinationModal = forwardRef<
     onOpenChange,
     encodedData,
     sourceAbiKey,
+    sourceAddress,
     sourceFunctionId,
     sourceFunctionName,
     onComplete,
@@ -93,6 +95,7 @@ export const EncodeDestinationModal = forwardRef<
     setLastEncodeSendTarget,
   } = useContractStore()
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentAddressOnly, setCurrentAddressOnly] = useState(true)
   const [currentChainOnly, setCurrentChainOnly] = useState(true)
   const [currentContractOnly, setCurrentContractOnly] = useState(true)
   const [byteArraysOnly, setByteArraysOnly] = useState(true)
@@ -152,6 +155,20 @@ export const EncodeDestinationModal = forwardRef<
     return isBytesType(inputType)
   }
 
+  const filterEligibleAddresses = useCallback(
+    (contractEntries: NonNullable<(typeof contracts)[string]>) => {
+      let list = currentChainOnly
+        ? contractEntries.filter((addr) => addr.chainIds.includes(chainId))
+        : [...contractEntries]
+      if (currentAddressOnly) {
+        const a = sourceAddress.toLowerCase()
+        list = list.filter((c) => c.address.toLowerCase() === a)
+      }
+      return list
+    },
+    [currentChainOnly, currentAddressOnly, chainId, sourceAddress]
+  )
+
   const targets = useMemo<ByteParamTarget[]>(() => {
     const items: ByteParamTarget[] = []
 
@@ -161,9 +178,7 @@ export const EncodeDestinationModal = forwardRef<
       const contractEntries = contracts[abiKey]
       if (!contractEntries || contractEntries.length === 0) continue
 
-      const eligibleAddresses = currentChainOnly
-        ? contractEntries.filter((addr) => addr.chainIds.includes(chainId))
-        : contractEntries
+      const eligibleAddresses = filterEligibleAddresses(contractEntries)
 
       if (eligibleAddresses.length === 0) continue
 
@@ -197,8 +212,7 @@ export const EncodeDestinationModal = forwardRef<
   }, [
     abis,
     contracts,
-    currentChainOnly,
-    chainId,
+    filterEligibleAddresses,
     currentContractOnly,
     sourceAbiKey,
     byteArraysOnly,
@@ -240,9 +254,7 @@ export const EncodeDestinationModal = forwardRef<
     const normalized = param.type.toLowerCase().trim()
     if (normalized !== "bytes" && normalized !== "bytes[]") return null
 
-    const eligibleAddresses = currentChainOnly
-      ? contractEntries.filter((addr) => addr.chainIds.includes(chainId))
-      : contractEntries
+    const eligibleAddresses = filterEligibleAddresses(contractEntries)
 
     const idx = eligibleAddresses.findIndex(
       (c) => c.address.toLowerCase() === last.contractAddress.toLowerCase()
@@ -260,7 +272,7 @@ export const EncodeDestinationModal = forwardRef<
       paramIndex: last.paramIndex,
       isArray: normalized.includes("[]"),
     }
-  }, [abis, contracts, chainId, currentChainOnly])
+  }, [abis, contracts, filterEligibleAddresses])
 
   const recentDestinations = useMemo(() => {
     const recent = getRecentEncodeDestinations()
@@ -334,9 +346,7 @@ export const EncodeDestinationModal = forwardRef<
     const contractEntries = contracts[abiKey]
     if (!contractEntries || contractEntries.length === 0) return
 
-    const eligibleAddresses = currentChainOnly
-      ? contractEntries.filter((addr) => addr.chainIds.includes(chainId))
-      : contractEntries
+    const eligibleAddresses = filterEligibleAddresses(contractEntries)
 
     if (eligibleAddresses.length === 0) return
 
@@ -393,8 +403,7 @@ export const EncodeDestinationModal = forwardRef<
     [
       encodedData,
       contracts,
-      currentChainOnly,
-      chainId,
+      filterEligibleAddresses,
       getFormState,
       setSelectedAbiKey,
       setSelectedAddress,
@@ -627,6 +636,22 @@ export const EncodeDestinationModal = forwardRef<
             <div className="flex flex-nowrap gap-1.5 w-full">
               <Button
                 type="button"
+                variant={currentAddressOnly ? "default" : "outline"}
+                onClick={() => setCurrentAddressOnly((prev) => !prev)}
+                className={cn(
+                  "text-[11px] px-2 h-8 flex-1 min-w-0 flex items-center justify-center gap-1",
+                  currentAddressOnly ? "bg-primary text-primary-foreground" : ""
+                )}
+              >
+                {currentAddressOnly ? (
+                  <Check className="h-3 w-3 shrink-0" />
+                ) : (
+                  <Square className="h-3 w-3 shrink-0" />
+                )}
+                <span className="truncate">Current Address Only</span>
+              </Button>
+              <Button
+                type="button"
                 variant={currentContractOnly ? "default" : "outline"}
                 onClick={() => setCurrentContractOnly((prev) => !prev)}
                 className={cn(
@@ -680,7 +705,7 @@ export const EncodeDestinationModal = forwardRef<
             {filteredTargets.length === 0 && filteredRecent.length === 0 ? (
               <div className="text-center text-muted-foreground py-8 text-sm">
                 {targets.length === 0
-                  ? "No matching byte parameter slots with the current filters. Try widening contract, chain, or byte-array filters."
+                  ? "No matching byte parameter slots with the current filters. Try widening address, contract, chain, or byte-array filters."
                   : "No matching functions found for this search."}
               </div>
             ) : (

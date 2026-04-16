@@ -656,6 +656,7 @@ export function ReadFunction({
         onOpenChange={setEncodeDestinationOpen}
         encodedData={encodedDataForDestination}
         sourceAbiKey={abiKey}
+        sourceAddress={address}
         sourceFunctionId={func.functionId}
         sourceFunctionName={func.name}
         onComplete={handleEncodeDestinationComplete}
