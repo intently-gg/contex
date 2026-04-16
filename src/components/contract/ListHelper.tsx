@@ -1,9 +1,16 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Eye, EyeOff, Plus, Trash2 } from "lucide-react"
+import { Eye, EyeOff, Plus, Sparkles, Trash2 } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
@@ -111,6 +118,12 @@ export function ListHelper({
     currentValue: string
   } | null>(null)
   const [inlinePreviewVisible, setInlinePreviewVisible] = useState(false)
+  const [bytesEncodeHintOpen, setBytesEncodeHintOpen] = useState(false)
+
+  const isBytesArray = useMemo(
+    () => abiParam.type.toLowerCase().trim() === "bytes[]",
+    [abiParam.type]
+  )
 
   const structDisplayName = useMemo(() => {
     if (!isTuple) return null
@@ -268,14 +281,23 @@ export function ListHelper({
 
   const gridClass =
     variant === "modal"
-      ? "grid grid-cols-[50%_50%] gap-4 flex-1 min-h-0 overflow-hidden"
+      ? "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-4 flex-1 min-h-0 overflow-hidden"
       : showPreviewColumn
-        ? "grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4"
+        ? "grid grid-cols-1 gap-4 min-h-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
         : "grid grid-cols-1 gap-4"
 
   const leftColClass =
-    variant === "modal" ? "space-y-2 overflow-y-auto pr-2 min-h-0" : "space-y-2 pr-2"
-  const rightColClass = variant === "modal" ? "space-y-2 overflow-y-auto min-h-0" : "space-y-2"
+    variant === "modal"
+      ? "min-h-0 min-w-0 space-y-2 overflow-y-auto pr-2"
+      : showPreviewColumn
+        ? "min-h-0 min-w-0 space-y-2 pr-2"
+        : "space-y-2 pr-2"
+  const rightColClass =
+    variant === "modal"
+      ? "flex min-h-0 min-w-0 flex-col overflow-hidden"
+      : showPreviewColumn
+        ? "max-h-[min(70vh,32rem)] min-h-0 space-y-2 overflow-y-auto"
+        : "space-y-2"
 
   const previewToggleButton = (show: boolean, onToggle: () => void) => (
     <Tooltip>
@@ -323,7 +345,15 @@ export function ListHelper({
         </div>
       )}
 
-      <div className={variant === "modal" ? "flex flex-col flex-1 min-h-0 overflow-hidden" : ""}>
+      <div
+        className={
+          variant === "modal"
+            ? "flex flex-col flex-1 min-h-0 overflow-hidden"
+            : showPreviewColumn
+              ? "flex min-h-0 flex-col"
+              : ""
+        }
+      >
         <div className={gridClass}>
           <div className={leftColClass}>
             {listValues.map((value, index) => {
@@ -379,23 +409,56 @@ export function ListHelper({
                 </div>
               )
             })}
-            <Button variant="outline" onClick={handleAddItem} className="w-full" type="button">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
+            <div className={cn("flex gap-2", isBytesArray ? "flex-col min-[380px]:flex-row" : "")}>
+              {isBytesArray ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setBytesEncodeHintOpen(true)}
+                  className="min-w-0 flex-1"
+                  type="button"
+                >
+                  <Sparkles className="mr-2 h-4 w-4 shrink-0" />
+                  Add Item from Function
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                onClick={handleAddItem}
+                className={cn(isBytesArray ? "min-w-0 flex-1" : "w-full")}
+                type="button"
+              >
+                <Plus className="mr-2 h-4 w-4 shrink-0" />
+                Add Item
+              </Button>
+            </div>
           </div>
           {showPreviewColumn ? (
             <div className={rightColClass}>
               <div
                 className={
                   variant === "modal"
-                    ? "sticky top-0 bg-background pb-2 z-10"
-                    : "bg-background pb-2"
+                    ? "sticky top-0 z-10 shrink-0 bg-background pb-2"
+                    : "shrink-0 bg-background pb-2"
                 }
               >
                 <h4 className="text-sm font-medium">Preview</h4>
               </div>
-              <ResultRenderer value={preview} abiParam={isTuple ? abiParam : undefined} minHeight={200} />
+              {variant === "modal" ? (
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  <ResultRenderer
+                    value={preview}
+                    abiParam={isTuple ? abiParam : undefined}
+                    minHeight={200}
+                  />
+                </div>
+              ) : (
+                <ResultRenderer
+                  value={preview}
+                  abiParam={isTuple ? abiParam : undefined}
+                  minHeight={200}
+                  editorHeightPx={320}
+                />
+              )}
             </div>
           ) : null}
         </div>
@@ -504,6 +567,41 @@ export function ListHelper({
           functionName={functionName}
         />
       )}
+      <Dialog open={bytesEncodeHintOpen} onOpenChange={setBytesEncodeHintOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add calldata from another function</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-1 text-sm text-muted-foreground">
+                <p>
+                  You can append any function call to this bytes[] without inputting raw bytes.
+                  <br /><br />
+                  This is very useful for constructing multicalls.
+                  <br /><br />
+                  1) Click your desired function from the list on the left 
+                  <br /><br />
+                  2) Populate the function's parameters
+                  <br /><br />
+                  3) Click {" "}
+                  <span className="font-medium text-foreground">[Encode]</span>
+                  <span aria-hidden> → </span>
+                  <span className="font-medium text-foreground">[To Function …]</span>
+                  <br /><br />
+                  4) Select this bytes[] parameter as the target to send your encoded bytes to.
+                  <br /><br />
+                  5) Repeat as needed until your bytes[] is complete.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" onClick={() => setBytesEncodeHintOpen(false)}>
+              Wow
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {nestedListHelperOpen && (
         <ListHelperModal
           open={!!nestedListHelperOpen}
