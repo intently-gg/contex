@@ -47,7 +47,7 @@ interface InputControlProps {
   onChange: (value: unknown) => void
   onValueHelper?: (fieldName: string) => void
   onTupleHelper?: (fieldName: string, abiParam: AbiParameter) => void
-  onListHelper?: (fieldName: string, abiParam: AbiParameter) => void
+  onListHelper?: (fieldName: string, abiParam: AbiParameter, currentValue?: string) => void
   onBytesHelper?: (fieldName: string, abiParam: AbiParameter) => void
   onAddressHelper?: (fieldName: string, abiParam: AbiParameter) => void
   className?: string
@@ -633,7 +633,7 @@ export function InputControl({
                       } else if (needsTupleHelper && onTupleHelper) {
                         onTupleHelper(fieldName, abiParam)
                       } else if (needsListHelper && onListHelper) {
-                        onListHelper(fieldName, abiParam)
+                        onListHelper(fieldName, abiParam, String(value ?? ""))
                       }
                     }}
                   >

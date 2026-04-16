@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useChainId } from "wagmi"
 import { encodeFunctionData } from "viem"
 import { useReadContractFunction } from "@/hooks/useContractFunctions"
-import { generateFormFields, parseInputValue, isTupleType } from "@/lib/formGenerator"
+import { generateFormFields, parseInputValue, isTupleType, isListType, needsValueParser } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,14 +16,17 @@ import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
 import { TupleHelper } from "./TupleHelper"
 import { ListHelperModal } from "./ListHelperModal"
+import { ListHelper } from "./ListHelper"
 import { BytesHelperModal } from "./BytesHelperModal"
 import { AddressHelperModal } from "./AddressHelperModal"
-import { EncodeDestinationModal } from "./EncodeDestinationModal"
+import {
+  EncodeDestinationModal,
+  type EncodeDestinationModalHandle,
+} from "./EncodeDestinationModal"
 import { ImportCalldataModal } from "./ImportCalldataModal"
 import { copyToClipboard, sanitizeForSerialization, getFunctionSignature } from "@/lib/utils"
 import type { Address, Abi } from "viem"
 import type { ParsedFunction } from "@/lib/abiParser"
-import { needsValueParser } from "@/lib/formGenerator"
 import { toast } from "sonner"
 
 interface ReadFunctionProps {
@@ -47,7 +50,11 @@ export function ReadFunction({
     useContractStore()
   const [valueParserOpen, setValueParserOpen] = useState<string | null>(null)
   const [tupleHelperOpen, setTupleHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
-  const [listHelperOpen, setListHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
+  const [listHelperOpen, setListHelperOpen] = useState<{
+    fieldName: string
+    abiParam: any
+    currentValue?: string
+  } | null>(null)
   const [bytesHelperOpen, setBytesHelperOpen] = useState<{ fieldName: string; abiParam: any; currentValue?: string } | null>(null)
   const [addressHelperOpen, setAddressHelperOpen] = useState<{ fieldName: string; abiParam: any } | null>(null)
   const [showCheckmark, setShowCheckmark] = useState(false)
@@ -119,6 +126,13 @@ export function ReadFunction({
   }, [inputs, abiKey, func.functionId, setFormState])
 
   const wasLoadingRef = useRef(false)
+  const encodeDestinationModalRef = useRef<EncodeDestinationModalHandle>(null)
+  const lastEncodeFunctionLabel = useContractStore((s) => {
+    const last = s.lastEncodeSendTarget
+    if (!last) return null
+    if (last.abiKey === abiKey && last.functionId === func.functionId) return null
+    return last.funcDisplayName
+  })
 
   const handleRefresh = async () => {
     await refetch()
@@ -196,6 +210,33 @@ export function ReadFunction({
       setEncodedDataForDestination(data)
       setEncodeSuccess(true)
       setEncodeDestinationOpen(true)
+    } catch (err) {
+      console.error("Encode error:", err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setEncodeError(new Error(errorMessage))
+    }
+  }
+
+  const handleEncodeToLastFunction = async () => {
+    setEncodeError(null)
+    setEncodeSuccess(false)
+    try {
+      const data = encodeFunctionData({
+        abi,
+        functionName: func.name,
+        args: filteredArgs,
+      })
+      setEncodedDataForDestination(data)
+      const ok =
+        encodeDestinationModalRef.current?.applyLastDestination(data) ?? false
+      if (!ok) {
+        setEncodedDataForDestination(null)
+        toast.error(
+          "Could not send to last destination (not available, wrong chain, or same function)."
+        )
+        return
+      }
+      setEncodeSuccess(true)
     } catch (err) {
       console.error("Encode error:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
@@ -399,8 +440,43 @@ export function ReadFunction({
                         onTupleHelper={(name, param) =>
                           setTupleHelperOpen({ fieldName: name, abiParam: param })
                         }
-                        onListHelper={(name, param) =>
-                          setListHelperOpen({ fieldName: name, abiParam: param })
+                        onListHelper={(name, param, val) =>
+                          setListHelperOpen({
+                            fieldName: name,
+                            abiParam: param,
+                            currentValue: val ?? "",
+                          })
+                        }
+                        onBytesHelper={(name, param, currentValue) =>
+                          setBytesHelperOpen({
+                            fieldName: name,
+                            abiParam: param,
+                            currentValue: currentValue ?? String(inputs[name] || ""),
+                          })
+                        }
+                        abiKey={abiKey}
+                        address={address}
+                        functionName={func.name}
+                        className="rounded-lg border border-border p-3 space-y-2"
+                      />
+                    ) : isListType(field.type) ? (
+                      <ListHelper
+                        key={field.name}
+                        fieldName={field.name}
+                        abiParam={field.abiParam}
+                        currentValue={String(inputs[field.name] ?? "")}
+                        active
+                        variant="inline"
+                        onLiveChange={(v) => handleInputChange(field.name, v)}
+                        onTupleHelper={(name, param) =>
+                          setTupleHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                        onListHelper={(name, param, val) =>
+                          setListHelperOpen({
+                            fieldName: name,
+                            abiParam: param,
+                            currentValue: val ?? "",
+                          })
                         }
                         onBytesHelper={(name, param, currentValue) =>
                           setBytesHelperOpen({
@@ -467,6 +543,8 @@ export function ReadFunction({
               showCheckmark={showCheckmark}
               onEncodeToClipboard={handleEncodeToClipboard}
               onEncodeToFunction={handleEncodeToFunction}
+              onEncodeToLastFunction={handleEncodeToLastFunction}
+              encodeToLastFunctionLabel={lastEncodeFunctionLabel}
               encodeError={encodeError}
               encodeSuccess={encodeSuccess}
               onEncodeSuccessAck={handleEncodeSuccessAck}
@@ -502,7 +580,9 @@ export function ReadFunction({
           abiParam={tupleHelperOpen.abiParam}
           currentValue={String(inputs[tupleHelperOpen.fieldName] || "")}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-          onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onListHelper={(name, param, val) =>
+            setListHelperOpen({ fieldName: name, abiParam: param, currentValue: val ?? "" })
+          }
           onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
           abiKey={abiKey}
           address={address}
@@ -516,10 +596,15 @@ export function ReadFunction({
           onApply={(value) => handleListHelperApply(listHelperOpen.fieldName, value)}
           fieldName={listHelperOpen.fieldName}
           abiParam={listHelperOpen.abiParam}
-          currentValue={String(inputs[listHelperOpen.fieldName] || "")}
-          onValueHelper={(name) => setValueParserOpen(name)}
+          currentValue={
+            listHelperOpen.currentValue !== undefined
+              ? listHelperOpen.currentValue
+              : String(inputs[listHelperOpen.fieldName] || "")
+          }
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-          onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onListHelper={(name, param, val) =>
+            setListHelperOpen({ fieldName: name, abiParam: param, currentValue: val ?? "" })
+          }
           onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
           abiKey={abiKey}
           address={address}
@@ -536,7 +621,9 @@ export function ReadFunction({
           currentValue={bytesHelperOpen.currentValue !== undefined ? bytesHelperOpen.currentValue : String(inputs[bytesHelperOpen.fieldName] || "")}
           onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-          onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
+          onListHelper={(name, param, val) =>
+            setListHelperOpen({ fieldName: name, abiParam: param, currentValue: val ?? "" })
+          }
           onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}
           abiKey={abiKey}
           address={address}
@@ -564,6 +651,7 @@ export function ReadFunction({
         </DialogContent>
       </Dialog>
       <EncodeDestinationModal
+        ref={encodeDestinationModalRef}
         open={encodeDestinationOpen}
         onOpenChange={setEncodeDestinationOpen}
         encodedData={encodedDataForDestination}

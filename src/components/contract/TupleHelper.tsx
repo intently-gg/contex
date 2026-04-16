@@ -7,9 +7,11 @@ import { Eye, EyeOff } from "lucide-react"
 import { InputControl } from "@/components/shared/InputControl"
 import { ResultRenderer } from "@/components/shared/ResultRenderer"
 import { ValueParserModal } from "./ValueParserModal"
+import { ListHelperModal } from "./ListHelperModal"
 import { AddressHelperModal } from "./AddressHelperModal"
+import { BytesHelperModal } from "./BytesHelperModal"
 import { parseTupleValue, serializeTupleAsArray, tupleToArray } from "@/lib/tupleParser"
-import { needsValueParser } from "@/lib/formGenerator"
+import { isListType, needsValueParser } from "@/lib/formGenerator"
 import { useChainId } from "wagmi"
 import { toast } from "sonner"
 import type { AbiParameter } from "viem"
@@ -114,6 +116,15 @@ export function TupleHelper({
     fieldName: string
     abiParam: AbiParameter
   } | null>(null)
+  const [bytesHelperOpen, setBytesHelperOpen] = useState<{
+    fieldName: string
+    abiParam: AbiParameter
+  } | null>(null)
+  const [nestedListHelperOpen, setNestedListHelperOpen] = useState<{
+    fieldName: string
+    abiParam: AbiParameter
+    currentValue: string
+  } | null>(null)
   const [inlinePreviewVisible, setInlinePreviewVisible] = useState(false)
 
   useLayoutEffect(() => {
@@ -196,9 +207,15 @@ export function TupleHelper({
   }
 
   const handleListHelper = (compName: string, comp: AbiParameter) => {
-    if (onListHelper) {
-      onListHelper(compName, comp, String(tupleValues[compName] || ""))
+    if (isListType(comp.type)) {
+      setNestedListHelperOpen({
+        fieldName: compName,
+        abiParam: comp,
+        currentValue: String(tupleValues[compName] || ""),
+      })
+      return
     }
+    onListHelper?.(compName, comp, String(tupleValues[compName] || ""))
   }
 
   const handleAddressHelper = (compName: string, param: AbiParameter) => {
@@ -334,14 +351,19 @@ export function TupleHelper({
                     needsValueParser(compName, comp.type) ? () => handleValueHelper(compName) : undefined
                   }
                   onTupleHelper={onTupleHelper ? (name, param) => handleTupleHelper(name, param) : undefined}
-                  onListHelper={onListHelper ? (name, param) => handleListHelper(name, param) : undefined}
-                  onBytesHelper={
-                    onBytesHelper
-                      ? (name, param) => {
-                          const n = name
-                          onBytesHelper(n, param, String(tupleValues[n] || ""))
-                        }
+                  onListHelper={
+                    isListType(comp.type) || onListHelper
+                      ? (_name, param) => handleListHelper(compName, param)
                       : undefined
+                  }
+                  onBytesHelper={
+                    comp.type === "bytes"
+                      ? (_name, param) => setBytesHelperOpen({ fieldName: compName, abiParam: param })
+                      : onBytesHelper
+                        ? (name, param) => {
+                            onBytesHelper(name, param, String(tupleValues[name] || ""))
+                          }
+                        : undefined
                   }
                   onAddressHelper={
                     comp.type === "address" || comp.type === "bytes32"
@@ -422,6 +444,38 @@ export function TupleHelper({
           fieldName={addressHelperOpen.fieldName}
           fieldType={addressHelperOpen.abiParam.type === "bytes32" ? "bytes32" : "address"}
           chainId={chainId}
+        />
+      )}
+      {bytesHelperOpen && (
+        <BytesHelperModal
+          open={!!bytesHelperOpen}
+          onOpenChange={(open) => setBytesHelperOpen(open ? bytesHelperOpen : null)}
+          onApply={(value) => handleFieldChange(bytesHelperOpen.fieldName, value)}
+          fieldName={bytesHelperOpen.fieldName}
+          abiParam={bytesHelperOpen.abiParam}
+          currentValue={String(tupleValues[bytesHelperOpen.fieldName] ?? "")}
+          onTupleHelper={onTupleHelper}
+          onListHelper={onListHelper}
+          onBytesHelper={onBytesHelper}
+          abiKey={abiKey}
+          address={address}
+          functionName={functionName}
+        />
+      )}
+      {nestedListHelperOpen && (
+        <ListHelperModal
+          open={!!nestedListHelperOpen}
+          onOpenChange={(open) => setNestedListHelperOpen(open ? nestedListHelperOpen : null)}
+          onApply={(serialized) => handleFieldChange(nestedListHelperOpen.fieldName, serialized)}
+          fieldName={nestedListHelperOpen.fieldName}
+          abiParam={nestedListHelperOpen.abiParam}
+          currentValue={nestedListHelperOpen.currentValue}
+          onTupleHelper={onTupleHelper}
+          onListHelper={onListHelper}
+          onBytesHelper={onBytesHelper}
+          abiKey={abiKey}
+          address={address}
+          functionName={functionName}
         />
       )}
     </div>

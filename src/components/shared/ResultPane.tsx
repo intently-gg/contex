@@ -25,6 +25,9 @@ interface ResultPaneProps {
   onEncodeToClipboard?: () => void | Promise<void>
   onEncodeToClipboardSync?: () => string | null // Returns encoded data synchronously
   onEncodeToFunction?: () => void
+  onEncodeToLastFunction?: () => void
+  /** When set (this session, after a prior send), show "To last function" in the Encode menu */
+  encodeToLastFunctionLabel?: string | null
   encodeError?: Error | null
   encodeSuccess?: boolean
   onEncodeSuccessAck?: () => void
@@ -46,6 +49,8 @@ export function ResultPane({
   onEncodeToClipboard,
   onEncodeToClipboardSync,
   onEncodeToFunction,
+  onEncodeToLastFunction,
+  encodeToLastFunctionLabel = null,
   encodeError,
   encodeSuccess = false,
   onEncodeSuccessAck,
@@ -223,7 +228,9 @@ export function ResultPane({
           ) : null}
 
           {/* Encode Dropdown */}
-          {(onEncodeToClipboard || onEncodeToFunction) && (
+          {(onEncodeToClipboard ||
+            onEncodeToFunction ||
+            (onEncodeToLastFunction && encodeToLastFunctionLabel)) && (
             <DropdownMenu open={encodeDropdownOpen} onOpenChange={setEncodeDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -294,8 +301,24 @@ export function ResultPane({
                     e.preventDefault()
                   }}
                 >
-                  To Function
+                  To Function …
                 </DropdownMenuItem>
+                {onEncodeToLastFunction && encodeToLastFunctionLabel ? (
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setEncodeDropdownOpen(false)
+                      onEncodeToLastFunction()
+                    }}
+                    onSelect={(e) => {
+                      e.preventDefault()
+                    }}
+                  >
+                    To Last Function ({encodeToLastFunctionLabel})
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

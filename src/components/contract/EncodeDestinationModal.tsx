@@ -1,4 +1,11 @@
-import { useMemo, useState, useEffect } from "react"
+import {
+  useMemo,
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from "react"
 import type { Abi } from "viem"
 import { useChainId } from "wagmi"
 import { useABIStore } from "@/stores/abiStore"
@@ -6,13 +13,32 @@ import { useContractStore } from "@/stores/contractStore"
 import { parseABI, type ParsedFunction } from "@/lib/abiParser"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Search, Clock, ArrowUpCircle, ArrowDownCircle, CirclePlus, CircleMinus, FileCode, Scroll, SquareFunction, Check, Square } from "lucide-react"
+import {
+  Search,
+  Clock,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  CirclePlus,
+  CircleMinus,
+  FileCode,
+  Scroll,
+  SquareFunction,
+  Check,
+  Square,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { cn, truncateLabel, safeStringify } from "@/lib/utils"
-import { ResultRenderer } from "@/components/shared/ResultRenderer"
+import {
+  cn,
+  truncateLabel,
+  safeStringify,
+  extractFunctionSelector,
+  findFunctionBySignature,
+} from "@/lib/utils"
 
 interface EncodeDestinationModalProps {
   open: boolean
@@ -22,6 +48,10 @@ interface EncodeDestinationModalProps {
   sourceFunctionId: string
   sourceFunctionName: string
   onComplete?: () => void
+}
+
+export type EncodeDestinationModalHandle = {
+  applyLastDestination: (encodedData: string) => boolean
 }
 
 interface ByteParamTarget {
@@ -35,15 +65,21 @@ interface ByteParamTarget {
   isArray: boolean
 }
 
-export function EncodeDestinationModal({
-  open,
-  onOpenChange,
-  encodedData,
-  sourceAbiKey,
-  sourceFunctionId,
-  sourceFunctionName,
-  onComplete,
-}: EncodeDestinationModalProps) {
+export const EncodeDestinationModal = forwardRef<
+  EncodeDestinationModalHandle,
+  EncodeDestinationModalProps
+>(function EncodeDestinationModal(
+  {
+    open,
+    onOpenChange,
+    encodedData,
+    sourceAbiKey,
+    sourceFunctionId,
+    sourceFunctionName,
+    onComplete,
+  },
+  ref
+) {
   const { abis } = useABIStore()
   const {
     contracts,
@@ -54,36 +90,74 @@ export function EncodeDestinationModal({
     getFormState,
     addEncodeDestination,
     getRecentEncodeDestinations,
+    setLastEncodeSendTarget,
   } = useContractStore()
   const [searchQuery, setSearchQuery] = useState("")
   const [currentChainOnly, setCurrentChainOnly] = useState(true)
+  const [currentContractOnly, setCurrentContractOnly] = useState(true)
+  const [byteArraysOnly, setByteArraysOnly] = useState(true)
   const [listPromptOpen, setListPromptOpen] = useState(false)
-  const [bytesPromptOpen, setBytesPromptOpen] = useState(false)
   const [listPromptTarget, setListPromptTarget] = useState<ByteParamTarget | null>(null)
   const [listPromptExisting, setListPromptExisting] = useState<string[] | null>(null)
-  const [bytesPromptTarget, setBytesPromptTarget] = useState<ByteParamTarget | null>(null)
-  const [bytesPromptExisting, setBytesPromptExisting] = useState<string | null>(null)
   const [clearExistingFirst, setClearExistingFirst] = useState(false)
   const [selectedInsertIndex, setSelectedInsertIndex] = useState<number | null>(null)
   const chainId = useChainId()
 
-  // Reset state when list prompt opens
+  // Default: append new bytes at end of list (or sole new item when empty)
   useEffect(() => {
-    if (listPromptOpen) {
+    if (listPromptOpen && listPromptExisting !== null) {
       setClearExistingFirst(false)
-      setSelectedInsertIndex(null)
+      setSelectedInsertIndex(listPromptExisting.length)
     }
-  }, [listPromptOpen])
+  }, [listPromptOpen, listPromptExisting])
+
+  const calldataDisplayName = useCallback(
+    (raw: string): string | null => {
+      const selector = extractFunctionSelector(raw)
+      if (!selector) return null
+      const match = findFunctionBySignature(selector, abis)
+      return match?.func.name ?? null
+    },
+    [abis]
+  )
+
+  const bytesListRowInner = (raw: string, explicitLabel: string | null) => {
+    const decoded = explicitLabel ?? calldataDisplayName(raw)
+    const hex = raw.trim()
+    if (!decoded) {
+      return (
+        <span className="min-w-0 truncate">{hex}</span>
+      )
+    }
+    return (
+      <>
+        <span className="shrink-0 font-medium text-foreground">{decoded}</span>
+        <span className="shrink-0">:</span>
+        <span className="min-w-0 truncate pl-0.5">{hex}</span>
+      </>
+    )
+  }
 
   const isBytesType = (type: string): boolean => {
     const normalized = type.toLowerCase().trim()
     return normalized === "bytes" || normalized === "bytes[]"
   }
 
+  const isBytesArrayOnlyType = (type: string): boolean => {
+    return type.toLowerCase().trim() === "bytes[]"
+  }
+
+  const paramMatchesByteFilter = (inputType: string): boolean => {
+    if (byteArraysOnly) return isBytesArrayOnlyType(inputType)
+    return isBytesType(inputType)
+  }
+
   const targets = useMemo<ByteParamTarget[]>(() => {
     const items: ByteParamTarget[] = []
 
     for (const [abiKey, entry] of Object.entries(abis)) {
+      if (currentContractOnly && abiKey !== sourceAbiKey) continue
+
       const contractEntries = contracts[abiKey]
       if (!contractEntries || contractEntries.length === 0) continue
 
@@ -101,7 +175,7 @@ export function EncodeDestinationModal({
 
       for (const func of parsed) {
         func.inputs.forEach((input, index) => {
-          if (isBytesType(input.type)) {
+          if (paramMatchesByteFilter(input.type)) {
             eligibleAddresses.forEach((contract, contractIdx) => {
               items.push({
                 abiKey,
@@ -120,7 +194,73 @@ export function EncodeDestinationModal({
     }
 
     return items
-  }, [abis, contracts, currentChainOnly, chainId])
+  }, [
+    abis,
+    contracts,
+    currentChainOnly,
+    chainId,
+    currentContractOnly,
+    sourceAbiKey,
+    byteArraysOnly,
+  ])
+
+  const commitEncodeDestination = useCallback(
+    (target: ByteParamTarget) => {
+      addEncodeDestination({
+        abiKey: target.abiKey,
+        functionId: target.func.functionId,
+        paramIndex: target.paramIndex,
+      })
+      setLastEncodeSendTarget({
+        abiKey: target.abiKey,
+        functionId: target.func.functionId,
+        paramIndex: target.paramIndex,
+        contractAddress: target.contractAddress,
+        funcDisplayName: target.func.displayName,
+      })
+    },
+    [addEncodeDestination, setLastEncodeSendTarget]
+  )
+
+  const resolveLastTargetFromStore = useCallback((): ByteParamTarget | null => {
+    const last = useContractStore.getState().lastEncodeSendTarget
+    if (!last) return null
+    const entry = abis[last.abiKey]
+    const contractEntries = contracts[last.abiKey]
+    if (!entry || !contractEntries?.length) return null
+
+    const abi = entry.abi as Abi | undefined
+    if (!abi) return null
+    const parsed = parseABI(abi)
+    if (!parsed) return null
+    const func = parsed.find((f) => f.functionId === last.functionId)
+    if (!func) return null
+    const param = func.inputs[last.paramIndex]
+    if (!param) return null
+    const normalized = param.type.toLowerCase().trim()
+    if (normalized !== "bytes" && normalized !== "bytes[]") return null
+
+    const eligibleAddresses = currentChainOnly
+      ? contractEntries.filter((addr) => addr.chainIds.includes(chainId))
+      : contractEntries
+
+    const idx = eligibleAddresses.findIndex(
+      (c) => c.address.toLowerCase() === last.contractAddress.toLowerCase()
+    )
+    if (idx === -1) return null
+
+    const contract = eligibleAddresses[idx]
+    return {
+      abiKey: last.abiKey,
+      abiLabel: entry.label,
+      contractIndex: idx,
+      contractLabel: contract.label,
+      contractAddress: contract.address,
+      func,
+      paramIndex: last.paramIndex,
+      isArray: normalized.includes("[]"),
+    }
+  }, [abis, contracts, chainId, currentChainOnly])
 
   const recentDestinations = useMemo(() => {
     const recent = getRecentEncodeDestinations()
@@ -185,8 +325,10 @@ export function EncodeDestinationModal({
     })
   }, [recentDestinations, searchQuery])
 
-  const handleSelectTarget = (target: ByteParamTarget) => {
-    if (!encodedData) return
+  const handleSelectTarget = useCallback(
+    (target: ByteParamTarget, encodedOverride?: string) => {
+    const data = encodedOverride ?? encodedData
+    if (!data) return
 
     const { abiKey, func, paramIndex, contractIndex } = target
     const contractEntries = contracts[abiKey]
@@ -208,20 +350,6 @@ export function EncodeDestinationModal({
 
     const isList = target.isArray
 
-    const applyArrayValue = (arr: string[]) => {
-      const newForm = {
-        ...existingForm,
-        [paramName]: safeStringify(arr),
-      }
-
-      setSelectedAbiKey(abiKey)
-      setSelectedAddress(abiKey, contractIndex)
-      setSelectedFunction(abiKey, func.functionId)
-      setFormState(abiKey, func.functionId, newForm)
-      addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
-      onComplete?.()
-    }
-
     const applyBytesValue = (value: string) => {
       const newForm = {
         ...existingForm,
@@ -232,27 +360,25 @@ export function EncodeDestinationModal({
       setSelectedAddress(abiKey, contractIndex)
       setSelectedFunction(abiKey, func.functionId)
       setFormState(abiKey, func.functionId, newForm)
-      addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
+      commitEncodeDestination(target)
       onComplete?.()
     }
 
     if (isList) {
-      if (!existingValue) {
-        applyArrayValue([encodedData])
-        onOpenChange(false)
-        return
-      }
-
       let existingArray: string[]
-      try {
-        const parsed = JSON.parse(existingValue)
-        if (Array.isArray(parsed)) {
-          existingArray = parsed.map((v) => String(v))
-        } else {
-          existingArray = [String(parsed)]
+      if (!existingValue) {
+        existingArray = []
+      } else {
+        try {
+          const parsed = JSON.parse(existingValue)
+          if (Array.isArray(parsed)) {
+            existingArray = parsed.map((v) => String(v))
+          } else {
+            existingArray = [String(parsed)]
+          }
+        } catch {
+          existingArray = [String(existingValue)]
         }
-      } catch {
-        existingArray = [String(existingValue)]
       }
 
       setListPromptTarget(target)
@@ -261,16 +387,49 @@ export function EncodeDestinationModal({
       return
     }
 
-    if (existingValue) {
-      setBytesPromptTarget(target)
-      setBytesPromptExisting(existingValue)
-      setBytesPromptOpen(true)
-      return
-    }
-
-    applyBytesValue(encodedData)
+    applyBytesValue(data)
     onOpenChange(false)
-  }
+  },
+    [
+      encodedData,
+      contracts,
+      currentChainOnly,
+      chainId,
+      getFormState,
+      setSelectedAbiKey,
+      setSelectedAddress,
+      setSelectedFunction,
+      setFormState,
+      commitEncodeDestination,
+      onComplete,
+      onOpenChange,
+    ]
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      applyLastDestination: (data: string) => {
+        if (!data.trim()) return false
+        const resolved = resolveLastTargetFromStore()
+        if (!resolved) return false
+        if (
+          resolved.abiKey === sourceAbiKey &&
+          resolved.func.functionId === sourceFunctionId
+        ) {
+          return false
+        }
+        handleSelectTarget(resolved, data)
+        return true
+      },
+    }),
+    [
+      resolveLastTargetFromStore,
+      sourceAbiKey,
+      sourceFunctionId,
+      handleSelectTarget,
+    ]
+  )
 
   const groupedByAbi = useMemo(() => {
     const groups: Record<
@@ -454,8 +613,8 @@ export function EncodeDestinationModal({
             <DialogTitle>Send Encoded Bytes To Function</DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-center gap-2 mb-3">
-            <div className="relative flex-1">
+          <div className="space-y-2 mb-3">
+            <div className="relative w-full">
               <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by ABI, contract, function, or parameter..."
@@ -465,29 +624,63 @@ export function EncodeDestinationModal({
                 autoFocus
               />
             </div>
-            <Button
-              type="button"
-              variant={currentChainOnly ? "default" : "outline"}
-              onClick={() => setCurrentChainOnly((prev) => !prev)}
-              className={cn(
-                "text-xs px-2 h-8 flex items-center gap-1.5",
-                currentChainOnly ? "bg-primary text-primary-foreground" : ""
-              )}
-            >
-              {currentChainOnly ? (
-                <Check className="h-3 w-3" />
-              ) : (
-                <Square className="h-3 w-3" />
-              )}
-              Current Chain Only
-            </Button>
+            <div className="flex flex-nowrap gap-1.5 w-full">
+              <Button
+                type="button"
+                variant={currentContractOnly ? "default" : "outline"}
+                onClick={() => setCurrentContractOnly((prev) => !prev)}
+                className={cn(
+                  "text-[11px] px-2 h-8 flex-1 min-w-0 flex items-center justify-center gap-1",
+                  currentContractOnly ? "bg-primary text-primary-foreground" : ""
+                )}
+              >
+                {currentContractOnly ? (
+                  <Check className="h-3 w-3 shrink-0" />
+                ) : (
+                  <Square className="h-3 w-3 shrink-0" />
+                )}
+                <span className="truncate">Current Contract Only</span>
+              </Button>
+              <Button
+                type="button"
+                variant={currentChainOnly ? "default" : "outline"}
+                onClick={() => setCurrentChainOnly((prev) => !prev)}
+                className={cn(
+                  "text-[11px] px-2 h-8 flex-1 min-w-0 flex items-center justify-center gap-1",
+                  currentChainOnly ? "bg-primary text-primary-foreground" : ""
+                )}
+              >
+                {currentChainOnly ? (
+                  <Check className="h-3 w-3 shrink-0" />
+                ) : (
+                  <Square className="h-3 w-3 shrink-0" />
+                )}
+                <span className="truncate">Current Chain Only</span>
+              </Button>
+              <Button
+                type="button"
+                variant={byteArraysOnly ? "default" : "outline"}
+                onClick={() => setByteArraysOnly((prev) => !prev)}
+                className={cn(
+                  "text-[11px] px-2 h-8 flex-1 min-w-0 flex items-center justify-center gap-1",
+                  byteArraysOnly ? "bg-primary text-primary-foreground" : ""
+                )}
+              >
+                {byteArraysOnly ? (
+                  <Check className="h-3 w-3 shrink-0" />
+                ) : (
+                  <Square className="h-3 w-3 shrink-0" />
+                )}
+                <span className="truncate">Byte Arrays Only</span>
+              </Button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto border rounded-md p-2 text-xs">
             {filteredTargets.length === 0 && filteredRecent.length === 0 ? (
               <div className="text-center text-muted-foreground py-8 text-sm">
                 {targets.length === 0
-                  ? "No functions with bytes parameters found in your configured contracts."
+                  ? "No matching byte parameter slots with the current filters. Try widening contract, chain, or byte-array filters."
                   : "No matching functions found for this search."}
               </div>
             ) : (
@@ -513,40 +706,62 @@ export function EncodeDestinationModal({
       </Dialog>
 
       <Dialog open={listPromptOpen} onOpenChange={setListPromptOpen}>
-        <DialogContent className="max-w-xl h-[90vh] flex flex-col">
+        <DialogContent className="max-w-[min(54rem,calc(100vw-2rem))] h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{listPromptTarget?.func.displayName || "Function"}.bytes[] has existing entries</DialogTitle>
+            <DialogTitle className="text-base leading-snug pr-6">
+              {listPromptTarget ? (
+                <>
+                  Encoding to {listPromptTarget.contractLabel} 🠊{" "}
+                  {listPromptTarget.func.displayName} 🠊{" "}
+                  {(() => {
+                    const p = listPromptTarget.func.inputs[listPromptTarget.paramIndex]
+                    return p.name && p.name.length > 0 ? p.name : `arg${listPromptTarget.paramIndex}`
+                  })()}
+                </>
+              ) : (
+                "Encoding to bytes[]"
+              )}
+            </DialogTitle>
           </DialogHeader>
-          <div className="text-sm mb-3">
-            Select where to insert your encoded <span className="font-mono">{sourceFunctionName}</span> bytes.
+          <div className="text-sm text-muted-foreground mb-3">
+            New item is placed at the end by default. Use the arrows to insert elsewhere.
           </div>
 
-          <div className="flex items-center space-x-2 mb-3">
-            <Checkbox
-              id="clear-existing"
-              checked={clearExistingFirst}
-              onCheckedChange={(checked) => {
-                setClearExistingFirst(checked === true)
-                if (checked) {
-                  setSelectedInsertIndex(null)
-                } else {
-                  setSelectedInsertIndex(null)
-                }
-              }}
-            />
-            <Label htmlFor="clear-existing" className="text-sm cursor-pointer">
-              Clear Existing Data First
-            </Label>
-          </div>
+          {listPromptExisting !== null && listPromptExisting.length > 0 ? (
+            <div className="flex items-center space-x-2 mb-3">
+              <Checkbox
+                id="clear-existing"
+                checked={clearExistingFirst}
+                onCheckedChange={(checked) => {
+                  const on = checked === true
+                  setClearExistingFirst(on)
+                  if (!on && listPromptExisting) {
+                    setSelectedInsertIndex(listPromptExisting.length)
+                  }
+                }}
+              />
+              <Label htmlFor="clear-existing" className="text-sm cursor-pointer">
+                Clear existing first
+              </Label>
+            </div>
+          ) : null}
 
-          <div className="border rounded-md p-3 mb-4 flex-1 min-h-0 overflow-y-auto min-w-[500px]">
+          <div className="border rounded-md p-3 mb-4 flex-1 min-h-0 overflow-y-auto min-w-[min(750px,100%)]">
+            {listPromptExisting && listPromptExisting.length === 0 && encodedData ? (
+              <div className="w-full flex items-center gap-2">
+                <CirclePlus className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0 p-2 rounded border border-emerald-500/60 bg-emerald-500/10 text-xs font-mono flex items-center gap-0 overflow-hidden whitespace-nowrap">
+                  {bytesListRowInner(encodedData, sourceFunctionName)}
+                </div>
+              </div>
+            ) : null}
             {listPromptExisting && listPromptExisting.length > 0 ? (
               <div className="space-y-2">
                 {clearExistingFirst && encodedData && (
                   <div className="w-full flex items-center gap-2">
                     <CirclePlus className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 p-2 rounded border border-emerald-500/60 bg-emerald-500/10 text-xs font-mono overflow-hidden text-ellipsis whitespace-nowrap">
-                      {encodedData.length > 60 ? `${encodedData.slice(0, 60)}...` : encodedData}
+                    <div className="flex-1 min-w-0 p-2 rounded border border-emerald-500/60 bg-emerald-500/10 text-xs font-mono flex items-center gap-0 overflow-hidden whitespace-nowrap">
+                      {bytesListRowInner(encodedData, sourceFunctionName)}
                     </div>
                   </div>
                 )}
@@ -584,13 +799,13 @@ export function EncodeDestinationModal({
                       )}
                       <div
                         className={cn(
-                          "flex-1 min-w-0 p-2 rounded border text-xs font-mono overflow-hidden text-ellipsis whitespace-nowrap",
+                          "flex-1 min-w-0 p-2 rounded border text-xs font-mono flex items-center gap-0 overflow-hidden whitespace-nowrap",
                           clearExistingFirst
                             ? "bg-red-500/10 border-red-500/60"
                             : "bg-muted/30"
                         )}
                       >
-                        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{item}</span>
+                        {bytesListRowInner(item, null)}
                       </div>
                       {!clearExistingFirst && (
                         <Button
@@ -612,8 +827,10 @@ export function EncodeDestinationModal({
                   const greenRow = (
                     <div className="w-full flex items-center gap-2">
                       <CirclePlus className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      <div className="flex-1 min-w-0 p-2 rounded border border-emerald-500/60 bg-emerald-500/10 text-xs font-mono overflow-hidden text-ellipsis whitespace-nowrap">
-                        {encodedData && (encodedData.length > 60 ? `${encodedData.slice(0, 60)}...` : encodedData)}
+                      <div className="flex-1 min-w-0 p-2 rounded border border-emerald-500/60 bg-emerald-500/10 text-xs font-mono flex items-center gap-0 overflow-hidden whitespace-nowrap">
+                        {encodedData
+                          ? bytesListRowInner(encodedData, sourceFunctionName)
+                          : null}
                       </div>
                     </div>
                   )
@@ -641,34 +858,33 @@ export function EncodeDestinationModal({
                   return <div key={index} className="w-full">{baseRow}</div>
                 })}
               </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">No existing entries</div>
-            )}
+            ) : null}
           </div>
 
-          <div className="flex flex-col items-stretch gap-2 mt-auto pt-4 border-t">
+          <div className="flex flex-row items-stretch gap-2 mt-auto pt-4 border-t">
             <Button
               type="button"
               variant="default"
-              disabled={!clearExistingFirst && selectedInsertIndex === null}
+              className="flex-1"
+              disabled={!encodedData || !listPromptTarget || listPromptExisting === null}
               onClick={async () => {
-                if (!encodedData || !listPromptTarget || !listPromptExisting) return
+                if (!encodedData || !listPromptTarget || listPromptExisting === null) return
                 const { abiKey, func, paramIndex } = listPromptTarget
                 const param = func.inputs[paramIndex]
                 const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
                 const existingForm = getFormState(abiKey, func.functionId) || {}
+                const existing = listPromptExisting
 
                 let newArray: string[]
                 if (clearExistingFirst) {
                   newArray = [encodedData]
-                } else if (selectedInsertIndex !== null) {
-                  newArray = [
-                    ...listPromptExisting.slice(0, selectedInsertIndex),
-                    encodedData,
-                    ...listPromptExisting.slice(selectedInsertIndex),
-                  ]
                 } else {
-                  return
+                  const at = selectedInsertIndex ?? existing.length
+                  newArray = [
+                    ...existing.slice(0, at),
+                    encodedData,
+                    ...existing.slice(at),
+                  ]
                 }
 
                 const newForm = {
@@ -677,7 +893,7 @@ export function EncodeDestinationModal({
                 }
 
                 setFormState(abiKey, func.functionId, newForm)
-                addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
+                commitEncodeDestination(listPromptTarget)
                 setListPromptOpen(false)
                 setClearExistingFirst(false)
                 setSelectedInsertIndex(null)
@@ -685,30 +901,32 @@ export function EncodeDestinationModal({
                 onComplete?.()
               }}
             >
+              <ArrowLeft className="h-4 w-4 shrink-0 mr-2" />
               Accept & Return to {sourceFunctionName}
             </Button>
             <Button
               type="button"
               variant="default"
-              disabled={!clearExistingFirst && selectedInsertIndex === null}
+              className="flex-1"
+              disabled={!encodedData || !listPromptTarget || listPromptExisting === null}
               onClick={async () => {
-                if (!encodedData || !listPromptTarget || !listPromptExisting) return
+                if (!encodedData || !listPromptTarget || listPromptExisting === null) return
                 const { abiKey, func, paramIndex, contractIndex } = listPromptTarget
                 const param = func.inputs[paramIndex]
                 const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
                 const existingForm = getFormState(abiKey, func.functionId) || {}
+                const existing = listPromptExisting
 
                 let newArray: string[]
                 if (clearExistingFirst) {
                   newArray = [encodedData]
-                } else if (selectedInsertIndex !== null) {
-                  newArray = [
-                    ...listPromptExisting.slice(0, selectedInsertIndex),
-                    encodedData,
-                    ...listPromptExisting.slice(selectedInsertIndex),
-                  ]
                 } else {
-                  return
+                  const at = selectedInsertIndex ?? existing.length
+                  newArray = [
+                    ...existing.slice(0, at),
+                    encodedData,
+                    ...existing.slice(at),
+                  ]
                 }
 
                 const newForm = {
@@ -720,7 +938,7 @@ export function EncodeDestinationModal({
                 setSelectedAddress(abiKey, contractIndex)
                 setSelectedFunction(abiKey, func.functionId)
                 setFormState(abiKey, func.functionId, newForm)
-                addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
+                commitEncodeDestination(listPromptTarget)
                 setListPromptOpen(false)
                 setClearExistingFirst(false)
                 setSelectedInsertIndex(null)
@@ -728,84 +946,11 @@ export function EncodeDestinationModal({
               }}
             >
               Accept & Go to {listPromptTarget?.func.displayName || "destination"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={bytesPromptOpen} onOpenChange={setBytesPromptOpen}>
-        <DialogContent className="max-w-xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Bytes Parameter Already Has Value</DialogTitle>
-          </DialogHeader>
-          <div className="text-sm mb-3">
-            There is an existing value in this <code>bytes</code> parameter already.
-          </div>
-          <div className="border rounded-md p-2 mb-4 max-h-40 overflow-y-auto">
-            <ResultRenderer value={bytesPromptExisting ?? ""} defaultFormat="yaml" />
-          </div>
-          <div className="text-sm mb-3">
-            How should we apply your encoded <span className="font-mono">{sourceFunctionName}</span> function?
-          </div>
-          <div className="flex items-center justify-end gap-2 mt-auto pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setBytesPromptOpen(false)
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={async () => {
-                if (!encodedData || !bytesPromptTarget) return
-                const { abiKey, func, paramIndex } = bytesPromptTarget
-                const param = func.inputs[paramIndex]
-                const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
-                const existingForm = getFormState(abiKey, func.functionId) || {}
-                const newForm = {
-                  ...existingForm,
-                  [paramName]: encodedData,
-                }
-                setFormState(abiKey, func.functionId, newForm)
-                addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
-                setBytesPromptOpen(false)
-                onOpenChange(false)
-                onComplete?.()
-              }}
-            >
-              Accept & Return to {sourceFunctionName}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={async () => {
-                if (!encodedData || !bytesPromptTarget) return
-                const { abiKey, func, paramIndex, contractIndex } = bytesPromptTarget
-                const param = func.inputs[paramIndex]
-                const paramName = param.name && param.name.length > 0 ? param.name : `arg${paramIndex}`
-                const existingForm = getFormState(abiKey, func.functionId) || {}
-                const newForm = {
-                  ...existingForm,
-                  [paramName]: encodedData,
-                }
-                setSelectedAbiKey(abiKey)
-                setSelectedAddress(abiKey, contractIndex)
-                setSelectedFunction(abiKey, func.functionId)
-                setFormState(abiKey, func.functionId, newForm)
-                addEncodeDestination({ abiKey, functionId: func.functionId, paramIndex })
-                setBytesPromptOpen(false)
-                onOpenChange(false)
-              }}
-            >
-              Accept & Go to {bytesPromptTarget?.func.displayName || "destination"}
+              <ArrowRight className="h-4 w-4 shrink-0 ml-2" />
             </Button>
           </div>
         </DialogContent>
       </Dialog>
     </>
   )
-}
+})

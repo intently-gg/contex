@@ -22,6 +22,15 @@ interface EncodeDestination {
   timestamp: number
 }
 
+/** Session-only (not persisted): last successful "encode to destination" for quick re-send */
+export interface LastEncodeSendTarget {
+  abiKey: string
+  functionId: string
+  paramIndex: number
+  contractAddress: string
+  funcDisplayName: string
+}
+
 interface ContractStore {
   contracts: ContractsRegistry
   selectedAbiKey: string | null
@@ -32,6 +41,7 @@ interface ContractStore {
   initializeFormState: () => void
   favorites: Record<string, string[]> // abiKey -> functionName[]
   encodeDestinations: EncodeDestination[]
+  lastEncodeSendTarget: LastEncodeSendTarget | null
   setContracts: (contracts: ContractsRegistry) => void
   setSelectedAbiKey: (abiKey: string | null) => void
   setSelectedFunction: (abiKey: string, functionName: string | null) => void
@@ -64,6 +74,7 @@ interface ContractStore {
   clearReadResultsForContract: (abiKey: string) => void
   addEncodeDestination: (destination: Omit<EncodeDestination, "timestamp">) => void
   getRecentEncodeDestinations: () => EncodeDestination[]
+  setLastEncodeSendTarget: (target: LastEncodeSendTarget | null) => void
 }
 
 function getResultKey(
@@ -86,6 +97,7 @@ export const useContractStore = create<ContractStore>()(
       formState: {},
       favorites: {},
       encodeDestinations: [],
+      lastEncodeSendTarget: null,
 
       setContracts: (contracts) => set({ contracts }),
 
@@ -243,6 +255,8 @@ export const useContractStore = create<ContractStore>()(
           .encodeDestinations.filter((d) => d.timestamp >= fiveDaysAgo)
           .sort((a, b) => b.timestamp - a.timestamp)
       },
+
+      setLastEncodeSendTarget: (target) => set({ lastEncodeSendTarget: target }),
     }),
     {
       name: "contract-explorer-storage",
