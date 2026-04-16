@@ -8,7 +8,7 @@ import { getABILabel } from "@/lib/abiLabels"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Pencil, Copy, ExternalLink, Check, Plus, Search, Network, AlertCircle } from "lucide-react"
 import { FunctionSidebar } from "./FunctionSidebar"
 import { SelectedFunctionView } from "./SelectedFunctionView"
@@ -429,61 +429,83 @@ export function ContractView({ abiKey }: ContractViewProps) {
               </Select>
             )}
             {selectedAddress && (
+              <TooltipProvider delayDuration={0}>
               <div className="flex items-center" style={{ gap: '4px' }}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsSearchModalOpen(true)}
-                  style={{
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)'
-                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsEditAddressOpen(true)}
-                  style={{
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)'
-                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsAddContractOpen(true)}
-                  style={{
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)'
-                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsSearchModalOpen(true)}
+                      style={{
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Search Contracts & Addresses</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsEditAddressOpen(true)}
+                      style={{
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit Contract Address</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsAddContractOpen(true)}
+                      style={{
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add New Contract Address</p>
+                  </TooltipContent>
+                </Tooltip>
                 {scannerUrl && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -547,6 +569,7 @@ export function ContractView({ abiKey }: ContractViewProps) {
                   </TooltipContent>
                 </Tooltip>
               </div>
+              </TooltipProvider>
             )}
           </div>
         </div>

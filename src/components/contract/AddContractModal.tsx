@@ -398,12 +398,12 @@ export function AddContractModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === "select-abi" ? "Select ABI" : "Add Contract Details"}
+            {step === "select-abi" ? "Select ABI" : "Add New Contract Address"}
           </DialogTitle>
           <DialogDescription>
             {step === "select-abi"
               ? "Choose an ABI file to register a contract"
-              : "Enter the contract details below"}
+              : "Enter the contract address details below"}
           </DialogDescription>
         </DialogHeader>
 
