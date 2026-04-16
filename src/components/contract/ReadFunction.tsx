@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useChainId } from "wagmi"
 import { encodeFunctionData } from "viem"
 import { useReadContractFunction } from "@/hooks/useContractFunctions"
-import { generateFormFields, parseInputValue } from "@/lib/formGenerator"
+import { generateFormFields, parseInputValue, isTupleType } from "@/lib/formGenerator"
 import { useContractStore } from "@/stores/contractStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { InputControl } from "@/components/shared/InputControl"
 import { ResultPane } from "@/components/shared/ResultPane"
 import { ValueParserModal } from "./ValueParserModal"
 import { TupleHelperModal } from "./TupleHelperModal"
+import { TupleHelper } from "./TupleHelper"
 import { ListHelperModal } from "./ListHelperModal"
 import { BytesHelperModal } from "./BytesHelperModal"
 import { AddressHelperModal } from "./AddressHelperModal"
@@ -384,22 +385,63 @@ export function ReadFunction({
 
               {/* Input Fields */}
               {formFields.length > 0 && (
-                <div className="space-y-1 pr-[5px]">
-                  {formFields.map((field) => (
-                    <InputControl
-                      key={field.name}
-                      fieldName={field.name}
-                      fieldType={field.type}
-                      abiParam={field.abiParam}
-                      value={inputs[field.name] ?? ""}
-                      onChange={(value) => handleInputChange(field.name, value)}
-                      onValueHelper={(name) => setValueParserOpen(name)}
-                      onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
-                      onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
-                      onBytesHelper={(name, param) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue: String(inputs[name] || "") })}
-                      onAddressHelper={(name, param) => setAddressHelperOpen({ fieldName: name, abiParam: param })}
-                    />
-                  ))}
+                <div className="space-y-3 pr-[5px]">
+                  {formFields.map((field) =>
+                    isTupleType(field.type) ? (
+                      <TupleHelper
+                        key={field.name}
+                        fieldName={field.name}
+                        abiParam={field.abiParam}
+                        currentValue={String(inputs[field.name] ?? "")}
+                        active
+                        variant="inline"
+                        onLiveChange={(v) => handleInputChange(field.name, v)}
+                        onTupleHelper={(name, param) =>
+                          setTupleHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                        onListHelper={(name, param) =>
+                          setListHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                        onBytesHelper={(name, param, currentValue) =>
+                          setBytesHelperOpen({
+                            fieldName: name,
+                            abiParam: param,
+                            currentValue: currentValue ?? String(inputs[name] || ""),
+                          })
+                        }
+                        abiKey={abiKey}
+                        address={address}
+                        functionName={func.name}
+                        className="rounded-lg border border-border p-3 space-y-2"
+                      />
+                    ) : (
+                      <InputControl
+                        key={field.name}
+                        fieldName={field.name}
+                        fieldType={field.type}
+                        abiParam={field.abiParam}
+                        value={inputs[field.name] ?? ""}
+                        onChange={(value) => handleInputChange(field.name, value)}
+                        onValueHelper={(name) => setValueParserOpen(name)}
+                        onTupleHelper={(name, param) =>
+                          setTupleHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                        onListHelper={(name, param) =>
+                          setListHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                        onBytesHelper={(name, param) =>
+                          setBytesHelperOpen({
+                            fieldName: name,
+                            abiParam: param,
+                            currentValue: String(inputs[name] || ""),
+                          })
+                        }
+                        onAddressHelper={(name, param) =>
+                          setAddressHelperOpen({ fieldName: name, abiParam: param })
+                        }
+                      />
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -459,7 +501,6 @@ export function ReadFunction({
           fieldName={tupleHelperOpen.fieldName}
           abiParam={tupleHelperOpen.abiParam}
           currentValue={String(inputs[tupleHelperOpen.fieldName] || "")}
-          onValueHelper={(name) => setValueParserOpen(name)}
           onTupleHelper={(name, param) => setTupleHelperOpen({ fieldName: name, abiParam: param })}
           onListHelper={(name, param) => setListHelperOpen({ fieldName: name, abiParam: param })}
           onBytesHelper={(name, param, currentValue) => setBytesHelperOpen({ fieldName: name, abiParam: param, currentValue })}

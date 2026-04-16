@@ -21,6 +21,8 @@
     --border: 214.3 31.8% 70.4%;
     --input: 214.3 31.8% 91.4%;
     --input-bg: 210 40% 97.5%;
+    /* Slightly lighter than input surfaces — groups inline tuple helper + nested fields */
+    --tuple-helper-nest: 210 48% 99.1%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
@@ -50,6 +52,7 @@
     --border: 217.2 32.6% 25.5%;
     --input: 217.2 32.6% 17.5%;
     --input-bg: 217.2 32.6% 8%;
+    --tuple-helper-nest: 217 30% 10.5%;
     --ring: 212.7 26.8% 83.9%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -115,6 +118,10 @@
   
   .border-border-50 {
     border-color: hsl(var(--border) / 0.5);
+  }
+
+  .bg-tuple-helper-nest {
+    background-color: hsl(var(--tuple-helper-nest));
   }
 
   /* Force hover backgrounds on all buttons using CSS custom properties */

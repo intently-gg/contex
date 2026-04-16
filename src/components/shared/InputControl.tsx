@@ -17,6 +17,27 @@ import { stringify as yamlStringify } from "yaml"
 import Editor from "@monaco-editor/react"
 import { toast } from "sonner"
 import type { AbiParameter } from "viem"
+import { ResultRenderer } from "@/components/shared/ResultRenderer"
+
+/** Parsed JSON array for tuple / tuple[] previews; `null` if empty or invalid. */
+function parseJsonArrayForAbi(value: unknown, expectedLength: number | null): unknown[] | null {
+  if (value === null || value === undefined || value === "") return null
+  let parsed: unknown
+  if (Array.isArray(value)) {
+    parsed = value
+  } else if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      return null
+    }
+  } else {
+    return null
+  }
+  if (!Array.isArray(parsed)) return null
+  if (expectedLength !== null && parsed.length !== expectedLength) return null
+  return parsed
+}
 
 interface InputControlProps {
   fieldName: string
@@ -256,9 +277,26 @@ export function InputControl({
       // Check if it's an array
       if (fieldType.includes("[]")) {
         const baseType = fieldType.replace("[]", "")
-        let placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
-        if (baseType.startsWith("tuple")) {
-          placeholder = "Recommended to use the helper ➔"
+        const placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
+        if (baseType.startsWith("tuple") && onListHelper) {
+          const previewArr = parseJsonArrayForAbi(value, null)
+          if (previewArr !== null) {
+            return (
+              <div className="h-[180px] w-full min-w-0 flex flex-col">
+                <ResultRenderer
+                  value={previewArr}
+                  abiParam={abiParam}
+                  className="min-h-0 flex-1"
+                  minHeight={160}
+                />
+              </div>
+            )
+          }
+          return (
+            <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
+              Configure list items in the helper to see preview
+            </div>
+          )
         }
         return (
           <Textarea
@@ -393,8 +431,29 @@ export function InputControl({
     // For arrays/lists, use textarea to allow JSON editing
     if (isArray) {
       const baseType = fieldType.replace("[]", "")
+      if (baseType.startsWith("tuple") && onListHelper) {
+        const previewArr = parseJsonArrayForAbi(value, null)
+        if (previewArr !== null) {
+          return (
+            <div className="h-[180px] w-full min-w-0 flex flex-col">
+              <ResultRenderer
+                value={previewArr}
+                abiParam={abiParam}
+                className="min-h-0 flex-1"
+                minHeight={160}
+              />
+            </div>
+          )
+        }
+        return (
+          <div className="text-muted-foreground text-sm h-32 flex items-center justify-center border rounded-md">
+            Configure list items in the helper to see preview
+          </div>
+        )
+      }
+
       let placeholder = `JSON array, e.g. ["value1", "value2"]`
-      
+
       if (baseType.includes("bytes")) {
         placeholder = `Array of bytes, e.g. ["0x123...", "0xABC..."]`
       } else if (baseType === "address") {
@@ -403,10 +462,8 @@ export function InputControl({
         placeholder = `Array of numbers, e.g. [1, 2, 3]`
       } else if (baseType === "string") {
         placeholder = `Array of strings, e.g. ["value1", "value2"]`
-      } else if (baseType.startsWith("tuple")) {
-        placeholder = "Recommended to use the helper ➔"
       }
-      
+
       return (
         <Textarea
           id={fieldName}
@@ -495,14 +552,6 @@ export function InputControl({
     )
   }
 
-  // Get placeholder for tuple types
-  const getTuplePlaceholder = () => {
-    if (isTuple) {
-      return "Recommended to use the helper ➔"
-    }
-    return undefined
-  }
-
   // Serialize tuple value for display
   const getTupleDisplayValue = (): string => {
     if (value === null || value === undefined || value === "") {
@@ -520,74 +569,35 @@ export function InputControl({
     return String(value)
   }
 
-  // Get tuple info for display
-  const getTupleInfo = (): { internalType: string | null; components: string | null } | null => {
-    const isTupleType = fieldType === "tuple" || fieldType === "tuple[]" || fieldType.startsWith("tuple[")
-    if (!isTupleType) return null
-    
-    const hasInternalType = abiParam.internalType && typeof abiParam.internalType === "string"
-    const components = (abiParam as any).components as readonly AbiParameter[] | undefined
-    const hasComponents = components && Array.isArray(components) && components.length > 0
-    
-    if (!hasInternalType && !hasComponents) return null
-    
-    let internalType: string | null = null
-    if (hasInternalType && abiParam.internalType) {
-      internalType = abiParam.internalType.replace(/^struct\s+/i, "")
+  const tupleStructLabel = useMemo(() => {
+    const isTupleShape =
+      fieldType === "tuple" || fieldType === "tuple[]" || fieldType.startsWith("tuple[")
+    if (!isTupleShape || !abiParam.internalType || typeof abiParam.internalType !== "string") {
+      return null
     }
-    
-    let componentsStr: string | null = null
-    if (hasComponents && components) {
-      const componentStr = components
-        .map((comp: AbiParameter) => `${comp.name || "unnamed"}: ${comp.type}`)
-        .join(", ")
-      componentsStr = `(${componentStr})`
-    }
-    
-    return { internalType, components: componentsStr }
-  }
-
-  const tupleInfo = getTupleInfo()
+    return abiParam.internalType.replace(/^struct\s+/i, "")
+  }, [fieldType, abiParam])
 
   return (
     <div className={`space-y-1 ${className || ""}`}>
       <Label htmlFor={fieldName} className="text-sm">
         {fieldName} <span style={{ color: 'hsl(var(--muted-foreground))' }}>({fieldType})</span>
       </Label>
-      {tupleInfo && (
-        <div className="space-y-0.5">
-          {tupleInfo.internalType && (
-            <div 
-              className="text-xs truncate"
-              style={{ 
-                color: '#60a5fa',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-              title={tupleInfo.internalType}
-            >
-              {tupleInfo.internalType}
-            </div>
-          )}
-          {tupleInfo.components && (
-            <div 
-              className="text-xs truncate"
-              style={{ 
-                color: '#7c8fa8',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-              title={tupleInfo.components}
-            >
-              {tupleInfo.components}
-            </div>
-          )}
+      {tupleStructLabel ? (
+        <div
+          className="text-xs truncate"
+          style={{
+            color: "#60a5fa",
+            maxWidth: "100%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={`Struct: ${tupleStructLabel}`}
+        >
+          Struct: {tupleStructLabel}
         </div>
-      )}
+      ) : null}
       {needsBytesHelper && matchedFunction && (
         <div className="flex items-center gap-1" style={{ color: '#22c55e', fontSize: '0.875rem' }}>
           <ScanEye className="h-3.5 w-3.5" style={{ color: '#22c55e' }} />
@@ -668,7 +678,7 @@ export function InputControl({
           {isTuple ? (
             <Textarea
               id={fieldName}
-              placeholder={getTuplePlaceholder()}
+              placeholder=""
               value={getTupleDisplayValue()}
               onChange={(e) => {
                 const val = e.target.value

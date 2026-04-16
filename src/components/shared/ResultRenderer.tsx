@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useId } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -25,6 +25,7 @@ interface ResultRendererProps {
 }
 
 export function ResultRenderer({ value, className, defaultFormat = "yaml", abiParam, minHeight }: ResultRendererProps) {
+  const formatGroupId = useId()
   const { theme } = useThemeStore()
   const { abis } = useABIStore()
   const [format, setFormat] = useState<"yaml" | "json" | "raw">(defaultFormat)
@@ -288,20 +289,20 @@ export function ResultRenderer({ value, className, defaultFormat = "yaml", abiPa
             className="flex items-center gap-3"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yaml" id="renderer-yaml" />
-              <Label htmlFor="renderer-yaml" className="text-sm font-normal cursor-pointer">
+              <RadioGroupItem value="yaml" id={`${formatGroupId}-yaml`} />
+              <Label htmlFor={`${formatGroupId}-yaml`} className="text-sm font-normal cursor-pointer">
                 YAML
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="json" id="renderer-json" />
-              <Label htmlFor="renderer-json" className="text-sm font-normal cursor-pointer">
+              <RadioGroupItem value="json" id={`${formatGroupId}-json`} />
+              <Label htmlFor={`${formatGroupId}-json`} className="text-sm font-normal cursor-pointer">
                 JSON
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="raw" id="renderer-raw" />
-              <Label htmlFor="renderer-raw" className="text-sm font-normal cursor-pointer">
+              <RadioGroupItem value="raw" id={`${formatGroupId}-raw`} />
+              <Label htmlFor={`${formatGroupId}-raw`} className="text-sm font-normal cursor-pointer">
                 RAW
               </Label>
             </div>
