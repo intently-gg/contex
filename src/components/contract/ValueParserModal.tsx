@@ -42,6 +42,12 @@ function getMemoryKey(abiKey: string, address: string, functionName: string, fie
   return `${abiKey}:${address}:${functionName}:${fieldName}`
 }
 
+function rememberIntegerDecimals(memoryKey: string | null, decimalsStr: string) {
+  if (memoryKey) {
+    decimalsMemory[memoryKey] = decimalsStr
+  }
+}
+
 function formatUnixTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000)
   const year = date.getFullYear()
@@ -187,12 +193,12 @@ export function ValueParserModal({
     ? getMemoryKey(abiKey, address, functionName, fieldName)
     : null
   
-  // Initialize decimals from memory or default
+  // Initialize decimals from memory or default (18 matches ether / typical ERC-20 units)
   const [decimals, setDecimals] = useState(() => {
     if (memoryKey && decimalsMemory[memoryKey]) {
       return decimalsMemory[memoryKey]
     }
-    return isWei ? "18" : "0"
+    return "18"
   })
   const [units, setUnits] = useState("")
   const previewRef = useRef<HTMLDivElement | null>(null)
@@ -226,12 +232,16 @@ export function ValueParserModal({
         setChainMode("blockNumber")
       }
       
-      // If currentValue exists and we have saved decimals, try to load it
-      if (currentValue && memoryKey && decimalsMemory[memoryKey]) {
+      // Decode the field's raw integer into units using this modal's decimal scale
+      // (decimals state persists per field instance; memoryKey backs remounts via rememberIntegerDecimals)
+      if (currentValue?.trim()) {
         try {
-          const savedDecimals = Number.parseInt(decimalsMemory[memoryKey], 10)
-          const parsedUnits = formatUnits(BigInt(currentValue), savedDecimals)
-          setUnits(parsedUnits)
+          const d = Number.parseInt(decimals, 10)
+          if (Number.isNaN(d) || d < 0) {
+            setUnits("")
+          } else {
+            setUnits(formatUnits(BigInt(currentValue.trim()), d))
+          }
         } catch {
           setUnits("")
         }
@@ -241,6 +251,9 @@ export function ValueParserModal({
     } else {
       setUnits("")
     }
+    // decimals omitted on purpose: only sync units when dialog open state or field value changes,
+    // not when the user edits the decimals input (would overwrite units mid-edit).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [open, currentValue, memoryKey, chainId, fieldName])
 
   // Real-time preview calculation for uint
@@ -297,6 +310,7 @@ export function ValueParserModal({
 
   const handlePreset = (presetDecimals: string) => {
     setDecimals(presetDecimals)
+    rememberIntegerDecimals(memoryKey, presetDecimals)
   }
 
   const [copied, setCopied] = useState(false)
@@ -577,7 +591,7 @@ export function ValueParserModal({
                         type="number"
                         value={decimals}
                         onChange={(e) => setDecimals(e.target.value)}
-                        placeholder={isWei ? "18" : "0"}
+                        placeholder="18"
                         className="flex-1"
                       />
                       <Button
@@ -602,11 +616,9 @@ export function ValueParserModal({
                         18
                       </Button>
                     </div>
-                    {isWei && (
-                      <p className="text-xs text-muted-foreground">
-                        Default: 18 (for wei/ether). You can override this.
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Default: 18{isWei ? " (wei/ether)" : ""}. You can override.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Preview</Label>
@@ -617,7 +629,14 @@ export function ValueParserModal({
                       Cancel
                     </Button>
                     {!disconnected && preview && preview.type === 'value' && (
-                      <Button onClick={() => handleApply(preview.value!)}>Apply</Button>
+                      <Button
+                        onClick={() => {
+                          rememberIntegerDecimals(memoryKey, decimals)
+                          handleApply(preview.value!)
+                        }}
+                      >
+                        Apply
+                      </Button>
                     )}
                   </DialogFooter>
                 </TabsContent>
