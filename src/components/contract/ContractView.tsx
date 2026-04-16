@@ -220,9 +220,7 @@ export function ContractView({ abiKey }: ContractViewProps) {
   // Wallet connected and chain is enabled - show full interface with sidebar
   return (
     <div className="flex flex-1 min-h-0">
-      {/* Hidden component that renders all ReadFunction components for functions with no params */}
-      {/* This ensures they all receive refreshKey and can auto-refresh */}
-      {/* Key includes address to force remount when address changes */}
+      {/* Batch multicall for zero-arg reads → zustand (sidebar + cache); keyed by address/chain */}
       {selectedAddress && abi && !hasError && (
         <AutoRefreshFunctions
           key={`${abiKey}-${selectedAddress.address}-${chainId}`}

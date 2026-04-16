@@ -1,6 +1,7 @@
-import { useMemo, useEffect } from "react"
-import { useReadContractFunction } from "@/hooks/useContractFunctions"
+import { useEffect, useMemo, useRef } from "react"
+import { useChainId, usePublicClient } from "wagmi"
 import { parseABI } from "@/lib/abiParser"
+import { useContractStore } from "@/stores/contractStore"
 import type { Address, Abi } from "viem"
 
 interface AutoRefreshFunctionsProps {
@@ -10,10 +11,12 @@ interface AutoRefreshFunctionsProps {
   refreshKey?: number
 }
 
+const MULTICALL_CHUNK = 128
+
 /**
- * Hidden component that renders all ReadFunction components for functions with no params.
- * This ensures all such functions receive refreshKey and can auto-refresh.
- * These components are rendered but not displayed (hidden).
+ * When refreshKey bumps (contract / chain / wallet change), batch-reads all
+ * zero-arg view/pure functions via Multicall3 and writes results under each
+ * function's selector id — the same key FunctionSidebar and ReadFunction use.
  */
 export function AutoRefreshFunctions({
   abiKey,
@@ -21,74 +24,100 @@ export function AutoRefreshFunctions({
   abi,
   refreshKey,
 }: AutoRefreshFunctionsProps) {
-  // Get all read functions with no parameters
+  const chainId = useChainId()
+  const publicClient = usePublicClient()
+  const setReadResult = useContractStore((s) => s.setReadResult)
+
   const allFunctions = useMemo(() => {
     const parsed = parseABI(abi)
     return parsed || []
   }, [abi])
+
   const readFunctionsWithNoParams = useMemo(
     () => allFunctions.filter((f) => f.type === "read" && f.inputs.length === 0),
     [allFunctions]
   )
 
-  // Render each function component (hidden) so they can receive refreshKey and auto-refresh
-  return (
-    <div style={{ display: "none" }}>
-      {readFunctionsWithNoParams.map((func) => (
-        <AutoRefreshFunction
-          key={func.functionId}
-          abiKey={abiKey}
-          address={address}
-          abi={abi}
-          functionName={func.name}
-          refreshKey={refreshKey}
-        />
-      ))}
-    </div>
-  )
-}
+  const runIdRef = useRef(0)
 
-interface AutoRefreshFunctionProps {
-  abiKey: string
-  address: Address
-  abi: Abi
-  functionName: string
-  refreshKey?: number
-}
+  useEffect(() => {
+    if (refreshKey === undefined || refreshKey <= 0) return
+    if (!publicClient || !address || !abiKey) return
+    if (readFunctionsWithNoParams.length === 0) return
 
-function AutoRefreshFunction({
-  abiKey,
-  address,
-  abi,
-  functionName,
-  refreshKey,
-}: AutoRefreshFunctionProps) {
-  // Enable query only when refreshKey is set (and > 0)
-  // When component remounts (due to key change), this will be true and query will run
-  const shouldAutoRefresh = refreshKey !== undefined && refreshKey > 0
+    const runId = ++runIdRef.current
+    let cancelled = false
 
-  const { refetch } = useReadContractFunction(
+    const run = async () => {
+      const contracts = readFunctionsWithNoParams.map((f) => ({
+        address,
+        abi: abi as Abi,
+        functionName: f.name,
+      }))
+
+      type McResult =
+        | { status: "success"; result?: unknown }
+        | { status: "failure"; error?: Error }
+
+      let flatResults: McResult[]
+
+      try {
+        flatResults = []
+        for (let i = 0; i < contracts.length; i += MULTICALL_CHUNK) {
+          const chunk = contracts.slice(i, i + MULTICALL_CHUNK)
+          const part = await publicClient.multicall({
+            contracts: chunk,
+            allowFailure: true,
+          })
+          flatResults.push(...part)
+        }
+      } catch (err) {
+        console.error("[AutoRefreshFunctions] multicall failed, falling back to readContract", err)
+        flatResults = await Promise.all(
+          readFunctionsWithNoParams.map(async (f) => {
+            try {
+              const result = await publicClient.readContract({
+                address,
+                abi: abi as Abi,
+                functionName: f.name,
+              })
+              return { status: "success" as const, result }
+            } catch (e) {
+              return {
+                status: "failure" as const,
+                error: e instanceof Error ? e : new Error(String(e)),
+              }
+            }
+          })
+        )
+      }
+
+      if (cancelled || runId !== runIdRef.current) return
+
+      for (let i = 0; i < readFunctionsWithNoParams.length; i++) {
+        const func = readFunctionsWithNoParams[i]
+        const r = flatResults[i]
+        if (r?.status === "success" && r.result !== undefined) {
+          setReadResult(abiKey, chainId, func.functionId, address, r.result)
+        }
+      }
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    refreshKey,
     address,
     abi,
-    functionName,
-    [], // No args for functions with no params
     abiKey,
-    shouldAutoRefresh
-  )
+    chainId,
+    publicClient,
+    readFunctionsWithNoParams,
+    setReadResult,
+  ])
 
-  // Trigger refetch when refreshKey changes
-  // The key prop ensures component remounts when address changes, so this will run
-  useEffect(() => {
-    if (refreshKey !== undefined && refreshKey > 0) {
-      // Small delay to ensure cache is cleared first
-      const timer = setTimeout(() => {
-        refetch()
-      }, 10)
-      return () => clearTimeout(timer)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey])
-
-  return null // This component doesn't render anything visible
+  return null
 }
-

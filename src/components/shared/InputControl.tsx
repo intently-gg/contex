@@ -64,6 +64,13 @@ export function InputControl({
   const needsBytesHelper = matchedFunction !== null && onBytesHelper
   const showDecodedView = needsBytesHelper && autoDecodeBytes && matchedFunction && typeof value === "string" && value.length > 0
 
+  const hasAnyHelper =
+    needsValueParserHelper ||
+    needsTupleHelper ||
+    needsListHelper ||
+    needsBytesHelper ||
+    needsAddressHelper
+
   const recursivelyDecodeBytes = (val: unknown): unknown => {
     if (val === null || val === undefined) {
       return val
@@ -549,90 +556,96 @@ export function InputControl({
           <span style={{ color: '#22c55e' }}>Encoded Function: {matchedFunction.func.name}</span>
         </div>
       )}
-      <div className="flex gap-0.5">
-        {isTuple ? (
-          <Textarea
-            id={fieldName}
-            placeholder={getTuplePlaceholder()}
-            value={getTupleDisplayValue()}
-            onChange={(e) => {
-              const val = e.target.value
-              // Allow tuple characters: [ ] " , space and data type specific chars
-              if (val === "" || /^[\s\[\]\"\,\{\}0-9a-fA-Fx\-\.]*$/.test(val)) {
-                onChange(val)
-              }
-            }}
-            className="flex-1 font-mono text-sm max-h-[150px]"
-            style={{ minHeight: '40px' }}
-          />
-        ) : (
-          renderInput()
-        )}
-        {(needsValueParserHelper || needsTupleHelper || needsListHelper || needsBytesHelper || needsAddressHelper) && (
-          <div className="flex flex-col gap-0.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 flex items-center justify-center"
-                  style={{
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = ''
-                  }}
-                  onClick={() => {
-                    if (needsAddressHelper && onAddressHelper) {
-                      onAddressHelper(fieldName, abiParam)
-                    } else if (needsBytesHelper && onBytesHelper) {
-                      onBytesHelper(fieldName, abiParam)
-                    } else if (needsValueParserHelper && onValueHelper) {
-                      onValueHelper(fieldName)
-                    } else if (needsTupleHelper && onTupleHelper) {
-                      onTupleHelper(fieldName, abiParam)
-                    } else if (needsListHelper && onListHelper) {
-                      onListHelper(fieldName, abiParam)
-                    }
-                  }}
-                >
-                  <Sparkles className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {needsAddressHelper ? "Address Helper" : needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Integer Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
-              </TooltipContent>
-            </Tooltip>
-            {needsBytesHelper && (
+      <div className="flex gap-0.5 items-start">
+        <div className="flex flex-col gap-0.5 shrink-0 w-10">
+          {hasAnyHelper ? (
+            <>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={autoDecodeBytes ? "default" : "outline"}
+                    variant="outline"
                     size="icon"
                     className="h-10 w-10 flex items-center justify-center"
+                    style={{
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = ''
+                    }}
                     onClick={() => {
-                      if (!autoDecodeBytes && !canDecodeBytes && matchedFunction) {
-                        toast.error(
-                          `Could not decode.\n\nThe bytes appear to be for function ${matchedFunction.func.name}, but cannot be successfully decoded.\n\n\nPlease confirm accuracy of input data.`
-                        )
-                        return
+                      if (needsAddressHelper && onAddressHelper) {
+                        onAddressHelper(fieldName, abiParam)
+                      } else if (needsBytesHelper && onBytesHelper) {
+                        onBytesHelper(fieldName, abiParam)
+                      } else if (needsValueParserHelper && onValueHelper) {
+                        onValueHelper(fieldName)
+                      } else if (needsTupleHelper && onTupleHelper) {
+                        onTupleHelper(fieldName, abiParam)
+                      } else if (needsListHelper && onListHelper) {
+                        onListHelper(fieldName, abiParam)
                       }
-                      setAutoDecodeBytes(!autoDecodeBytes)
                     }}
                   >
-                    <Binary className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {autoDecodeBytes ? "Disable auto-decode" : "Enable auto-decode"}
+                  {needsAddressHelper ? "Address Helper" : needsBytesHelper ? "Bytes Helper" : needsValueParserHelper ? "Integer Helper" : needsTupleHelper ? "Tuple Helper" : "List Helper"}
                 </TooltipContent>
               </Tooltip>
-            )}
-          </div>
-        )}
+              {needsBytesHelper && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={autoDecodeBytes ? "default" : "outline"}
+                      size="icon"
+                      className="h-10 w-10 flex items-center justify-center"
+                      onClick={() => {
+                        if (!autoDecodeBytes && !canDecodeBytes && matchedFunction) {
+                          toast.error(
+                            `Could not decode.\n\nThe bytes appear to be for function ${matchedFunction.func.name}, but cannot be successfully decoded.\n\n\nPlease confirm accuracy of input data.`
+                          )
+                          return
+                        }
+                        setAutoDecodeBytes(!autoDecodeBytes)
+                      }}
+                    >
+                      <Binary className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {autoDecodeBytes ? "Disable auto-decode" : "Enable auto-decode"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            <div className="h-10 w-10 shrink-0" aria-hidden />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          {isTuple ? (
+            <Textarea
+              id={fieldName}
+              placeholder={getTuplePlaceholder()}
+              value={getTupleDisplayValue()}
+              onChange={(e) => {
+                const val = e.target.value
+                // Allow tuple characters: [ ] " , space and data type specific chars
+                if (val === "" || /^[\s\[\]\"\,\{\}0-9a-fA-Fx\-\.]*$/.test(val)) {
+                  onChange(val)
+                }
+              }}
+              className="w-full font-mono text-sm max-h-[150px]"
+              style={{ minHeight: '40px' }}
+            />
+          ) : (
+            renderInput()
+          )}
+        </div>
       </div>
     </div>
   )

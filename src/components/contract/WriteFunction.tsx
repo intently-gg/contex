@@ -466,45 +466,49 @@ export function WriteFunction({
               )}
 
               {isPayable && (
-                <div className="space-y-1">
+                <div className="space-y-1 pr-[5px]">
                   <Label htmlFor={`${func.name}-value`} className="text-sm">Value (wei)</Label>
-                  <div className="flex gap-0.5">
-                    <Input
-                      id={`${func.name}-value`}
-                      type="text"
-                      placeholder="0"
-                      value={value}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        // Only allow digits 0-9 (same as uint256)
-                        if (val === "" || /^[0-9]*$/.test(val)) {
-                          setValue(val)
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-10 w-10 flex items-center justify-center"
-                          style={{
-                            transition: 'all 0.2s ease-in-out',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = ''
-                          }}
-                          onClick={() => setValueParserOpen("__eth_value__")}
-                        >
-                          <Sparkles className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Integer Helper</TooltipContent>
-                    </Tooltip>
+                  <div className="flex gap-0.5 items-start">
+                    <div className="flex flex-col gap-0.5 shrink-0 w-10">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 flex items-center justify-center"
+                            style={{
+                              transition: 'all 0.2s ease-in-out',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = ''
+                            }}
+                            onClick={() => setValueParserOpen("__eth_value__")}
+                          >
+                            <Sparkles className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Integer Helper</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Input
+                        id={`${func.name}-value`}
+                        type="text"
+                        placeholder="0"
+                        value={value}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          // Only allow digits 0-9 (same as uint256)
+                          if (val === "" || /^[0-9]*$/.test(val)) {
+                            setValue(val)
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
