@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -8,9 +8,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Sparkles, ScanEye, Binary } from "lucide-react"
 import { needsValueParser, isTupleType, isListType, generateFormFields } from "@/lib/formGenerator"
 import { extractFunctionSelector, findFunctionBySignature, safeStringify } from "@/lib/utils"
+import { findRegisteredAddressForInput } from "@/lib/config"
 import { useABIStore } from "@/stores/abiStore"
 import { useThemeStore } from "@/stores/themeStore"
 import { decodeFunctionData } from "viem"
+import { useChainId } from "wagmi"
 import { stringify as yamlStringify } from "yaml"
 import Editor from "@monaco-editor/react"
 import { toast } from "sonner"
@@ -43,6 +45,7 @@ export function InputControl({
   onAddressHelper,
   className,
 }: InputControlProps) {
+  const chainId = useChainId()
   const { abis } = useABIStore()
   const { theme } = useThemeStore()
   const [autoDecodeBytes, setAutoDecodeBytes] = useState(true)
@@ -52,6 +55,39 @@ export function InputControl({
   const needsTupleHelper = isTuple && onTupleHelper
   const needsListHelper = isArray && onListHelper
   const needsAddressHelper = (fieldType === "address" || fieldType === "bytes32") && !!onAddressHelper
+
+  const matchedRegisteredAddress = useMemo(() => {
+    if (fieldType !== "address" && fieldType !== "bytes32") return undefined
+    return findRegisteredAddressForInput(value, fieldType, chainId)
+  }, [value, fieldType, chainId])
+
+  /** Used to measure value width with the same font as the visible input (avoids broken layout from abs. spans inside min-w-0). */
+  const registryHintInputRef = useRef<HTMLInputElement>(null)
+  const [registryLabelLeftPx, setRegistryLabelLeftPx] = useState(0)
+
+  useLayoutEffect(() => {
+    if (!matchedRegisteredAddress) {
+      setRegistryLabelLeftPx(0)
+      return
+    }
+    const input = registryHintInputRef.current
+    if (!input) {
+      setRegistryLabelLeftPx(0)
+      return
+    }
+    const cs = window.getComputedStyle(input)
+    const padL = parseFloat(cs.paddingLeft) || 0
+    const text = String(value ?? "")
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      setRegistryLabelLeftPx(0)
+      return
+    }
+    ctx.font = cs.font
+    const textW = ctx.measureText(text).width
+    setRegistryLabelLeftPx(Math.ceil(padL + textW + 6))
+  }, [value, matchedRegisteredAddress])
   
   // Check if bytes field matches a function signature
   const matchedFunction = useMemo(() => {
@@ -244,6 +280,7 @@ export function InputControl({
       // Fixed-size bytes (bytes32, bytes16, etc.) - use single-line Input
       return (
         <Input
+          ref={fieldType === "bytes32" ? registryHintInputRef : undefined}
           id={fieldName}
           type="text"
           placeholder="0x..."
@@ -391,6 +428,7 @@ export function InputControl({
     if (fieldType === "address") {
       return (
         <Input
+          ref={registryHintInputRef}
           id={fieldName}
           type="text"
           placeholder="0x..."
@@ -642,6 +680,19 @@ export function InputControl({
               className="w-full font-mono text-sm max-h-[150px]"
               style={{ minHeight: '40px' }}
             />
+          ) : fieldType === "address" || fieldType === "bytes32" ? (
+            <div className="relative min-w-0">
+              {renderInput()}
+              {matchedRegisteredAddress ? (
+                <span
+                  className="pointer-events-none absolute top-1/2 z-10 max-w-[min(12rem,calc(100%-1.5rem))] -translate-y-1/2 truncate text-xs text-zinc-400 dark:text-zinc-500"
+                  style={{ left: registryLabelLeftPx }}
+                  title={`${matchedRegisteredAddress.type}: ${matchedRegisteredAddress.label}`}
+                >
+                  ({matchedRegisteredAddress.type}: {matchedRegisteredAddress.label})
+                </span>
+              ) : null}
+            </div>
           ) : (
             renderInput()
           )}

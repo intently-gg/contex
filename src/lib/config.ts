@@ -13,6 +13,60 @@ export interface RegisteredAddress {
   chainIds: number[] | "ALL"
 }
 
+/** Left-pad a 20-byte hex address to 32 bytes (matches Address Helper output). */
+export function registeredAddressAsBytes32(address: string): string {
+  const normalized = address.startsWith("0x") ? address.slice(2) : address
+  if (normalized.length !== 40 || !/^[0-9a-fA-F]+$/.test(normalized)) {
+    throw new Error("Invalid address length")
+  }
+  return "0x" + normalized.toLowerCase().padStart(64, "0")
+}
+
+/** Match a complete address or bytes32 value to a default registered helper entry for the current chain. */
+export function findRegisteredAddressForInput(
+  rawValue: unknown,
+  fieldType: string,
+  chainId: number
+): RegisteredAddress | undefined {
+  if (fieldType !== "address" && fieldType !== "bytes32") return undefined
+  const v = String(rawValue ?? "").trim()
+  if (!v) return undefined
+
+  let compareAddressLower: string | null = null
+  let compareBytes32Lower: string | null = null
+
+  if (fieldType === "address") {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(v)) return undefined
+    compareAddressLower = v.toLowerCase()
+  } else {
+    if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
+      compareAddressLower = v.toLowerCase()
+    } else if (/^0x[0-9a-fA-F]{64}$/.test(v)) {
+      compareBytes32Lower = v.toLowerCase()
+    } else {
+      return undefined
+    }
+  }
+
+  for (const ra of DEFAULT_REGISTERED_ADDRESSES) {
+    const chainOk = ra.chainIds === "ALL" || ra.chainIds.includes(chainId)
+    if (!chainOk) continue
+    if (compareAddressLower && ra.address.toLowerCase() === compareAddressLower) {
+      return ra
+    }
+    if (compareBytes32Lower) {
+      try {
+        if (registeredAddressAsBytes32(ra.address).toLowerCase() === compareBytes32Lower) {
+          return ra
+        }
+      } catch {
+        continue
+      }
+    }
+  }
+  return undefined
+}
+
 /** Expected on-chain symbol() values per asset label (used by verify-assets script). */
 export const ASSET_EXPECTED_SYMBOLS: Record<string, string[]> = {
   USDC: ["USDC", "USDC.e", "USDzC"],

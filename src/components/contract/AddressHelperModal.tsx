@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search } from "lucide-react"
-import { DEFAULT_REGISTERED_ADDRESSES, type RegisteredAddress } from "@/lib/config"
+import {
+  DEFAULT_REGISTERED_ADDRESSES,
+  registeredAddressAsBytes32,
+  type RegisteredAddress,
+} from "@/lib/config"
 
 interface AddressHelperModalProps {
   open: boolean
@@ -12,14 +16,6 @@ interface AddressHelperModalProps {
   fieldName: string
   fieldType: "address" | "bytes32"
   chainId: number
-}
-
-function addressToBytes32(address: string): string {
-  const normalized = address.startsWith("0x") ? address.slice(2) : address
-  if (normalized.length !== 40) {
-    throw new Error("Invalid address length")
-  }
-  return "0x" + normalized.toLowerCase().padStart(64, "0")
 }
 
 function normalizeHexInput(input: string): { hex: string; has0x: boolean } {
@@ -109,7 +105,7 @@ export function AddressHelperModal({
       onApply(address)
     } else {
       try {
-        const bytes32 = addressToBytes32(address)
+        const bytes32 = registeredAddressAsBytes32(address)
         onApply(bytes32)
       } catch {
         return

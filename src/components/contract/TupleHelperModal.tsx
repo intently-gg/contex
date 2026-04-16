@@ -188,7 +188,7 @@ export function TupleHelperModal({
             Configure {fieldName} tuple values
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-[50%_50%] gap-4 flex-1 overflow-hidden">
+        <div className="grid grid-cols-[calc(50%-0.5rem+75px)_minmax(0,1fr)] gap-4 flex-1 overflow-hidden">
           <div className="space-y-2 overflow-y-auto pr-2">
             {components.map((comp: AbiParameter, index: number) => {
               const compName = comp.name || `param_${index}`
