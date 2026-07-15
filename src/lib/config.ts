@@ -1,4 +1,4 @@
-export const CONTEX_VERSION = "0.28.1"
+export const CONTEX_VERSION = "0.28.2"
 
 /** Override RPC URLs by chain ID; chains not listed use wagmi defaults. */
 export const RPC_URL_OVERRIDES: Partial<Record<number, string>> = {
