@@ -4,6 +4,7 @@ export const CONTEX_VERSION = "0.28.2"
 export const RPC_URL_OVERRIDES: Partial<Record<number, string>> = {
   1: "https://ethereum-rpc.publicnode.com",
   137: "https://polygon-bor-rpc.publicnode.com",
+  5042: "https://rpc.mainnet.arc.io"
 }
 
 export interface RegisteredAddress {

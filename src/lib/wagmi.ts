@@ -39,7 +39,8 @@ import {
   ronin,
   taiko,
   robinhood,
-  megaeth
+  megaeth,
+  arc
 } from "wagmi/chains"
 
 // Generic "hyperlink" icon SVG as default (three chain links connected diagonally)
@@ -150,6 +151,7 @@ const chainsWithIcons = await Promise.all([
   getChainWithIcon(polygon),
   getChainWithIcon(robinhood),
   getChainWithIcon(bsc),
+  getChainWithIcon(arc),
   getChainWithIcon(hyperliquid),
   getChainWithIcon(optimism),
   getChainWithIcon(unichain),
