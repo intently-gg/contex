@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileJson, Plus, Calculator, Hash } from "lucide-react"
+import { FileJson, Plus, Calculator, Hash, Waypoints } from "lucide-react"
 import { AddContractModal } from "@/components/contract/AddContractModal"
 import { ABIManagerModal } from "@/components/contract/ABIManagerModal"
 import { ValueParserModal } from "@/components/contract/ValueParserModal"
@@ -16,6 +16,7 @@ import { useEffect, useState } from "react"
 import { fetchAdminStatus } from "@/lib/admin"
 import { AdminModal } from "@/components/admin/AdminModal"
 import { HexConverterModal } from "@/components/tools/HexConverterModal"
+import { Eip7702HelperModal } from "@/components/tools/Eip7702HelperModal"
 
 export function Header() {
   const { theme, toggleTheme } = useThemeStore()
@@ -23,6 +24,7 @@ export function Header() {
   const [isABIManagerOpen, setIsABIManagerOpen] = useState(false)
   const [isValueHelperOpen, setIsValueHelperOpen] = useState(false)
   const [isHexConverterOpen, setIsHexConverterOpen] = useState(false)
+  const [isEip7702Open, setIsEip7702Open] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
 
@@ -88,6 +90,10 @@ export function Header() {
                 <Hash className="mr-2 h-4 w-4" />
                 Hex Converter
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsEip7702Open(true)}>
+                <Waypoints className="mr-2 h-4 w-4" />
+                EIP7702 Helper
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem onClick={() => setIsAdminModalOpen(true)}>
                   <Shield className="mr-2 h-4 w-4" />
@@ -131,6 +137,7 @@ export function Header() {
         open={isHexConverterOpen}
         onOpenChange={setIsHexConverterOpen}
       />
+      <Eip7702HelperModal open={isEip7702Open} onOpenChange={setIsEip7702Open} />
       <AdminModal open={isAdminModalOpen} onOpenChange={setIsAdminModalOpen} />
     </header>
   )
